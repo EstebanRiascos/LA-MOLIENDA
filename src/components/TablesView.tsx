@@ -63,35 +63,35 @@ export const TablesView: React.FC<TablesViewProps> = ({
         return {
           label: 'Salón Principal',
           icon: <Coffee size={12} className="zone-tag-icon" />,
-          watermarkIcon: <Coffee size={68} strokeWidth={1.4} />,
+          watermarkIcon: <Coffee size={100} strokeWidth={1.6} />,
           className: 'zone-salon',
         };
       case 'terraza':
         return {
           label: 'Terraza Exterior',
           icon: <Sun size={12} className="zone-tag-icon" />,
-          watermarkIcon: <Sun size={68} strokeWidth={1.4} />,
+          watermarkIcon: <Sun size={100} strokeWidth={1.6} />,
           className: 'zone-terraza',
         };
       case 'barra':
         return {
           label: 'Barra Café & Bar',
           icon: <Wine size={12} className="zone-tag-icon" />,
-          watermarkIcon: <Wine size={68} strokeWidth={1.4} />,
+          watermarkIcon: <Wine size={100} strokeWidth={1.6} />,
           className: 'zone-barra',
         };
       case 'takeaway':
         return {
           label: 'Para Llevar',
           icon: <ShoppingBag size={12} className="zone-tag-icon" />,
-          watermarkIcon: <ShoppingBag size={68} strokeWidth={1.4} />,
+          watermarkIcon: <ShoppingBag size={100} strokeWidth={1.6} />,
           className: 'zone-takeaway',
         };
       default:
         return {
           label: zone,
           icon: <Coffee size={12} className="zone-tag-icon" />,
-          watermarkIcon: <Coffee size={68} strokeWidth={1.4} />,
+          watermarkIcon: <Coffee size={100} strokeWidth={1.6} />,
           className: 'zone-salon',
         };
     }

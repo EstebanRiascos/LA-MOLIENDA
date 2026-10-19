@@ -1016,24 +1016,34 @@ body {
 /* Watermark in Card Background */
 .table-card-watermark {
   position: absolute;
-  right: -8px;
-  top: 42px;
-  opacity: 0.038;
+  right: 14px;
+  bottom: 48px;
+  opacity: 0.12;
   pointer-events: none;
-  color: var(--text-primary);
   transition: opacity 0.3s ease, transform 0.3s ease;
   z-index: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .table-card:hover .table-card-watermark {
-  opacity: 0.07;
-  transform: scale(1.06) rotate(4deg);
+  opacity: 0.22;
+  transform: scale(1.08) rotate(-3deg);
 }
 
-.table-card-watermark.zone-salon { color: #f59e0b; }
-.table-card-watermark.zone-terraza { color: #10b981; }
-.table-card-watermark.zone-barra { color: #a855f7; }
-.table-card-watermark.zone-takeaway { color: #0ea5e9; }
+.table-card-watermark.zone-salon { color: #d97706; }
+.table-card-watermark.zone-terraza { color: #059669; }
+.table-card-watermark.zone-barra { color: #9333ea; }
+.table-card-watermark.zone-takeaway { color: #0284c7; }
+
+[data-theme='light'] .table-card-watermark {
+  opacity: 0.15;
+}
+
+[data-theme='light'] .table-card:hover .table-card-watermark {
+  opacity: 0.28;
+}
 
 /* Filter Pill Icons */
 .pill-zone-icon {
@@ -1139,6 +1149,8 @@ body {
   flex-direction: column;
   gap: 0.75rem;
   flex: 1;
+  position: relative;
+  z-index: 1;
 }
 
 .table-meta-row {
