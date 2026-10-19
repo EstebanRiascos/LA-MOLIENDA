@@ -892,25 +892,26 @@ body {
 }
 
 .table-card-free {
-  border-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(212, 175, 105, 0.22);
 }
 .table-card-free:hover {
   border-color: var(--accent-emerald);
 }
 
 .table-card-occupied {
-  border-color: rgba(245, 158, 11, 0.5);
-  background: linear-gradient(180deg, rgba(245, 158, 11, 0.03), var(--bg-card));
+  border-color: rgba(245, 158, 11, 0.55);
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.05), var(--bg-card));
 }
 
 .table-card-prebill {
-  border-color: rgba(56, 189, 248, 0.5);
-  background: linear-gradient(180deg, rgba(56, 189, 248, 0.03), var(--bg-card));
+  border-color: rgba(56, 189, 248, 0.55);
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.05), var(--bg-card));
 }
 
 .table-card-header {
   padding: 0.85rem 1.1rem;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1.5px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.02);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1248,20 +1249,21 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.45rem;
-  padding: 0.55rem;
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  color: #10b981;
+  padding: 0.58rem;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.22) 0%, rgba(5, 150, 105, 0.35) 100%);
+  border: 1.5px solid #10b981;
+  color: #34d399;
   border-radius: var(--radius-md);
-  font-size: 0.82rem;
-  font-weight: 700;
+  font-size: 0.83rem;
+  font-weight: 750;
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 .btn-open-table:hover {
   background: #10b981;
-  color: #06281e;
+  color: #022c22;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
 }
 
 .btn-manage-account {
@@ -1325,6 +1327,152 @@ body {
 .btn-checkout-quick:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 10px rgba(16, 185, 129, 0.4);
+}
+
+/* ========================================================
+   LIGHT THEME: VIBRANT & RICH TABLE CARDS
+   Eliminates washed-out pale appearance with warm contrast
+   ======================================================== */
+[data-theme='light'] .table-card {
+  background: #ffffff;
+  border: 1.5px solid #dccdc0;
+  box-shadow: 0 4px 16px rgba(45, 30, 18, 0.08), 0 1px 3px rgba(45, 30, 18, 0.05);
+}
+
+[data-theme='light'] .table-card:hover {
+  border-color: #c9a464;
+  box-shadow: 0 8px 24px rgba(45, 30, 18, 0.14);
+  transform: translateY(-3px);
+}
+
+[data-theme='light'] .table-card-free {
+  border-color: #dccdc0;
+}
+
+[data-theme='light'] .table-card-free:hover {
+  border-color: #059669;
+  box-shadow: 0 8px 24px rgba(5, 150, 105, 0.16);
+}
+
+[data-theme='light'] .table-card-occupied {
+  border-color: #d97706;
+  border-width: 2px;
+  background: linear-gradient(180deg, #fffcf7 0%, #ffffff 100%);
+  box-shadow: 0 4px 18px rgba(217, 119, 6, 0.16);
+}
+
+[data-theme='light'] .table-card-prebill {
+  border-color: #0284c7;
+  border-width: 2px;
+  background: linear-gradient(180deg, #f8fcff 0%, #ffffff 100%);
+  box-shadow: 0 4px 18px rgba(2, 132, 199, 0.16);
+}
+
+[data-theme='light'] .table-card-header {
+  background: #faf5ee;
+  border-bottom: 1.5px solid #ead6c3;
+}
+
+[data-theme='light'] .table-num {
+  color: #1e130a;
+  font-size: 1.12rem;
+  font-weight: 850;
+  letter-spacing: -0.01em;
+}
+
+[data-theme='light'] .table-meta-row {
+  color: #3b2a1c;
+  font-weight: 600;
+}
+
+[data-theme='light'] .table-capacity {
+  color: #3b2a1c;
+  font-weight: 750;
+  font-size: 0.84rem;
+}
+
+[data-theme='light'] .table-free-placeholder {
+  color: #5c4736;
+  font-weight: 600;
+  font-style: normal;
+  font-size: 0.82rem;
+}
+
+[data-theme='light'] .table-card-mgmt-btns .btn-card-mgmt {
+  background: #ffffff;
+  border: 1.5px solid #dccdc0;
+  color: #4a3829;
+}
+
+[data-theme='light'] .table-card-mgmt-btns .btn-card-mgmt:hover {
+  background: #fdf6ec;
+  border-color: #b45309;
+  color: #b45309;
+}
+
+[data-theme='light'] .status-free {
+  background: #dcfce7;
+  border: 1.5px solid #4ade80;
+  color: #047857;
+  font-weight: 800;
+  box-shadow: 0 1px 3px rgba(4, 120, 87, 0.12);
+}
+
+[data-theme='light'] .status-occupied {
+  background: #fef3c7;
+  border: 1.5px solid #f59e0b;
+  color: #b45309;
+  font-weight: 800;
+  box-shadow: 0 1px 3px rgba(180, 83, 9, 0.12);
+}
+
+[data-theme='light'] .status-prebill {
+  background: #e0f2fe;
+  border: 1.5px solid #38bdf8;
+  color: #0369a1;
+  font-weight: 800;
+  box-shadow: 0 1px 3px rgba(3, 105, 161, 0.12);
+}
+
+[data-theme='light'] .table-card-watermark {
+  opacity: 0.35;
+}
+
+[data-theme='light'] .table-card-watermark.zone-salon {
+  color: #c98838;
+}
+
+[data-theme='light'] .table-card-actions {
+  background: #faf5ee;
+  border-top: 1.5px solid #ead6c3;
+}
+
+[data-theme='light'] .btn-open-table {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  color: #ffffff;
+  border: 1px solid #047857;
+  font-weight: 750;
+  font-size: 0.84rem;
+  box-shadow: 0 2px 8px rgba(4, 120, 87, 0.28);
+}
+
+[data-theme='light'] .btn-open-table:hover {
+  background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(4, 120, 87, 0.4);
+  transform: translateY(-1px);
+}
+
+[data-theme='light'] .btn-manage-account {
+  background: #ffffff;
+  border: 1.5px solid #dccdc0;
+  color: #1e130a;
+}
+
+[data-theme='light'] .btn-manage-account:hover {
+  border-color: #b45309;
+  background: #fdf6ec;
+  color: #b45309;
 }
 
 /* SECTION 2: POS VIEW */
@@ -1415,11 +1563,59 @@ body {
   align-items: center;
   gap: 0.5rem;
   overflow-x: auto;
-  padding: 6px 4px 8px 4px;
+  overflow-y: hidden;
+  padding: 6px 4px 10px 4px;
   width: 100%;
   max-width: 100%;
   min-width: 0;
   scrollbar-width: thin;
+  scrollbar-color: rgba(201, 164, 100, 0.5) rgba(201, 164, 100, 0.08);
+  scroll-behavior: smooth;
+  user-select: none;
+}
+
+/* Custom Sleek Scrollbar for POS Category Pills */
+.pos-category-pills::-webkit-scrollbar {
+  height: 6px;
+}
+
+.pos-category-pills::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.pos-category-pills::-webkit-scrollbar-track {
+  background: rgba(201, 164, 100, 0.08);
+  border-radius: 10px;
+  margin: 0 4px;
+}
+
+.pos-category-pills::-webkit-scrollbar-thumb {
+  background: #c9a464;
+  border-radius: 10px;
+  transition: background 0.2s ease;
+}
+
+.pos-category-pills::-webkit-scrollbar-thumb:hover {
+  background: #dfc28d;
+}
+
+/* Light Theme Scrollbar for Category Pills */
+[data-theme='light'] .pos-category-pills {
+  scrollbar-color: #b89355 rgba(184, 147, 85, 0.12);
+}
+
+[data-theme='light'] .pos-category-pills::-webkit-scrollbar-track {
+  background: rgba(184, 147, 85, 0.12);
+}
+
+[data-theme='light'] .pos-category-pills::-webkit-scrollbar-thumb {
+  background: #b89355;
+}
+
+[data-theme='light'] .pos-category-pills::-webkit-scrollbar-thumb:hover {
+  background: #92400e;
 }
 
 .pos-category-btn {
@@ -2929,27 +3125,42 @@ body {
 }
 
 .btn-cap-pill {
-  padding: 0.25rem 0.55rem;
+  padding: 0.28rem 0.65rem;
   background: var(--bg-input);
   border: 1px solid var(--border-color);
   border-radius: 6px;
   color: var(--text-secondary);
-  font-size: 0.74rem;
+  font-size: 0.76rem;
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
-.btn-cap-pill:hover {
-  border-color: var(--accent-amber);
-  color: var(--accent-amber);
+.btn-cap-pill:hover:not(.active) {
+  border-color: #c9a464;
+  color: var(--text-primary);
+  background: rgba(201, 164, 100, 0.08);
+}
+
+[data-theme='light'] .btn-cap-pill:hover:not(.active) {
+  border-color: #b89355;
+  color: #21160d;
+  background: rgba(184, 147, 85, 0.08);
 }
 
 .btn-cap-pill.active {
-  background: var(--accent-amber);
-  border-color: var(--accent-amber);
-  color: #1a0f05;
-  font-weight: 750;
+  background: linear-gradient(180deg, #1b140d 0%, #080604 100%) !important;
+  color: #dfc28d !important;
+  border: 1.5px solid #c9a464 !important;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 10px rgba(212, 175, 105, 0.22);
+}
+
+[data-theme='light'] .btn-cap-pill.active {
+  background: linear-gradient(180deg, #241a12 0%, #0d0906 100%) !important;
+  color: #e5cb9b !important;
+  border: 1.5px solid #b89355 !important;
+  box-shadow: 0 2px 8px rgba(20, 14, 8, 0.25), 0 0 10px rgba(184, 147, 85, 0.22);
 }
 
 .table-live-preview-box {

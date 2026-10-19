@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Search,
   Plus,
@@ -40,6 +40,26 @@ export const PosView: React.FC<PosViewProps> = ({
   const [targetTableId, setTargetTableId] = useState<string>('direct_takeaway');
   const [tipPercentage, setTipPercentage] = useState<number>(10);
   const [patronNote, setPatronNote] = useState<string>('');
+
+  // Horizontal scroll with mouse wheel for category pills
+  const categoryPillsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = categoryPillsRef.current;
+    if (!el) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        el.scrollLeft += e.deltaY;
+      }
+    };
+
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      el.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
 
   // Filter products
   const filteredProducts = products.filter((p) => {
@@ -174,7 +194,7 @@ export const PosView: React.FC<PosViewProps> = ({
         </div>
 
         {/* Category Pills */}
-        <div className="pos-category-pills">
+        <div className="pos-category-pills" ref={categoryPillsRef}>
           <button
             type="button"
             className={`pos-category-btn ${selectedCategory === 'all' ? 'active' : ''}`}

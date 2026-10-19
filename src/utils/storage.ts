@@ -2,7 +2,7 @@ import { Product, Table, SaleRecord, SystemStats } from '../types';
 import { DEFAULT_PRODUCTS, DEFAULT_TABLES, DEFAULT_SALES } from './defaults';
 
 const STORAGE_KEY_PRODUCTS = 'lamolienda_products_prod_v2';
-const STORAGE_KEY_TABLES = 'lamolienda_tables_prod_v2';
+const STORAGE_KEY_TABLES = 'lamolienda_tables_prod_v3';
 const STORAGE_KEY_SALES = 'lamolienda_sales_prod_v2';
 const STORAGE_KEY_THEME = 'lamolienda_theme_v1';
 const STORAGE_KEY_STAFF = 'lamolienda_current_staff_v1';
@@ -20,6 +20,7 @@ export function resetAllDataToProduction(): void {
     localStorage.removeItem('lamolienda_tables_v1');
     localStorage.removeItem('lamolienda_sales_v1');
     localStorage.removeItem('lamolienda_products_v1');
+    localStorage.removeItem('lamolienda_tables_prod_v2');
     localStorage.removeItem(STORAGE_KEY_TABLES);
     localStorage.removeItem(STORAGE_KEY_SALES);
     localStorage.removeItem(STORAGE_KEY_PRODUCTS);

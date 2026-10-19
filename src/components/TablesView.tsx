@@ -128,7 +128,7 @@ export const TablesView: React.FC<TablesViewProps> = ({
             className={`filter-pill-btn ${selectedZone === 'todas' ? 'active' : ''}`}
             onClick={() => setSelectedZone('todas')}
           >
-            <span>Todas las Zonas</span>
+            <span>Todas</span>
             <span className="pill-count">{zonesCount.todas}</span>
           </button>
           <button
@@ -137,18 +137,20 @@ export const TablesView: React.FC<TablesViewProps> = ({
             onClick={() => setSelectedZone('salon')}
           >
             <Coffee size={13} className="pill-zone-icon icon-salon" />
-            <span>Salón Principal</span>
+            <span>Salón (Mesas)</span>
             <span className="pill-count">{zonesCount.salon}</span>
           </button>
-          <button
-            type="button"
-            className={`filter-pill-btn ${selectedZone === 'terraza' ? 'active' : ''}`}
-            onClick={() => setSelectedZone('terraza')}
-          >
-            <Sun size={13} className="pill-zone-icon icon-terraza" />
-            <span>Terraza Exterior</span>
-            <span className="pill-count">{zonesCount.terraza}</span>
-          </button>
+          {zonesCount.terraza > 0 && (
+            <button
+              type="button"
+              className={`filter-pill-btn ${selectedZone === 'terraza' ? 'active' : ''}`}
+              onClick={() => setSelectedZone('terraza')}
+            >
+              <Sun size={13} className="pill-zone-icon icon-terraza" />
+              <span>Terraza Exterior</span>
+              <span className="pill-count">{zonesCount.terraza}</span>
+            </button>
+          )}
           <button
             type="button"
             className={`filter-pill-btn ${selectedZone === 'barra' ? 'active' : ''}`}
@@ -158,15 +160,17 @@ export const TablesView: React.FC<TablesViewProps> = ({
             <span>Barra Café & Bar</span>
             <span className="pill-count">{zonesCount.barra}</span>
           </button>
-          <button
-            type="button"
-            className={`filter-pill-btn ${selectedZone === 'takeaway' ? 'active' : ''}`}
-            onClick={() => setSelectedZone('takeaway')}
-          >
-            <ShoppingBag size={13} className="pill-zone-icon icon-takeaway" />
-            <span>Para Llevar</span>
-            <span className="pill-count">{zonesCount.takeaway}</span>
-          </button>
+          {zonesCount.takeaway > 0 && (
+            <button
+              type="button"
+              className={`filter-pill-btn ${selectedZone === 'takeaway' ? 'active' : ''}`}
+              onClick={() => setSelectedZone('takeaway')}
+            >
+              <ShoppingBag size={13} className="pill-zone-icon icon-takeaway" />
+              <span>Para Llevar</span>
+              <span className="pill-count">{zonesCount.takeaway}</span>
+            </button>
+          )}
         </div>
 
         {/* Status Filter & Management Controls */}

@@ -433,29 +433,22 @@ export const DEFAULT_PRODUCTS: Product[] = [
 ];
 
 export const DEFAULT_TABLES: Table[] = [
-  // --- SALÓN PRINCIPAL ---
+  // --- SALÓN PRINCIPAL (10 MESAS) ---
   { id: 'tbl-salon-1', number: 'Mesa 01', zone: 'salon', capacity: 2, status: 'libre', items: [], subtotal: 0, total: 0 },
   { id: 'tbl-salon-2', number: 'Mesa 02', zone: 'salon', capacity: 4, status: 'libre', items: [], subtotal: 0, total: 0 },
   { id: 'tbl-salon-3', number: 'Mesa 03', zone: 'salon', capacity: 4, status: 'libre', items: [], subtotal: 0, total: 0 },
   { id: 'tbl-salon-4', number: 'Mesa 04', zone: 'salon', capacity: 6, status: 'libre', items: [], subtotal: 0, total: 0 },
   { id: 'tbl-salon-5', number: 'Mesa 05', zone: 'salon', capacity: 2, status: 'libre', items: [], subtotal: 0, total: 0 },
   { id: 'tbl-salon-6', number: 'Mesa 06', zone: 'salon', capacity: 4, status: 'libre', items: [], subtotal: 0, total: 0 },
+  { id: 'tbl-salon-7', number: 'Mesa 07', zone: 'salon', capacity: 4, status: 'libre', items: [], subtotal: 0, total: 0 },
+  { id: 'tbl-salon-8', number: 'Mesa 08', zone: 'salon', capacity: 4, status: 'libre', items: [], subtotal: 0, total: 0 },
+  { id: 'tbl-salon-9', number: 'Mesa 09', zone: 'salon', capacity: 6, status: 'libre', items: [], subtotal: 0, total: 0 },
+  { id: 'tbl-salon-10', number: 'Mesa 10', zone: 'salon', capacity: 4, status: 'libre', items: [], subtotal: 0, total: 0 },
 
-  // --- TERRAZA EXTERIOR ---
-  { id: 'tbl-terraza-1', number: 'Terraza T1', zone: 'terraza', capacity: 4, status: 'libre', items: [], subtotal: 0, total: 0 },
-  { id: 'tbl-terraza-2', number: 'Terraza T2', zone: 'terraza', capacity: 4, status: 'libre', items: [], subtotal: 0, total: 0 },
-  { id: 'tbl-terraza-3', number: 'Terraza T3', zone: 'terraza', capacity: 6, status: 'libre', items: [], subtotal: 0, total: 0 },
-  { id: 'tbl-terraza-4', number: 'Terraza T4', zone: 'terraza', capacity: 2, status: 'libre', items: [], subtotal: 0, total: 0 },
-
-  // --- BARRA CAFÉ & COCTELERÍA ---
-  { id: 'tbl-barra-1', number: 'Barra B1', zone: 'barra', capacity: 1, status: 'libre', items: [], subtotal: 0, total: 0 },
+  // --- BARRA CAFÉ & COCTELERÍA (3 BARRAS) ---
+  { id: 'tbl-barra-1', number: 'Barra B1', zone: 'barra', capacity: 2, status: 'libre', items: [], subtotal: 0, total: 0 },
   { id: 'tbl-barra-2', number: 'Barra B2', zone: 'barra', capacity: 2, status: 'libre', items: [], subtotal: 0, total: 0 },
   { id: 'tbl-barra-3', number: 'Barra B3', zone: 'barra', capacity: 2, status: 'libre', items: [], subtotal: 0, total: 0 },
-  { id: 'tbl-barra-4', number: 'Barra B4', zone: 'barra', capacity: 1, status: 'libre', items: [], subtotal: 0, total: 0 },
-
-  // --- PARA LLEVAR / TAKEAWAY ---
-  { id: 'tbl-takeaway-1', number: 'Llevar TK1', zone: 'takeaway', capacity: 1, status: 'libre', items: [], subtotal: 0, total: 0 },
-  { id: 'tbl-takeaway-2', number: 'Llevar TK2', zone: 'takeaway', capacity: 1, status: 'libre', items: [], subtotal: 0, total: 0 },
 ];
 
 export const DEFAULT_SALES: SaleRecord[] = [];

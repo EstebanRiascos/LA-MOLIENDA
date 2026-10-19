@@ -115,6 +115,20 @@ export const OpenTableModal: React.FC<OpenTableModalProps> = ({
             </div>
           </div>
 
+          <div className="quick-capacity-pills" style={{ marginBottom: '1rem', marginTop: '-0.35rem' }}>
+            <span className="quick-lbl">Atajos:</span>
+            {[1, 2, 4, 6, 8, 10].map((p) => (
+              <button
+                type="button"
+                key={p}
+                className={`btn-cap-pill ${pax === p ? 'active' : ''}`}
+                onClick={() => setPax(p)}
+              >
+                {p} pax
+              </button>
+            ))}
+          </div>
+
           <div className="form-group">
             <label className="form-label">Atendido por (Barista / Mesero) *</label>
             <select
