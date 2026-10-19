@@ -189,21 +189,36 @@ export const TablesView: React.FC<TablesViewProps> = ({
                   <span className="table-num">{table.number}</span>
                   <span className="table-zone-tag">{getZoneLabel(table.zone)}</span>
                 </div>
-                <div className="table-header-right-group">
-                  <div className="table-badge-status">
-                    {isOccupied && (
-                      <span className="status-badge status-occupied">
-                        <span className="pulsing-dot" /> Ocupada
-                      </span>
-                    )}
-                    {isPreBill && (
-                      <span className="status-badge status-prebill">
-                        <Receipt size={12} /> Pre-cuenta
-                      </span>
-                    )}
-                    {isFree && (
-                      <span className="status-badge status-free">
-                        <CheckCircle2 size={12} /> Libre
+                <div className="table-badge-status">
+                  {isOccupied && (
+                    <span className="status-badge status-occupied">
+                      <span className="pulsing-dot" /> Ocupada
+                    </span>
+                  )}
+                  {isPreBill && (
+                    <span className="status-badge status-prebill">
+                      <Receipt size={12} /> Pre-cuenta
+                    </span>
+                  )}
+                  {isFree && (
+                    <span className="status-badge status-free">
+                      <CheckCircle2 size={12} /> Libre
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Card Info Details */}
+              <div className="table-card-body">
+                <div className="table-meta-row">
+                  <div className="table-meta-left">
+                    <span className="table-capacity" title="Capacidad de comensales">
+                      <Users size={14} /> {table.capacity} pax
+                    </span>
+
+                    {(isOccupied || isPreBill) && timeText && (
+                      <span className="table-time" title="Tiempo con la cuenta abierta">
+                        <Clock size={14} /> {timeText}
                       </span>
                     )}
                   </div>
@@ -235,21 +250,6 @@ export const TablesView: React.FC<TablesViewProps> = ({
                       </button>
                     )}
                   </div>
-                </div>
-              </div>
-
-              {/* Card Info Details */}
-              <div className="table-card-body">
-                <div className="table-meta-row">
-                  <span className="table-capacity" title="Capacidad de comensales">
-                    <Users size={14} /> {table.capacity} pax
-                  </span>
-
-                  {(isOccupied || isPreBill) && timeText && (
-                    <span className="table-time" title="Tiempo con la cuenta abierta">
-                      <Clock size={14} /> {timeText}
-                    </span>
-                  )}
                 </div>
 
                 {/* If Table has active consumption */}

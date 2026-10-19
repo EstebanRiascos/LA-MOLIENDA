@@ -870,8 +870,8 @@ body {
 /* Tables Floor Grid */
 .tables-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
-  gap: 1.15rem;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.35rem;
 }
 
 .table-card {
@@ -909,35 +909,64 @@ body {
 }
 
 .table-card-header {
-  padding: 0.85rem 1rem;
+  padding: 0.85rem 1.1rem;
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.65rem;
 }
 
-.table-header-right-group {
+.table-title-box {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.55rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.table-num {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.table-zone-tag {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-input);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.table-badge-status {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
+.table-meta-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .table-card-mgmt-btns {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  opacity: 0.85;
-  transition: opacity var(--transition-fast);
-}
-
-.table-card:hover .table-card-mgmt-btns {
-  opacity: 1;
+  gap: 0.35rem;
 }
 
 .btn-card-mgmt {
-  width: 25px;
-  height: 25px;
-  border-radius: 6px;
+  width: 27px;
+  height: 27px;
+  border-radius: 7px;
   border: 1px solid var(--border-color);
   background: var(--bg-input);
   color: var(--text-muted);
@@ -958,28 +987,6 @@ body {
   color: var(--accent-rose);
   border-color: var(--accent-rose);
   background: rgba(244, 63, 94, 0.15);
-}
-
-.table-title-box {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-}
-
-.table-num {
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: var(--text-primary);
-}
-
-.table-zone-tag {
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  background: var(--bg-input);
-  padding: 0.15rem 0.45rem;
-  border-radius: 6px;
-  border: 1px solid var(--border-color);
 }
 
 .status-badge {
