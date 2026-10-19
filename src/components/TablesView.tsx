@@ -13,6 +13,8 @@ import {
   Sparkles,
   Edit2,
   Trash2,
+  Filter,
+  ChevronDown,
 } from 'lucide-react';
 import { Table, TableZone, TableStatus, Product } from '../types';
 import { formatCurrency } from '../utils/storage';
@@ -137,25 +139,31 @@ export const TablesView: React.FC<TablesViewProps> = ({
 
         {/* Status Filter & Management Controls */}
         <div className="status-filter-group">
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value as any)}
-            className="select-status-input"
-          >
-            <option value="todas">Todos los Estados</option>
-            <option value="ocupada">Ocupadas (Activas)</option>
-            <option value="por_cobrar">Pre-cuenta Entregada</option>
-            <option value="libre">Mesas Libres</option>
-          </select>
+          {/* Custom Styled Status Dropdown */}
+          <div className="select-status-wrapper">
+            <Filter size={13} className="select-status-icon" />
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value as any)}
+              className="select-status-input"
+              aria-label="Filtrar por estado de mesa"
+            >
+              <option value="todas">Todos los Estados</option>
+              <option value="ocupada">Ocupadas (Activas)</option>
+              <option value="por_cobrar">Pre-cuenta Entregada</option>
+              <option value="libre">Mesas Libres</option>
+            </select>
+            <ChevronDown size={14} className="select-status-chevron" />
+          </div>
 
           {/* Add New Table / Bar button */}
           <button
             type="button"
-            className="btn-add-table-pill"
+            className="btn-add-table-action"
             onClick={onOpenNewTableForm}
             title="Agregar una nueva mesa, barra o espacio de atención"
           >
-            <Plus size={15} strokeWidth={2.5} />
+            <Plus size={15} strokeWidth={2.6} />
             <span>Nueva Mesa / Barra</span>
           </button>
         </div>
