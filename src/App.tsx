@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Product, Table, SaleRecord, OrderItem, SystemStats } from './types';
+import { Product, Table, TableZone, SaleRecord, OrderItem, SystemStats } from './types';
 import {
   getStoredProducts,
   saveStoredProducts,
@@ -32,6 +32,7 @@ import { OpenTableModal } from './components/OpenTableModal';
 import { SplitBillModal } from './components/SplitBillModal';
 import { TableTransferModal } from './components/TableTransferModal';
 import { CashClosingModal } from './components/CashClosingModal';
+import { TableFormModal } from './components/TableFormModal';
 
 export const App: React.FC = () => {
   // Theme state
@@ -89,6 +90,10 @@ export const App: React.FC = () => {
 
   const [isCashClosingOpen, setIsCashClosingOpen] = useState(false);
 
+  // Table management states
+  const [isTableFormOpen, setIsTableFormOpen] = useState(false);
+  const [editingTable, setEditingTable] = useState<Table | null>(null);
+
   // Theme synchronization
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -117,6 +122,95 @@ export const App: React.FC = () => {
   const stats: SystemStats = calculateSystemStats(tables, sales, products);
 
   // --- TABLE OPERATIONS ---
+  const handleOpenNewTableForm = () => {
+    setEditingTable(null);
+    setIsTableFormOpen(true);
+  };
+
+  const handleEditTableForm = (table: Table) => {
+    setEditingTable(table);
+    setIsTableFormOpen(true);
+  };
+
+  const handleSaveTableForm = (data: {
+    id?: string;
+    number: string;
+    zone: TableZone;
+    capacity: number;
+  }) => {
+    if (data.id) {
+      // Edit existing table
+      const updated = tables.map((t) =>
+        t.id === data.id
+          ? {
+              ...t,
+              number: data.number,
+              zone: data.zone,
+              capacity: data.capacity,
+            }
+          : t
+      );
+      setTables(updated);
+      saveStoredTables(updated);
+      showNotification(`Espacio "${data.number}" actualizado correctamente.`);
+    } else {
+      // Create new table
+      const newTable: Table = {
+        id: `tbl-${data.zone}-${Date.now()}`,
+        number: data.number,
+        zone: data.zone,
+        capacity: data.capacity,
+        status: 'libre',
+        items: [],
+        subtotal: 0,
+        total: 0,
+      };
+      const updated = [...tables, newTable];
+      setTables(updated);
+      saveStoredTables(updated);
+      showNotification(`Nuevo espacio "${data.number}" agregado con éxito.`);
+    }
+    setIsTableFormOpen(false);
+    setEditingTable(null);
+  };
+
+  const handleDeleteTable = (table: Table) => {
+    if (table.status !== 'libre') {
+      alert(
+        `No puedes eliminar "${table.number}" porque tiene una cuenta activa o pre-cuenta. Debes cobrar o cancelar la cuenta primero.`
+      );
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `¿Estás seguro de que deseas eliminar permanentemente el espacio "${table.number}"?`
+    );
+    if (!confirmed) return;
+
+    const updated = tables.filter((t) => t.id !== table.id);
+    setTables(updated);
+    saveStoredTables(updated);
+    showNotification(`Espacio "${table.number}" eliminado del sistema.`);
+  };
+
+  const handleResetDefaultTables = () => {
+    const hasActiveTables = tables.some((t) => t.status !== 'libre');
+    if (hasActiveTables) {
+      alert(
+        'Hay mesas con cuentas activas. No se puede restablecer la distribución hasta cobrar o cerrar todas las cuentas.'
+      );
+      return;
+    }
+    const confirmed = window.confirm(
+      '¿Deseas restablecer la distribución original de 16 mesas y barras? Se perderán las modificaciones personalizadas.'
+    );
+    if (!confirmed) return;
+
+    setTables(DEFAULT_TABLES);
+    saveStoredTables(DEFAULT_TABLES);
+    showNotification('Distribución de mesas restablecida a valores predeterminados.');
+  };
+
   const handleOpenTableModal = (table?: Table) => {
     setPreSelectedOpenTable(table || null);
     setIsOpenTableModalOpen(true);
@@ -478,6 +572,10 @@ export const App: React.FC = () => {
                   ]);
                 }
               }}
+              onOpenNewTableForm={handleOpenNewTableForm}
+              onEditTableForm={handleEditTableForm}
+              onDeleteTable={handleDeleteTable}
+              onResetDefaultTables={handleResetDefaultTables}
             />
           </div>
         )}
@@ -600,6 +698,18 @@ export const App: React.FC = () => {
         currentStaff={currentStaff}
         onClose={() => setIsCashClosingOpen(false)}
         onConfirmCloseShift={handleConfirmCloseShift}
+      />
+
+      {/* 9. Table / Bar Add & Edit Modal */}
+      <TableFormModal
+        isOpen={isTableFormOpen}
+        table={editingTable}
+        existingTables={tables}
+        onClose={() => {
+          setIsTableFormOpen(false);
+          setEditingTable(null);
+        }}
+        onSave={handleSaveTableForm}
       />
     </div>
   );

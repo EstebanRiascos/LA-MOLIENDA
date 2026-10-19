@@ -3,6 +3,7 @@ import {
   Users,
   Clock,
   Coffee,
+  Plus,
   PlusCircle,
   Receipt,
   CreditCard,
@@ -10,6 +11,9 @@ import {
   CheckCircle2,
   AlertCircle,
   Sparkles,
+  Edit2,
+  Trash2,
+  RotateCcw,
 } from 'lucide-react';
 import { Table, TableZone, TableStatus, Product } from '../types';
 import { formatCurrency } from '../utils/storage';
@@ -23,6 +27,10 @@ interface TablesViewProps {
   onCheckout: (table: Table) => void;
   onTransferTable: (table: Table) => void;
   onQuickAddItem: (tableId: string, productId: string) => void;
+  onOpenNewTableForm: () => void;
+  onEditTableForm: (table: Table) => void;
+  onDeleteTable: (table: Table) => void;
+  onResetDefaultTables?: () => void;
 }
 
 export const TablesView: React.FC<TablesViewProps> = ({
@@ -33,6 +41,10 @@ export const TablesView: React.FC<TablesViewProps> = ({
   onPreBill,
   onCheckout,
   onTransferTable,
+  onOpenNewTableForm,
+  onEditTableForm,
+  onDeleteTable,
+  onResetDefaultTables,
 }) => {
   const [selectedZone, setSelectedZone] = useState<TableZone | 'todas'>('todas');
   const [selectedStatus, setSelectedStatus] = useState<TableStatus | 'todas'>('todas');
@@ -126,7 +138,7 @@ export const TablesView: React.FC<TablesViewProps> = ({
           </button>
         </div>
 
-        {/* Status Filter */}
+        {/* Status Filter & Management Controls */}
         <div className="status-filter-group">
           <select
             value={selectedStatus}
@@ -138,6 +150,29 @@ export const TablesView: React.FC<TablesViewProps> = ({
             <option value="por_cobrar">Pre-cuenta Entregada</option>
             <option value="libre">Mesas Libres</option>
           </select>
+
+          {/* Add New Table / Bar button */}
+          <button
+            type="button"
+            className="btn-add-table-pill"
+            onClick={onOpenNewTableForm}
+            title="Agregar una nueva mesa, barra o espacio de atención"
+          >
+            <Plus size={15} strokeWidth={2.5} />
+            <span>Nueva Mesa / Barra</span>
+          </button>
+
+          {/* Reset tables button if provided */}
+          {onResetDefaultTables && (
+            <button
+              type="button"
+              className="btn-reset-tables-subtle"
+              onClick={onResetDefaultTables}
+              title="Restablecer distribución original de mesas"
+            >
+              <RotateCcw size={14} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -161,22 +196,52 @@ export const TablesView: React.FC<TablesViewProps> = ({
                   <span className="table-num">{table.number}</span>
                   <span className="table-zone-tag">{getZoneLabel(table.zone)}</span>
                 </div>
-                <div className="table-badge-status">
-                  {isOccupied && (
-                    <span className="status-badge status-occupied">
-                      <span className="pulsing-dot" /> Ocupada
-                    </span>
-                  )}
-                  {isPreBill && (
-                    <span className="status-badge status-prebill">
-                      <Receipt size={12} /> Pre-cuenta
-                    </span>
-                  )}
-                  {isFree && (
-                    <span className="status-badge status-free">
-                      <CheckCircle2 size={12} /> Libre
-                    </span>
-                  )}
+                <div className="table-header-right-group">
+                  <div className="table-badge-status">
+                    {isOccupied && (
+                      <span className="status-badge status-occupied">
+                        <span className="pulsing-dot" /> Ocupada
+                      </span>
+                    )}
+                    {isPreBill && (
+                      <span className="status-badge status-prebill">
+                        <Receipt size={12} /> Pre-cuenta
+                      </span>
+                    )}
+                    {isFree && (
+                      <span className="status-badge status-free">
+                        <CheckCircle2 size={12} /> Libre
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Card Management Controls (Edit / Delete) */}
+                  <div className="table-card-mgmt-btns">
+                    <button
+                      type="button"
+                      className="btn-card-mgmt edit"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditTableForm(table);
+                      }}
+                      title={`Editar configuración de ${table.number}`}
+                    >
+                      <Edit2 size={13} />
+                    </button>
+                    {isFree && (
+                      <button
+                        type="button"
+                        className="btn-card-mgmt delete"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteTable(table);
+                        }}
+                        title={`Eliminar ${table.number}`}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
