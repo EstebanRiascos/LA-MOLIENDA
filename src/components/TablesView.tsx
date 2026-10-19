@@ -13,7 +13,6 @@ import {
   Sparkles,
   Edit2,
   Trash2,
-  RotateCcw,
 } from 'lucide-react';
 import { Table, TableZone, TableStatus, Product } from '../types';
 import { formatCurrency } from '../utils/storage';
@@ -30,7 +29,6 @@ interface TablesViewProps {
   onOpenNewTableForm: () => void;
   onEditTableForm: (table: Table) => void;
   onDeleteTable: (table: Table) => void;
-  onResetDefaultTables?: () => void;
 }
 
 export const TablesView: React.FC<TablesViewProps> = ({
@@ -44,7 +42,6 @@ export const TablesView: React.FC<TablesViewProps> = ({
   onOpenNewTableForm,
   onEditTableForm,
   onDeleteTable,
-  onResetDefaultTables,
 }) => {
   const [selectedZone, setSelectedZone] = useState<TableZone | 'todas'>('todas');
   const [selectedStatus, setSelectedStatus] = useState<TableStatus | 'todas'>('todas');
@@ -161,18 +158,6 @@ export const TablesView: React.FC<TablesViewProps> = ({
             <Plus size={15} strokeWidth={2.5} />
             <span>Nueva Mesa / Barra</span>
           </button>
-
-          {/* Reset tables button if provided */}
-          {onResetDefaultTables && (
-            <button
-              type="button"
-              className="btn-reset-tables-subtle"
-              onClick={onResetDefaultTables}
-              title="Restablecer distribución original de mesas"
-            >
-              <RotateCcw size={14} />
-            </button>
-          )}
         </div>
       </div>
 

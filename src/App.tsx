@@ -193,24 +193,6 @@ export const App: React.FC = () => {
     showNotification(`Espacio "${table.number}" eliminado del sistema.`);
   };
 
-  const handleResetDefaultTables = () => {
-    const hasActiveTables = tables.some((t) => t.status !== 'libre');
-    if (hasActiveTables) {
-      alert(
-        'Hay mesas con cuentas activas. No se puede restablecer la distribución hasta cobrar o cerrar todas las cuentas.'
-      );
-      return;
-    }
-    const confirmed = window.confirm(
-      '¿Deseas restablecer la distribución original de 16 mesas y barras? Se perderán las modificaciones personalizadas.'
-    );
-    if (!confirmed) return;
-
-    setTables(DEFAULT_TABLES);
-    saveStoredTables(DEFAULT_TABLES);
-    showNotification('Distribución de mesas restablecida a valores predeterminados.');
-  };
-
   const handleOpenTableModal = (table?: Table) => {
     setPreSelectedOpenTable(table || null);
     setIsOpenTableModalOpen(true);
@@ -575,7 +557,6 @@ export const App: React.FC = () => {
               onOpenNewTableForm={handleOpenNewTableForm}
               onEditTableForm={handleEditTableForm}
               onDeleteTable={handleDeleteTable}
-              onResetDefaultTables={handleResetDefaultTables}
             />
           </div>
         )}
