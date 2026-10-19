@@ -15,6 +15,9 @@ import {
   Trash2,
   Filter,
   ChevronDown,
+  Sun,
+  Wine,
+  ShoppingBag,
 } from 'lucide-react';
 import { Table, TableZone, TableStatus, Product } from '../types';
 import { formatCurrency } from '../utils/storage';
@@ -54,18 +57,43 @@ export const TablesView: React.FC<TablesViewProps> = ({
     return matchesZone && matchesStatus;
   });
 
-  const getZoneLabel = (zone: TableZone) => {
+  const getZoneInfo = (zone: TableZone) => {
     switch (zone) {
       case 'salon':
-        return 'Salón Principal';
+        return {
+          label: 'Salón Principal',
+          icon: <Coffee size={12} className="zone-tag-icon" />,
+          watermarkIcon: <Coffee size={68} strokeWidth={1.4} />,
+          className: 'zone-salon',
+        };
       case 'terraza':
-        return 'Terraza Exterior';
+        return {
+          label: 'Terraza Exterior',
+          icon: <Sun size={12} className="zone-tag-icon" />,
+          watermarkIcon: <Sun size={68} strokeWidth={1.4} />,
+          className: 'zone-terraza',
+        };
       case 'barra':
-        return 'Barra Café & Bar';
+        return {
+          label: 'Barra Café & Bar',
+          icon: <Wine size={12} className="zone-tag-icon" />,
+          watermarkIcon: <Wine size={68} strokeWidth={1.4} />,
+          className: 'zone-barra',
+        };
       case 'takeaway':
-        return 'Para Llevar';
+        return {
+          label: 'Para Llevar',
+          icon: <ShoppingBag size={12} className="zone-tag-icon" />,
+          watermarkIcon: <ShoppingBag size={68} strokeWidth={1.4} />,
+          className: 'zone-takeaway',
+        };
       default:
-        return zone;
+        return {
+          label: zone,
+          icon: <Coffee size={12} className="zone-tag-icon" />,
+          watermarkIcon: <Coffee size={68} strokeWidth={1.4} />,
+          className: 'zone-salon',
+        };
     }
   };
 
@@ -108,6 +136,7 @@ export const TablesView: React.FC<TablesViewProps> = ({
             className={`filter-pill-btn ${selectedZone === 'salon' ? 'active' : ''}`}
             onClick={() => setSelectedZone('salon')}
           >
+            <Coffee size={13} className="pill-zone-icon icon-salon" />
             <span>Salón Principal</span>
             <span className="pill-count">{zonesCount.salon}</span>
           </button>
@@ -116,6 +145,7 @@ export const TablesView: React.FC<TablesViewProps> = ({
             className={`filter-pill-btn ${selectedZone === 'terraza' ? 'active' : ''}`}
             onClick={() => setSelectedZone('terraza')}
           >
+            <Sun size={13} className="pill-zone-icon icon-terraza" />
             <span>Terraza Exterior</span>
             <span className="pill-count">{zonesCount.terraza}</span>
           </button>
@@ -124,6 +154,7 @@ export const TablesView: React.FC<TablesViewProps> = ({
             className={`filter-pill-btn ${selectedZone === 'barra' ? 'active' : ''}`}
             onClick={() => setSelectedZone('barra')}
           >
+            <Wine size={13} className="pill-zone-icon icon-barra" />
             <span>Barra Café & Bar</span>
             <span className="pill-count">{zonesCount.barra}</span>
           </button>
@@ -132,6 +163,7 @@ export const TablesView: React.FC<TablesViewProps> = ({
             className={`filter-pill-btn ${selectedZone === 'takeaway' ? 'active' : ''}`}
             onClick={() => setSelectedZone('takeaway')}
           >
+            <ShoppingBag size={13} className="pill-zone-icon icon-takeaway" />
             <span>Para Llevar</span>
             <span className="pill-count">{zonesCount.takeaway}</span>
           </button>
@@ -176,6 +208,7 @@ export const TablesView: React.FC<TablesViewProps> = ({
           const isPreBill = table.status === 'por_cobrar';
           const isFree = table.status === 'libre';
           const timeText = getElapsedTime(table.openedAt);
+          const zoneInfo = getZoneInfo(table.zone);
 
           let cardStatusClass = 'table-card-free';
           if (isOccupied) cardStatusClass = 'table-card-occupied';
@@ -183,11 +216,19 @@ export const TablesView: React.FC<TablesViewProps> = ({
 
           return (
             <div key={table.id} className={`table-card ${cardStatusClass}`}>
+              {/* Subtle Ambient Zone Watermark */}
+              <div className={`table-card-watermark ${zoneInfo.className}`} aria-hidden="true">
+                {zoneInfo.watermarkIcon}
+              </div>
+
               {/* Card Header */}
               <div className="table-card-header">
                 <div className="table-title-box">
                   <span className="table-num">{table.number}</span>
-                  <span className="table-zone-tag">{getZoneLabel(table.zone)}</span>
+                  <span className={`table-zone-tag ${zoneInfo.className}`}>
+                    {zoneInfo.icon}
+                    <span>{zoneInfo.label}</span>
+                  </span>
                 </div>
                 <div className="table-badge-status">
                   {isOccupied && (

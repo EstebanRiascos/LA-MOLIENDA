@@ -934,16 +934,117 @@ body {
 }
 
 .table-zone-tag {
-  font-size: 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
   font-weight: 600;
   color: var(--text-muted);
   background: var(--bg-input);
-  padding: 0.2rem 0.5rem;
+  padding: 0.2rem 0.55rem;
   border-radius: 6px;
   border: 1px solid var(--border-color);
   white-space: nowrap;
   flex-shrink: 0;
+  transition: all var(--transition-fast);
 }
+
+.zone-tag-icon {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.table-card:hover .zone-tag-icon {
+  transform: scale(1.12);
+}
+
+/* Subtle, luxury zone colors for badge */
+.table-zone-tag.zone-salon {
+  border-color: rgba(180, 83, 9, 0.25);
+  background: rgba(180, 83, 9, 0.05);
+}
+.table-zone-tag.zone-salon .zone-tag-icon {
+  color: #b45309;
+}
+
+.table-zone-tag.zone-terraza {
+  border-color: rgba(16, 185, 129, 0.28);
+  background: rgba(16, 185, 129, 0.05);
+}
+.table-zone-tag.zone-terraza .zone-tag-icon {
+  color: #10b981;
+}
+
+.table-zone-tag.zone-barra {
+  border-color: rgba(168, 85, 247, 0.28);
+  background: rgba(168, 85, 247, 0.05);
+}
+.table-zone-tag.zone-barra .zone-tag-icon {
+  color: #a855f7;
+}
+
+.table-zone-tag.zone-takeaway {
+  border-color: rgba(14, 165, 233, 0.28);
+  background: rgba(14, 165, 233, 0.05);
+}
+.table-zone-tag.zone-takeaway .zone-tag-icon {
+  color: #0ea5e9;
+}
+
+/* Light Theme Zone Accents */
+[data-theme='light'] .table-zone-tag.zone-salon {
+  background: rgba(217, 119, 6, 0.08);
+  border-color: rgba(217, 119, 6, 0.25);
+  color: #92400e;
+}
+[data-theme='light'] .table-zone-tag.zone-terraza {
+  background: rgba(5, 150, 105, 0.08);
+  border-color: rgba(5, 150, 105, 0.25);
+  color: #065f46;
+}
+[data-theme='light'] .table-zone-tag.zone-barra {
+  background: rgba(147, 51, 234, 0.08);
+  border-color: rgba(147, 51, 234, 0.25);
+  color: #6b21a8;
+}
+[data-theme='light'] .table-zone-tag.zone-takeaway {
+  background: rgba(2, 132, 199, 0.08);
+  border-color: rgba(2, 132, 199, 0.25);
+  color: #0369a1;
+}
+
+/* Watermark in Card Background */
+.table-card-watermark {
+  position: absolute;
+  right: -8px;
+  top: 42px;
+  opacity: 0.038;
+  pointer-events: none;
+  color: var(--text-primary);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  z-index: 0;
+}
+
+.table-card:hover .table-card-watermark {
+  opacity: 0.07;
+  transform: scale(1.06) rotate(4deg);
+}
+
+.table-card-watermark.zone-salon { color: #f59e0b; }
+.table-card-watermark.zone-terraza { color: #10b981; }
+.table-card-watermark.zone-barra { color: #a855f7; }
+.table-card-watermark.zone-takeaway { color: #0ea5e9; }
+
+/* Filter Pill Icons */
+.pill-zone-icon {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.pill-zone-icon.icon-salon { color: #f59e0b; }
+.pill-zone-icon.icon-terraza { color: #10b981; }
+.pill-zone-icon.icon-barra { color: #a855f7; }
+.pill-zone-icon.icon-takeaway { color: #0ea5e9; }
 
 .table-badge-status {
   flex-shrink: 0;
