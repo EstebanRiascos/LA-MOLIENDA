@@ -408,7 +408,8 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.45rem;
-  padding: 0.48rem 0.95rem;
+  height: 38px;
+  padding: 0 0.95rem;
   border-radius: var(--radius-md);
   font-size: 0.82rem;
   font-weight: 600;
@@ -437,10 +438,11 @@ body {
   font-size: 0.84rem;
   font-weight: 750;
   letter-spacing: -0.01em;
-  padding: 0.52rem 1.15rem;
-  border-radius: 9999px;
+  height: 38px;
+  padding: 0 1.15rem;
+  border-radius: var(--radius-md);
   border: 1px solid rgba(255, 255, 255, 0.35);
-  box-shadow: 0 3px 12px rgba(245, 158, 11, 0.4), 0 1px 3px rgba(0, 0, 0, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.45);
+  box-shadow: 0 3px 12px rgba(245, 158, 11, 0.35), 0 1px 3px rgba(0, 0, 0, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.45);
   white-space: nowrap;
   gap: 0.5rem;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -476,9 +478,9 @@ body {
 }
 
 .btn-primary-icon-wrap {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
   background: rgba(26, 15, 5, 0.12);
   display: inline-flex;
   align-items: center;
