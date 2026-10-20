@@ -6,7 +6,6 @@ import {
   Package,
   Receipt,
   FileSpreadsheet,
-  Plus,
   Sun,
   Moon,
   UserCheck,
@@ -20,8 +19,8 @@ interface HeaderProps {
   onToggleTheme: () => void;
   activeSection: ActiveSection;
   onChangeSection: (section: ActiveSection) => void;
-  onOpenNewTable: () => void;
-  onOpenNewProduct: () => void;
+  onOpenNewTable?: () => void;
+  onOpenNewProduct?: () => void;
   onExportExcel: () => void;
   activeTablesCount: number;
   lowStockCount: number;
@@ -191,32 +190,6 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="btn-text-desktop">Excel</span>
           </button>
 
-          {/* Primary Action Button depending on section */}
-          {activeSection === 'inventario' ? (
-            <button
-              type="button"
-              className="btn-header-action btn-header-primary"
-              onClick={onOpenNewProduct}
-              title="Registrar nuevo producto en el catálogo"
-            >
-              <span className="btn-primary-icon-wrap">
-                <Plus size={15} strokeWidth={2.6} />
-              </span>
-              <span className="btn-text-primary-action">Nuevo Producto</span>
-            </button>
-          ) : activeSection === 'mesas' ? null : (
-            <button
-              type="button"
-              className="btn-header-action btn-header-primary"
-              onClick={onOpenNewTable}
-              title="Abrir comanda / cuenta en una mesa o barra"
-            >
-              <span className="btn-primary-icon-wrap">
-                <Plus size={15} strokeWidth={2.6} />
-              </span>
-              <span className="btn-text-primary-action">Abrir Mesa</span>
-            </button>
-          )}
 
           {/* Theme Toggle */}
           <button

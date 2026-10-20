@@ -125,7 +125,7 @@ body {
 .header-container {
   max-width: 1600px;
   margin: 0 auto;
-  padding: 0.65rem 1.25rem;
+  padding: 1.15rem 1.25rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
