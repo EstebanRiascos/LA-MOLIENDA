@@ -18,15 +18,18 @@ import {
   Sun,
   Wine,
   ShoppingBag,
+  LayoutGrid,
+  Compass,
 } from 'lucide-react';
 import { Table, TableZone, TableStatus, Product } from '../types';
 import { formatCurrency } from '../utils/storage';
+import { FloorPlan3DView } from './FloorPlan3DView';
 
 interface TablesViewProps {
   tables: Table[];
   products: Product[];
   onSelectTable: (table: Table) => void;
-  onOpenTable: (table: Table) => void;
+  onOpenTable: (table?: Table) => void;
   onPreBill: (table: Table) => void;
   onCheckout: (table: Table) => void;
   onTransferTable: (table: Table) => void;
@@ -34,6 +37,7 @@ interface TablesViewProps {
   onOpenNewTableForm: () => void;
   onEditTableForm: (table: Table) => void;
   onDeleteTable: (table: Table) => void;
+  onUpdateTables?: (tables: Table[]) => void;
 }
 
 export const TablesView: React.FC<TablesViewProps> = ({
@@ -47,7 +51,9 @@ export const TablesView: React.FC<TablesViewProps> = ({
   onOpenNewTableForm,
   onEditTableForm,
   onDeleteTable,
+  onUpdateTables,
 }) => {
+  const [viewMode, setViewMode] = useState<'cards' | 'plan_3d'>('cards');
   const [selectedZone, setSelectedZone] = useState<TableZone | 'todas'>('todas');
   const [selectedStatus, setSelectedStatus] = useState<TableStatus | 'todas'>('todas');
 
@@ -119,8 +125,48 @@ export const TablesView: React.FC<TablesViewProps> = ({
 
   return (
     <div className="tables-view-container">
-      {/* Floor & Filter Bar */}
-      <div className="tables-filter-bar">
+      {/* Top Header Mode Switcher: Cards vs 3D Floor Plan */}
+      <div className="tables-header-switcher-row">
+        <div className="panel-mode-toggle-group">
+          <button
+            type="button"
+            className={`panel-mode-pill ${viewMode === 'cards' ? 'active' : ''}`}
+            onClick={() => setViewMode('cards')}
+          >
+            <LayoutGrid size={15} />
+            <span>Tarjetas de Mesas</span>
+            <span className="panel-count-badge">{tables.length}</span>
+          </button>
+          <button
+            type="button"
+            className={`panel-mode-pill ${viewMode === 'plan_3d' ? 'active' : ''}`}
+            onClick={() => setViewMode('plan_3d')}
+          >
+            <Compass size={15} />
+            <span>Plano 3D del Local</span>
+            <span className="panel-badge-highlight">Plano La Molienda</span>
+          </button>
+        </div>
+      </div>
+
+      {viewMode === 'plan_3d' ? (
+        <FloorPlan3DView
+          tables={tables}
+          products={products}
+          onSelectTable={onSelectTable}
+          onOpenTable={onOpenTable}
+          onPreBill={onPreBill}
+          onCheckout={onCheckout}
+          onTransferTable={onTransferTable}
+          onOpenNewTableForm={onOpenNewTableForm}
+          onEditTableForm={onEditTableForm}
+          onDeleteTable={onDeleteTable}
+          onUpdateTables={onUpdateTables || (() => {})}
+        />
+      ) : (
+        <>
+          {/* Floor & Filter Bar */}
+          <div className="tables-filter-bar">
         {/* Zones Tabs */}
         <div className="filter-pill-group">
           <button
@@ -191,6 +237,17 @@ export const TablesView: React.FC<TablesViewProps> = ({
             </select>
             <ChevronDown size={14} className="select-status-chevron" />
           </div>
+
+          {/* Abrir Mesa Button */}
+          <button
+            type="button"
+            className="btn-open-table-action"
+            onClick={() => onOpenTable()}
+            title="Abrir comanda / cuenta en una mesa o barra libre"
+          >
+            <Plus size={15} strokeWidth={2.6} />
+            <span>Abrir Mesa</span>
+          </button>
 
           {/* Add New Table / Bar button */}
           <button
@@ -382,6 +439,8 @@ export const TablesView: React.FC<TablesViewProps> = ({
           );
         })}
       </div>
-    </div>
-  );
+    </>
+  )}
+</div>
+);
 };

@@ -26,6 +26,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   const patron = saleRecord?.patronName || table?.patronName || 'Cliente';
   const subtotal = saleRecord ? saleRecord.subtotal : table?.subtotal || 0;
   const tipAmount = saleRecord ? saleRecord.tipAmount : table?.tipAmount || 0;
+  const tipPercent = subtotal > 0 && tipAmount > 0 ? Math.round((tipAmount / subtotal) * 100) : (table?.tipPercentage ?? 0);
   const total = saleRecord ? saleRecord.total : table?.total || subtotal + tipAmount;
   const dateStr = saleRecord?.date
     ? new Date(saleRecord.date).toLocaleString('es-CO')
@@ -135,7 +136,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
               <span>{formatCurrency(subtotal)}</span>
             </div>
             <div className="total-line">
-              <span>PROPINA VOLUNTARIA (10%):</span>
+              <span>PROPINA VOLUNTARIA ({tipPercent}%):</span>
               <span>{formatCurrency(tipAmount)}</span>
             </div>
             <div className="receipt-divider-dashed" />
@@ -192,12 +193,13 @@ export const TicketModal: React.FC<TicketModalProps> = ({
 
         {/* Modal Actions */}
         <div className="ticket-modal-actions no-print">
-          <button type="button" className="btn-cancel" onClick={onClose}>
+          <button type="button" className="btn-modal-cancel" onClick={onClose}>
             Cerrar
           </button>
           <button type="button" className="btn-print-receipt" onClick={handlePrint}>
-            <Printer size={16} />
-            <span>Imprimir Ticket (80mm)</span>
+            <Printer size={15} />
+            <span>Imprimir Ticket</span>
+            <span className="print-format-badge">80mm</span>
           </button>
         </div>
       </div>

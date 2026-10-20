@@ -23,6 +23,7 @@ interface InventoryViewProps {
   onEditProduct: (product: Product) => void;
   onDeleteProduct: (productId: string) => void;
   onQuickUpdatePrice: (productId: string, newPrice: number) => void;
+  onQuickUpdateCost?: (productId: string, newCost: number) => void;
   onQuickAdjustStock: (productId: string, delta: number) => void;
   onShowNotification: (msg: string) => void;
 }
@@ -33,18 +34,23 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   onEditProduct,
   onDeleteProduct,
   onQuickUpdatePrice,
+  onQuickUpdateCost,
   onQuickAdjustStock,
   onShowNotification,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ProductCategory | 'all'>('all');
   const [stockFilter, setStockFilter] = useState<'all' | 'normal' | 'low' | 'out'>('all');
-  const [sortBy, setSortBy] = useState<'name' | 'price' | 'stock' | 'margin'>('name');
+  const [sortBy, setSortBy] = useState<'name' | 'price' | 'cost' | 'stock' | 'margin'>('name');
   const [sortAsc, setSortAsc] = useState(true);
 
   // Inline price editing state
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
   const [tempPriceValue, setTempPriceValue] = useState<string>('');
+
+  // Inline cost editing state
+  const [editingCostId, setEditingCostId] = useState<string | null>(null);
+  const [tempCostValue, setTempCostValue] = useState<string>('');
 
   // Inventory KPI calculations
   const totalValue = products.reduce((sum, p) => sum + p.price * p.stock, 0);
@@ -80,6 +86,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
     let result = 0;
     if (sortBy === 'name') result = a.name.localeCompare(b.name);
     if (sortBy === 'price') result = a.price - b.price;
+    if (sortBy === 'cost') result = a.cost - b.cost;
     if (sortBy === 'stock') result = a.stock - b.stock;
     if (sortBy === 'margin') {
       const marginA = a.price > 0 ? ((a.price - a.cost) / a.price) * 100 : 0;
@@ -101,6 +108,22 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       onShowNotification('Precio de venta actualizado con éxito.');
     }
     setEditingPriceId(null);
+  };
+
+  const handleStartEditCost = (product: Product) => {
+    setEditingCostId(product.id);
+    setTempCostValue(product.cost.toString());
+  };
+
+  const handleSaveCost = (productId: string) => {
+    const num = parseFloat(tempCostValue);
+    if (!isNaN(num) && num >= 0) {
+      if (onQuickUpdateCost) {
+        onQuickUpdateCost(productId, num);
+      }
+      onShowNotification('Costo de insumo actualizado con éxito.');
+    }
+    setEditingCostId(null);
   };
 
   return (
@@ -198,7 +221,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             onClick={onOpenNewProduct}
           >
             <Plus size={16} strokeWidth={2.5} />
-            <span>+ Nuevo Producto</span>
+            <span>Nuevo Producto</span>
           </button>
         </div>
       </div>
@@ -216,7 +239,12 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 </span>
               </th>
               <th className="th-center">Categoría</th>
-              <th className="th-center">Costo Insumo</th>
+              <th onClick={() => { setSortBy('cost'); setSortAsc(!sortAsc); }} className="sortable-th th-center">
+                <span className="th-sort-wrapper">
+                  <span>Costo Insumo ($)</span>
+                  <ArrowUpDown size={13} />
+                </span>
+              </th>
               <th onClick={() => { setSortBy('price'); setSortAsc(!sortAsc); }} className="sortable-th th-center">
                 <span className="th-sort-wrapper">
                   <span>Precio de Venta ($)</span>
@@ -229,7 +257,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   <ArrowUpDown size={13} />
                 </span>
               </th>
-              <th onClick={() => { setSortBy('stock'); setSortAsc(!sortAsc); }} className="sortable-th th-center">
+              <th onClick={() => { setSortBy('stock'); setSortAsc(!sortAsc); }} className="sortable-th th-center" style={{ minWidth: '120px' }}>
                 <span className="th-sort-wrapper">
                   <span>Stock Actual</span>
                   <ArrowUpDown size={13} />
@@ -286,9 +314,48 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                       </span>
                     </td>
 
-                    {/* Cost */}
+                    {/* Cost - Editable inline! */}
                     <td className="td-cost">
-                      <span className="cost-amount">{formatCurrency(product.cost)}</span>
+                      {editingCostId === product.id ? (
+                        <div className="inline-price-edit">
+                          <input
+                            type="number"
+                            value={tempCostValue}
+                            onChange={(e) => setTempCostValue(e.target.value)}
+                            className="input-inline-price"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveCost(product.id);
+                              if (e.key === 'Escape') setEditingCostId(null);
+                            }}
+                          />
+                          <button
+                            type="button"
+                            className="btn-inline-save"
+                            onClick={() => handleSaveCost(product.id)}
+                            title="Guardar nuevo costo"
+                          >
+                            <Check size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-inline-cancel"
+                            onClick={() => setEditingCostId(null)}
+                            title="Cancelar"
+                          >
+                            <X size={13} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div
+                          className="cost-display-box"
+                          onClick={() => handleStartEditCost(product)}
+                          title="Click para editar el costo de insumo"
+                        >
+                          <span className="cost-amount">{formatCurrency(product.cost)}</span>
+                          <Edit2 size={12} className="edit-hint-icon" />
+                        </div>
+                      )}
                     </td>
 
                     {/* Sale Price - Editable inline! */}
@@ -339,20 +406,39 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
                     {/* Margin */}
                     <td className="td-margin">
-                      <span
-                        className={`margin-pill ${
-                          margin >= 60 ? 'margin-high' : margin >= 35 ? 'margin-mid' : 'margin-low'
+                      <div
+                        className={`margin-chip ${
+                          margin >= 60 ? 'chip-high' : margin >= 35 ? 'chip-mid' : 'chip-low'
                         }`}
+                        title={`Margen Bruto: ${margin.toFixed(1)}% | Ganancia neta: ${formatCurrency(
+                          product.price - product.cost
+                        )} por unidad`}
                       >
-                        {margin.toFixed(1)}%
-                      </span>
+                        <span className="margin-chip-val">{margin.toFixed(1)}%</span>
+                        <div className="margin-chip-track">
+                          <div
+                            className="margin-chip-fill"
+                            style={{ width: `${Math.min(100, Math.max(0, margin))}%` }}
+                          />
+                        </div>
+                      </div>
                     </td>
 
                     {/* Stock level */}
                     <td className="td-stock">
-                      <div className="stock-level-box">
+                      <div
+                        className={`stock-level-box ${
+                          isOutOfStock ? 'stock-status-out' : isLowStock ? 'stock-status-low' : 'stock-status-normal'
+                        }`}
+                      >
                         <div className="stock-numbers">
-                          <span className="current-stock-val">{product.stock}</span>
+                          <span
+                            className={`current-stock-val ${
+                              isOutOfStock ? 'val-red' : isLowStock ? 'val-amber' : 'val-green'
+                            }`}
+                          >
+                            {product.stock}
+                          </span>
                           <span className="min-stock-sub">/ mín {product.minStock}</span>
                         </div>
                         <div className="stock-progress-bar">
@@ -361,13 +447,23 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                               isOutOfStock ? 'fill-red' : isLowStock ? 'fill-yellow' : 'fill-green'
                             }`}
                             style={{
-                              width: `${Math.min(
-                                100,
-                                Math.round((product.stock / (product.minStock * 2 || 10)) * 100)
-                              )}%`,
+                              width: isOutOfStock
+                                ? '100%'
+                                : isLowStock
+                                ? `${Math.max(25, Math.min(75, Math.round((product.stock / (product.minStock || 5)) * 60)))}%`
+                                : `${Math.min(100, Math.max(50, Math.round((product.stock / (product.minStock * 2 || 10)) * 100)))}%`,
                             }}
                           />
                         </div>
+                        {product.reservedStock && product.reservedStock > 0 ? (
+                          <div
+                            className={`stock-in-progress-pill ${isOutOfStock ? 'pill-alert-out' : ''}`}
+                            title={`${product.reservedStock} unidad(es) seleccionada(s) en comanda activa o mesas`}
+                          >
+                            <span className="in-progress-dot" />
+                            <span>{product.reservedStock} en curso</span>
+                          </div>
+                        ) : null}
                       </div>
                     </td>
 

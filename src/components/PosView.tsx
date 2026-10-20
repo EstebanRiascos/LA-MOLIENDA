@@ -22,6 +22,14 @@ interface PosViewProps {
   onAddItemsToTable: (tableId: string, items: OrderItem[]) => void;
   onDirectSaleCheckout: (items: OrderItem[], patronName?: string) => void;
   onShowNotification: (msg: string) => void;
+  cartItems?: OrderItem[];
+  setCartItems?: React.Dispatch<React.SetStateAction<OrderItem[]>>;
+  targetTableId?: string;
+  setTargetTableId?: (id: string) => void;
+  tipPercentage?: number;
+  setTipPercentage?: (p: number) => void;
+  patronNote?: string;
+  setPatronNote?: (note: string) => void;
 }
 
 export const PosView: React.FC<PosViewProps> = ({
@@ -30,16 +38,35 @@ export const PosView: React.FC<PosViewProps> = ({
   onAddItemsToTable,
   onDirectSaleCheckout,
   onShowNotification,
+  cartItems: propsCartItems,
+  setCartItems: propsSetCartItems,
+  targetTableId: propsTargetTableId,
+  setTargetTableId: propsSetTargetTableId,
+  tipPercentage: propsTipPercentage,
+  setTipPercentage: propsSetTipPercentage,
+  patronNote: propsPatronNote,
+  setPatronNote: propsSetPatronNote,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<ProductCategory | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [onlyInStock, setOnlyInStock] = useState(false);
 
-  // Cart state for the POS current session
-  const [cartItems, setCartItems] = useState<OrderItem[]>([]);
-  const [targetTableId, setTargetTableId] = useState<string>('direct_takeaway');
-  const [tipPercentage, setTipPercentage] = useState<number>(10);
-  const [patronNote, setPatronNote] = useState<string>('');
+  // Cart state: synchronized with App if provided
+  const [internalCartItems, setInternalCartItems] = useState<OrderItem[]>([]);
+  const cartItems = propsCartItems !== undefined ? propsCartItems : internalCartItems;
+  const setCartItems = propsSetCartItems !== undefined ? propsSetCartItems : setInternalCartItems;
+
+  const [internalTargetTableId, setInternalTargetTableId] = useState<string>('direct_takeaway');
+  const targetTableId = propsTargetTableId !== undefined ? propsTargetTableId : internalTargetTableId;
+  const setTargetTableId = propsSetTargetTableId !== undefined ? propsSetTargetTableId : setInternalTargetTableId;
+
+  const [internalTipPercentage, setInternalTipPercentage] = useState<number>(0);
+  const tipPercentage = propsTipPercentage !== undefined ? propsTipPercentage : internalTipPercentage;
+  const setTipPercentage = propsSetTipPercentage !== undefined ? propsSetTipPercentage : setInternalTipPercentage;
+
+  const [internalPatronNote, setInternalPatronNote] = useState<string>('');
+  const patronNote = propsPatronNote !== undefined ? propsPatronNote : internalPatronNote;
+  const setPatronNote = propsSetPatronNote !== undefined ? propsSetPatronNote : setInternalPatronNote;
 
   // Horizontal scroll with mouse wheel for category pills
   const categoryPillsRef = useRef<HTMLDivElement>(null);
@@ -76,7 +103,7 @@ export const PosView: React.FC<PosViewProps> = ({
   // Add product to cart
   const handleAddToCart = (product: Product) => {
     if (product.stock <= 0) {
-      alert(`El producto "${product.name}" está agotado en inventario.`);
+      onShowNotification(`"${product.name}" no tiene más existencias disponibles en inventario.`);
       return;
     }
 
@@ -105,6 +132,13 @@ export const PosView: React.FC<PosViewProps> = ({
   };
 
   const handleIncreaseQty = (itemId: string) => {
+    const item = cartItems.find((i) => i.id === itemId);
+    if (!item) return;
+    const prod = products.find((p) => p.id === item.productId);
+    if (prod && prod.stock <= 0) {
+      onShowNotification(`No hay más existencias disponibles de "${item.productName}".`);
+      return;
+    }
     setCartItems((prev) =>
       prev.map((i) => (i.id === itemId ? { ...i, quantity: i.quantity + 1 } : i))
     );
@@ -125,6 +159,7 @@ export const PosView: React.FC<PosViewProps> = ({
   const handleClearCart = () => {
     if (cartItems.length > 0 && window.confirm('¿Vaciar la comanda actual?')) {
       setCartItems([]);
+      setTipPercentage(0);
     }
   };
 
@@ -145,6 +180,7 @@ export const PosView: React.FC<PosViewProps> = ({
       onDirectSaleCheckout(cartItems, patronNote || 'Venta Rápida / Llevar');
       setCartItems([]);
       setPatronNote('');
+      setTipPercentage(0);
     } else {
       // Mandar a mesa
       onAddItemsToTable(targetTableId, cartItems);
@@ -154,6 +190,7 @@ export const PosView: React.FC<PosViewProps> = ({
       );
       setCartItems([]);
       setPatronNote('');
+      setTipPercentage(0);
     }
   };
 
@@ -425,20 +462,34 @@ export const PosView: React.FC<PosViewProps> = ({
             <span className="grand-total-amount">{formatCurrency(cartTotal)}</span>
           </div>
 
-          {/* Action button */}
+          {/* Action button: solid motionless click, pulsing/titilante aura while items are in comanda */}
           <button
             type="button"
-            className="btn-dispatch-order"
+            className={`btn-dispatch-order ${cartItems.length > 0 ? 'ready-to-dispatch' : ''}`}
             onClick={handleDispatchOrder}
             disabled={cartItems.length === 0}
           >
             {targetTableId === 'direct_takeaway' ? (
               <>
-                <CreditCard size={17} /> Cobrar Venta Rápida
+                <CreditCard size={17} className="dispatch-icon" />
+                <span>Cobrar Venta Rápida</span>
+                {cartItems.length > 0 && (
+                  <span className="dispatch-badge">
+                    {cartItems.reduce((acc, i) => acc + i.quantity, 0)}
+                  </span>
+                )}
               </>
             ) : (
               <>
-                <Send size={17} /> Cargar a {tables.find((t) => t.id === targetTableId)?.number}
+                <Send size={17} className="dispatch-icon" />
+                <span>
+                  {`Cargar a ${tables.find((t) => t.id === targetTableId)?.number}`}
+                </span>
+                {cartItems.length > 0 && (
+                  <span className="dispatch-badge">
+                    {cartItems.reduce((acc, i) => acc + i.quantity, 0)}
+                  </span>
+                )}
               </>
             )}
           </button>

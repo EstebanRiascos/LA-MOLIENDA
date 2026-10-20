@@ -10,6 +10,7 @@ import {
   Coffee,
   DollarSign,
   Layers,
+  AlertCircle,
 } from 'lucide-react';
 import { Table, PaymentMethod, SaleRecord, OrderItem } from '../types';
 import { formatCurrency } from '../utils/storage';
@@ -42,13 +43,14 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const subtotal = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
 
   // States
-  const [tipPercentage, setTipPercentage] = useState<number>(table?.tipPercentage ?? 10);
+  const [tipPercentage, setTipPercentage] = useState<number>(table?.tipPercentage ?? 0);
   const [customTip, setCustomTip] = useState<number | ''>('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('efectivo');
-  const [cashReceived, setCashReceived] = useState<number | ''>(0);
+  const [cashReceived, setCashReceived] = useState<number | ''>('');
   const [voucherReference, setVoucherReference] = useState('');
   const [clientName, setClientName] = useState(initialPatronName);
   const [clientDocument, setClientDocument] = useState('');
+  const [hasAttemptedPay, setHasAttemptedPay] = useState(false);
 
   // Mixed payment states
   const [mixedCashAmount, setMixedCashAmount] = useState<number | ''>('');
@@ -68,10 +70,25 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
   const handleQuickCash = (amount: number) => {
     setCashReceived(amount);
+    setHasAttemptedPay(false);
   };
 
   const handleExactCash = () => {
     setCashReceived(grandTotal);
+    setHasAttemptedPay(false);
+  };
+
+  const isPaymentValid = () => {
+    if (items.length === 0) return false;
+    if (paymentMethod === 'efectivo') {
+      return numCash >= grandTotal && numCash > 0;
+    }
+    if (paymentMethod === 'mixto') {
+      const numMixedCash = Number(mixedCashAmount) || 0;
+      const numMixedCard = Number(mixedCardAmount) || 0;
+      return (numMixedCash + numMixedCard) >= grandTotal;
+    }
+    return true; // Tarjeta / Datáfono y QR / Transferencia cubren el total
   };
 
   const handleConfirm = () => {
@@ -80,16 +97,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       return;
     }
 
-    if (paymentMethod === 'efectivo' && numCash < grandTotal) {
-      if (
-        !window.confirm(
-          `El efectivo recibido (${formatCurrency(numCash)}) es menor al total (${formatCurrency(
-            grandTotal
-          )}). ¿Deseas continuar?`
-        )
-      ) {
-        return;
-      }
+    // Si el pago no está completo, activamos los anuncios en rojo y bloqueamos
+    if (!isPaymentValid()) {
+      setHasAttemptedPay(true);
+      return;
     }
 
     const saleRecord: SaleRecord = {
@@ -247,7 +258,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               <button
                 type="button"
                 className={`pm-btn ${paymentMethod === 'efectivo' ? 'active' : ''}`}
-                onClick={() => setPaymentMethod('efectivo')}
+                onClick={() => {
+                  setPaymentMethod('efectivo');
+                  setHasAttemptedPay(false);
+                }}
               >
                 <Banknote size={20} />
                 <span>Efectivo</span>
@@ -256,7 +270,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               <button
                 type="button"
                 className={`pm-btn ${paymentMethod === 'tarjeta' ? 'active' : ''}`}
-                onClick={() => setPaymentMethod('tarjeta')}
+                onClick={() => {
+                  setPaymentMethod('tarjeta');
+                  setHasAttemptedPay(false);
+                }}
               >
                 <CreditCard size={20} />
                 <span>Datáfono / Tarjeta</span>
@@ -265,7 +282,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               <button
                 type="button"
                 className={`pm-btn ${paymentMethod === 'transferencia' ? 'active' : ''}`}
-                onClick={() => setPaymentMethod('transferencia')}
+                onClick={() => {
+                  setPaymentMethod('transferencia');
+                  setHasAttemptedPay(false);
+                }}
               >
                 <QrCode size={20} />
                 <span>QR / Transferencia</span>
@@ -274,7 +294,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               <button
                 type="button"
                 className={`pm-btn ${paymentMethod === 'mixto' ? 'active' : ''}`}
-                onClick={() => setPaymentMethod('mixto')}
+                onClick={() => {
+                  setPaymentMethod('mixto');
+                  setHasAttemptedPay(false);
+                }}
               >
                 <Layers size={20} />
                 <span>Pago Dividido</span>
@@ -293,10 +316,12 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                       step="500"
                       min="0"
                       value={cashReceived}
-                      onChange={(e) =>
-                        setCashReceived(e.target.value === '' ? '' : parseFloat(e.target.value))
-                      }
-                      className="cash-input-large"
+                      onChange={(e) => {
+                        setCashReceived(e.target.value === '' ? '' : parseFloat(e.target.value));
+                        if (hasAttemptedPay) setHasAttemptedPay(false);
+                      }}
+                      className={`cash-input-large ${hasAttemptedPay && numCash < grandTotal ? 'input-error animate-shake' : ''}`}
+                      placeholder={grandTotal.toString()}
                       autoFocus
                     />
                   </div>
@@ -337,18 +362,38 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 {/* Change or Shortage Display */}
                 <div
                   className={`change-result-box ${
-                    numCash >= grandTotal ? 'box-change' : numCash > 0 ? 'box-shortage' : ''
+                    numCash >= grandTotal
+                      ? 'box-change'
+                      : (hasAttemptedPay && numCash < grandTotal) || (numCash > 0 && numCash < grandTotal)
+                      ? 'box-shortage'
+                      : ''
                   }`}
                 >
                   {numCash >= grandTotal ? (
                     <div>
-                      <span className="change-lbl">CAMBIO / VUELTOS A ENTREGAR:</span>
+                      <span className="change-lbl">PAGO CUBIERTO — CAMBIO / VUELTOS A ENTREGAR:</span>
                       <span className="change-val">{formatCurrency(changeGiven)}</span>
                     </div>
+                  ) : hasAttemptedPay && numCash === 0 ? (
+                    <div className="payment-alert-card animate-shake">
+                      <div className="alert-badge-row">
+                        <AlertCircle size={15} className="alert-icon-warning" />
+                        <span>Falta ingresar el dinero recibido</span>
+                      </div>
+                      <p className="alert-desc">
+                        Digita el efectivo entregado por el cliente o pulsa <strong>Exacto ({formatCurrency(grandTotal)})</strong>.
+                      </p>
+                    </div>
                   ) : numCash > 0 ? (
-                    <div>
-                      <span className="short-lbl">Faltante por cubrir:</span>
-                      <span className="short-val">{formatCurrency(cashShortage)}</span>
+                    <div className="payment-alert-card">
+                      <div className="alert-badge-row">
+                        <AlertCircle size={15} className="alert-icon-warning" />
+                        <span>{hasAttemptedPay ? 'Efectivo insuficiente' : 'Faltante por cubrir'}</span>
+                      </div>
+                      <div className="alert-amount-row">
+                        <span>Faltante por cobrar:</span>
+                        <span className="alert-missing-val">{formatCurrency(grandTotal - numCash)}</span>
+                      </div>
                     </div>
                   ) : (
                     <div>
@@ -411,9 +456,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   <input
                     type="number"
                     value={mixedCashAmount}
-                    onChange={(e) =>
-                      setMixedCashAmount(e.target.value === '' ? '' : parseFloat(e.target.value))
-                    }
+                    onChange={(e) => {
+                      setMixedCashAmount(e.target.value === '' ? '' : parseFloat(e.target.value));
+                      if (hasAttemptedPay) setHasAttemptedPay(false);
+                    }}
                     className="form-input"
                     placeholder="0"
                   />
@@ -424,9 +470,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   <input
                     type="number"
                     value={mixedCardAmount}
-                    onChange={(e) =>
-                      setMixedCardAmount(e.target.value === '' ? '' : parseFloat(e.target.value))
-                    }
+                    onChange={(e) => {
+                      setMixedCardAmount(e.target.value === '' ? '' : parseFloat(e.target.value));
+                      if (hasAttemptedPay) setHasAttemptedPay(false);
+                    }}
                     className="form-input"
                     placeholder="0"
                   />
@@ -442,6 +489,45 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                     className="form-input"
                   />
                 </div>
+
+                {/* Mixed status calculation */}
+                {(((Number(mixedCashAmount) || 0) + (Number(mixedCardAmount) || 0) > 0) || hasAttemptedPay) && (
+                  <div
+                    className={`change-result-box ${
+                      (Number(mixedCashAmount) || 0) + (Number(mixedCardAmount) || 0) >= grandTotal
+                        ? 'box-change'
+                        : 'box-shortage'
+                    }`}
+                    style={{ marginTop: '0.65rem' }}
+                  >
+                    {(Number(mixedCashAmount) || 0) + (Number(mixedCardAmount) || 0) >= grandTotal ? (
+                      <div>
+                        <span className="change-lbl">PAGO DIVIDIDO CUBIERTO:</span>
+                        <span className="change-val">
+                          {formatCurrency(
+                            (Number(mixedCashAmount) || 0) + (Number(mixedCardAmount) || 0)
+                          )}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className={`payment-alert-card ${hasAttemptedPay ? 'animate-shake' : ''}`}>
+                        <div className="alert-badge-row">
+                          <AlertCircle size={15} className="alert-icon-warning" />
+                          <span>Monto dividido insuficiente</span>
+                        </div>
+                        <div className="alert-amount-row">
+                          <span>Faltante por cubrir:</span>
+                          <span className="alert-missing-val">
+                            {formatCurrency(
+                              grandTotal -
+                                ((Number(mixedCashAmount) || 0) + (Number(mixedCardAmount) || 0))
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -455,6 +541,12 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 <CheckCircle2 size={18} />
                 <span>Confirmar Pago & Cerrar Cuenta</span>
               </button>
+              {hasAttemptedPay && !isPaymentValid() && (
+                <div className="payment-blocked-notice animate-shake">
+                  <AlertCircle size={14} className="alert-icon-warning" />
+                  <span>Por favor registra el pago completo antes de cerrar la cuenta</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

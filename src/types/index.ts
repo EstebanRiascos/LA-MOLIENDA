@@ -17,6 +17,8 @@ export interface Product {
   cost: number; // Costo base de insumos
   stock: number; // Cantidad disponible
   minStock: number; // Umbral de alerta de stock bajo
+  reservedStock?: number; // Cantidad seleccionada en comandas activas o mesas
+  originalStock?: number; // Stock base en bodega
   unit: 'unidad' | 'copa' | 'botella' | 'porción' | 'trago';
   image: string; // URL o base64
   available: boolean;
@@ -55,6 +57,11 @@ export interface Table {
   tipPercentage?: number; // 0, 10, 15
   tipAmount?: number;
   total: number;
+  // Propiedades opcionales para el Plano 3D / Arquitectónico
+  posX?: number; // Coordenada X porcentual (0 - 100)
+  posY?: number; // Coordenada Y porcentual (0 - 100)
+  rotation?: number; // Ángulo de rotación en grados (ej: 0, 45, 90)
+  shape?: 'square' | 'round' | 'bar' | 'booth';
 }
 
 export type PaymentMethod = 'efectivo' | 'tarjeta' | 'transferencia' | 'mixto';

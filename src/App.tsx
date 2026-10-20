@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Product, Table, TableZone, SaleRecord, OrderItem, SystemStats } from './types';
 import {
   getStoredProducts,
@@ -23,6 +23,7 @@ import { TablesView } from './components/TablesView';
 import { PosView } from './components/PosView';
 import { InventoryView } from './components/InventoryView';
 import { SalesHistoryView } from './components/SalesHistoryView';
+import { AmbientBackgroundCanvas } from './components/AmbientBackgroundCanvas';
 
 import { TableDetailModal } from './components/TableDetailModal';
 import { PaymentModal } from './components/PaymentModal';
@@ -94,6 +95,39 @@ export const App: React.FC = () => {
   const [isTableFormOpen, setIsTableFormOpen] = useState(false);
   const [editingTable, setEditingTable] = useState<Table | null>(null);
 
+  // POS active comanda state (preserved across tab navigation)
+  const [posCartItems, setPosCartItems] = useState<OrderItem[]>([]);
+  const [posTargetTableId, setPosTargetTableId] = useState<string>('direct_takeaway');
+  const [posTipPercentage, setPosTipPercentage] = useState<number>(0);
+  const [posPatronNote, setPosPatronNote] = useState<string>('');
+
+  // Sincronización en tiempo real del inventario con las selecciones del POS y mesas abiertas
+  const synchronizedProducts = useMemo(() => {
+    return products.map((prod) => {
+      // 1. Unidades seleccionadas en la comanda activa del POS
+      const inCart = posCartItems
+        .filter((i) => i.productId === prod.id)
+        .reduce((sum, i) => sum + i.quantity, 0);
+
+      // 2. Unidades seleccionadas / servidas en mesas no libres
+      const inTables = tables
+        .filter((t) => t.status !== 'libre')
+        .flatMap((t) => t.items)
+        .filter((i) => i.productId === prod.id)
+        .reduce((sum, i) => sum + i.quantity, 0);
+
+      const reserved = inCart + inTables;
+      const currentStock = Math.max(0, prod.stock - reserved);
+
+      return {
+        ...prod,
+        stock: currentStock,
+        originalStock: prod.stock,
+        reservedStock: reserved,
+      };
+    });
+  }, [products, posCartItems, tables]);
+
   // Theme synchronization
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -119,7 +153,7 @@ export const App: React.FC = () => {
   };
 
   // System Stats live calculation
-  const stats: SystemStats = calculateSystemStats(tables, sales, products);
+  const stats: SystemStats = calculateSystemStats(tables, sales, synchronizedProducts);
 
   // --- TABLE OPERATIONS ---
   const handleOpenNewTableForm = () => {
@@ -215,7 +249,7 @@ export const App: React.FC = () => {
             capacity: pax,
             items: [],
             subtotal: 0,
-            tipPercentage: 10,
+            tipPercentage: 0,
             tipAmount: 0,
             total: 0,
           }
@@ -236,6 +270,11 @@ export const App: React.FC = () => {
   const handleSelectTable = (table: Table) => {
     setActiveTableDetail(table);
     setIsTableDetailOpen(true);
+  };
+
+  const handleUpdateAllTables = (updatedTables: Table[]) => {
+    setTables(updatedTables);
+    saveStoredTables(updatedTables);
   };
 
   const handleUpdateTable = (updatedTable: Table) => {
@@ -279,7 +318,7 @@ export const App: React.FC = () => {
           waiter: undefined,
           items: [],
           subtotal: 0,
-          tipPercentage: 10,
+          tipPercentage: 0,
           tipAmount: 0,
           total: 0,
         };
@@ -359,7 +398,7 @@ export const App: React.FC = () => {
               waiter: undefined,
               items: [],
               subtotal: 0,
-              tipPercentage: 10,
+              tipPercentage: 0,
               tipAmount: 0,
               total: 0,
             }
@@ -367,6 +406,10 @@ export const App: React.FC = () => {
       );
       setTables(updatedTables);
       saveStoredTables(updatedTables);
+    } else {
+      setPosCartItems([]);
+      setPosPatronNote('');
+      setPosTipPercentage(0);
     }
 
     // 4. Close payment modal & Open Receipt for Printing
@@ -397,7 +440,8 @@ export const App: React.FC = () => {
         });
 
         const subtotal = mergedItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
-        const tipAmount = Math.round(subtotal * ((t.tipPercentage || 10) / 100));
+        const tipPercent = t.tipPercentage ?? 0;
+        const tipAmount = Math.round(subtotal * (tipPercent / 100));
         const total = subtotal + tipAmount;
 
         return {
@@ -416,6 +460,9 @@ export const App: React.FC = () => {
 
     setTables(updated);
     saveStoredTables(updated);
+    setPosCartItems([]);
+    setPosPatronNote('');
+    setPosTipPercentage(0);
   };
 
   // --- INVENTORY OPERATIONS ---
@@ -430,13 +477,26 @@ export const App: React.FC = () => {
   };
 
   const handleSaveProduct = (prod: Product) => {
+    const inCart = posCartItems
+      .filter((i) => i.productId === prod.id)
+      .reduce((sum, i) => sum + i.quantity, 0);
+    const inTables = tables
+      .filter((t) => t.status !== 'libre')
+      .flatMap((t) => t.items)
+      .filter((i) => i.productId === prod.id)
+      .reduce((sum, i) => sum + i.quantity, 0);
+    const reserved = inCart + inTables;
+
+    const baseStockToSave = Math.max(0, (Number(prod.stock) || 0) + reserved);
+    const prodToSave = { ...prod, stock: baseStockToSave };
+
     let updated: Product[];
     const exists = products.some((p) => p.id === prod.id);
     if (exists) {
-      updated = products.map((p) => (p.id === prod.id ? prod : p));
+      updated = products.map((p) => (p.id === prod.id ? prodToSave : p));
       showNotification(`Producto "${prod.name}" actualizado.`);
     } else {
-      updated = [prod, ...products];
+      updated = [prodToSave, ...products];
       showNotification(`Nuevo producto "${prod.name}" registrado en catálogo.`);
     }
     setProducts(updated);
@@ -461,11 +521,31 @@ export const App: React.FC = () => {
     saveStoredProducts(updated);
   };
 
+  const handleQuickUpdateCost = (productId: string, newCost: number) => {
+    const updated = products.map((p) => (p.id === productId ? { ...p, cost: newCost } : p));
+    setProducts(updated);
+    saveStoredProducts(updated);
+  };
+
   const handleQuickAdjustStock = (productId: string, delta: number) => {
+    const inCart = posCartItems
+      .filter((i) => i.productId === productId)
+      .reduce((sum, i) => sum + i.quantity, 0);
+    const inTables = tables
+      .filter((t) => t.status !== 'libre')
+      .flatMap((t) => t.items)
+      .filter((i) => i.productId === productId)
+      .reduce((sum, i) => sum + i.quantity, 0);
+    const reserved = inCart + inTables;
+
     const updated = products.map((p) => {
       if (p.id === productId) {
-        const newStock = Math.max(0, p.stock + delta);
-        return { ...p, stock: newStock };
+        // Stock disponible actual en pantalla
+        const currentAvailable = Math.max(0, p.stock - reserved);
+        const newAvailable = Math.max(0, currentAvailable + delta);
+        // El stock físico en almacén debe ser el nuevo disponible + las unidades ya en curso
+        const newPhysicalStock = newAvailable + reserved;
+        return { ...p, stock: newPhysicalStock };
       }
       return p;
     });
@@ -497,6 +577,9 @@ export const App: React.FC = () => {
 
   return (
     <div className="app-container">
+      {/* Multi-logo ambient background canvas across the entire system */}
+      <AmbientBackgroundCanvas />
+
       {/* Header */}
       <Header
         theme={theme}
@@ -532,14 +615,14 @@ export const App: React.FC = () => {
           <div key="mesas" className={`view-slider-container ${slideDirection === 'right' ? 'slide-from-right' : 'slide-from-left'}`}>
             <TablesView
               tables={tables}
-              products={products}
+              products={synchronizedProducts}
               onSelectTable={handleSelectTable}
               onOpenTable={(t) => handleOpenTableModal(t)}
               onPreBill={handlePreBill}
               onCheckout={handleCheckoutTable}
               onTransferTable={handleTransferTable}
               onQuickAddItem={(tableId, prodId) => {
-                const prod = products.find((p) => p.id === prodId);
+                const prod = synchronizedProducts.find((p) => p.id === prodId);
                 if (prod) {
                   handleAddItemsToTable(tableId, [
                     {
@@ -557,6 +640,7 @@ export const App: React.FC = () => {
               onOpenNewTableForm={handleOpenNewTableForm}
               onEditTableForm={handleEditTableForm}
               onDeleteTable={handleDeleteTable}
+              onUpdateTables={handleUpdateAllTables}
             />
           </div>
         )}
@@ -565,11 +649,19 @@ export const App: React.FC = () => {
         {activeSection === 'pos' && (
           <div key="pos" className={`view-slider-container ${slideDirection === 'right' ? 'slide-from-right' : 'slide-from-left'}`}>
             <PosView
-              products={products}
+              products={synchronizedProducts}
               tables={tables}
               onAddItemsToTable={handleAddItemsToTable}
               onDirectSaleCheckout={handleDirectSaleCheckout}
               onShowNotification={showNotification}
+              cartItems={posCartItems}
+              setCartItems={setPosCartItems}
+              targetTableId={posTargetTableId}
+              setTargetTableId={setPosTargetTableId}
+              tipPercentage={posTipPercentage}
+              setTipPercentage={setPosTipPercentage}
+              patronNote={posPatronNote}
+              setPatronNote={setPosPatronNote}
             />
           </div>
         )}
@@ -578,11 +670,12 @@ export const App: React.FC = () => {
         {activeSection === 'inventario' && (
           <div key="inventario" className={`view-slider-container ${slideDirection === 'right' ? 'slide-from-right' : 'slide-from-left'}`}>
             <InventoryView
-              products={products}
+              products={synchronizedProducts}
               onOpenNewProduct={handleOpenNewProduct}
               onEditProduct={handleEditProduct}
               onDeleteProduct={handleDeleteProduct}
               onQuickUpdatePrice={handleQuickUpdatePrice}
+              onQuickUpdateCost={handleQuickUpdateCost}
               onQuickAdjustStock={handleQuickAdjustStock}
               onShowNotification={showNotification}
             />
@@ -608,7 +701,7 @@ export const App: React.FC = () => {
       <TableDetailModal
         isOpen={isTableDetailOpen}
         table={activeTableDetail}
-        products={products}
+        products={synchronizedProducts}
         onClose={() => setIsTableDetailOpen(false)}
         onUpdateTable={handleUpdateTable}
         onOpenCheckout={handleCheckoutTable}

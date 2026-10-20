@@ -204,7 +204,7 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
               <span className="btn-text-primary-action">Nuevo Producto</span>
             </button>
-          ) : (
+          ) : activeSection === 'mesas' ? null : (
             <button
               type="button"
               className="btn-header-action btn-header-primary"

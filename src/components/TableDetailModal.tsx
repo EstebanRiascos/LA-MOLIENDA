@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   X,
   Plus,
@@ -52,8 +52,28 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
   const [editingNoteItemId, setEditingNoteItemId] = useState<string | null>(null);
   const [tempNoteText, setTempNoteText] = useState('');
 
+  // Horizontal scroll with mouse wheel for category chips
+  const categoryChipsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = categoryChipsRef.current;
+    if (!el) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        el.scrollLeft += e.deltaY;
+      }
+    };
+
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      el.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
+
   // Recalculate totals helper
-  const recalculateTable = (items: OrderItem[], tipPercent: number = table.tipPercentage ?? 10): Table => {
+  const recalculateTable = (items: OrderItem[], tipPercent: number = table.tipPercentage ?? 0): Table => {
     const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
     const tipAmount = Math.round(subtotal * (tipPercent / 100));
     const total = subtotal + tipAmount;
@@ -376,7 +396,7 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
                   <div className="tip-toggle-pills">
                     <button
                       type="button"
-                      className={`tip-btn ${table.tipPercentage === 0 ? 'active' : ''}`}
+                      className={`tip-btn ${(table.tipPercentage ?? 0) === 0 ? 'active' : ''}`}
                       onClick={() => handleToggleTip(0)}
                     >
                       0%
@@ -455,9 +475,12 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
           {/* RIGHT PANEL: VISUAL MENU TO ADD ITEMS TO TABLE */}
           <div className="menu-picker-column">
             <div className="menu-picker-header">
-              <span className="picker-title">Añadir al Pedido</span>
+              <div className="picker-title-box">
+                <span className="picker-title">Añadir al Pedido</span>
+                <span className="picker-count-badge">{filteredProducts.length}</span>
+              </div>
               <div className="picker-search">
-                <Search size={14} className="search-icon" />
+                <Search size={14} className="picker-search-icon" />
                 <input
                   type="text"
                   placeholder="Buscar café, cóctel, postre..."
@@ -468,8 +491,8 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
               </div>
             </div>
 
-            {/* Category Filter Chips */}
-            <div className="picker-category-chips">
+            {/* Category Filter Chips with visual slider */}
+            <div className="picker-category-chips" ref={categoryChipsRef}>
               <button
                 type="button"
                 className={`category-chip ${selectedCategory === 'all' ? 'active' : ''}`}
@@ -499,7 +522,16 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
                   title={`Agregar ${prod.name} (${formatCurrency(prod.price)})`}
                 >
                   <div className="picker-img-wrapper">
-                    <img src={prod.image} alt={prod.name} className="picker-product-img" />
+                    <img
+                      src={prod.image}
+                      alt={prod.name}
+                      className="picker-product-img"
+                      loading="lazy"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src =
+                          'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=600&q=80';
+                      }}
+                    />
                     <span className="picker-price-tag">
                       <span className="picker-price-currency">$</span>
                       <span className="picker-price-val">{(prod.price || 0).toLocaleString('es-CO')}</span>

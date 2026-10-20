@@ -221,7 +221,7 @@ export const DEFAULT_PRODUCTS: Product[] = [
     stock: 22,
     minStock: 6,
     unit: 'copa',
-    image: 'https://images.unsplash.com/photo-1574056067201-ac83dca60944?auto=format&fit=crop&w=600&q=80',
+    image: 'https://images.unsplash.com/photo-1545438102-799c3991ffb2?auto=format&fit=crop&w=600&q=80',
     available: true,
   },
   {
@@ -265,7 +265,7 @@ export const DEFAULT_PRODUCTS: Product[] = [
     stock: 44,
     minStock: 12,
     unit: 'copa',
-    image: 'https://images.unsplash.com/photo-1608278243343-7f212285a73e?auto=format&fit=crop&w=600&q=80',
+    image: 'https://images.unsplash.com/photo-1608276664640-ea6541f486a4?auto=format&fit=crop&w=600&q=80',
     available: true,
   },
   {
@@ -279,7 +279,7 @@ export const DEFAULT_PRODUCTS: Product[] = [
     stock: 58,
     minStock: 15,
     unit: 'botella',
-    image: 'https://images.unsplash.com/photo-1608278243343-7f212285a73e?auto=format&fit=crop&w=600&q=80',
+    image: 'https://images.unsplash.com/photo-1535958636474-b021ee887b13?auto=format&fit=crop&w=600&q=80',
     available: true,
   },
   {
@@ -433,22 +433,22 @@ export const DEFAULT_PRODUCTS: Product[] = [
 ];
 
 export const DEFAULT_TABLES: Table[] = [
-  // --- SALÓN PRINCIPAL (10 MESAS) ---
-  { id: 'tbl-salon-1', number: 'Mesa 01', zone: 'salon', capacity: 2, status: 'libre', items: [], subtotal: 0, total: 0 },
-  { id: 'tbl-salon-2', number: 'Mesa 02', zone: 'salon', capacity: 4, status: 'libre', items: [], subtotal: 0, total: 0 },
-  { id: 'tbl-salon-3', number: 'Mesa 03', zone: 'salon', capacity: 4, status: 'libre', items: [], subtotal: 0, total: 0 },
-  { id: 'tbl-salon-4', number: 'Mesa 04', zone: 'salon', capacity: 6, status: 'libre', items: [], subtotal: 0, total: 0 },
-  { id: 'tbl-salon-5', number: 'Mesa 05', zone: 'salon', capacity: 2, status: 'libre', items: [], subtotal: 0, total: 0 },
-  { id: 'tbl-salon-6', number: 'Mesa 06', zone: 'salon', capacity: 4, status: 'libre', items: [], subtotal: 0, total: 0 },
-  { id: 'tbl-salon-7', number: 'Mesa 07', zone: 'salon', capacity: 4, status: 'libre', items: [], subtotal: 0, total: 0 },
-  { id: 'tbl-salon-8', number: 'Mesa 08', zone: 'salon', capacity: 4, status: 'libre', items: [], subtotal: 0, total: 0 },
-  { id: 'tbl-salon-9', number: 'Mesa 09', zone: 'salon', capacity: 6, status: 'libre', items: [], subtotal: 0, total: 0 },
-  { id: 'tbl-salon-10', number: 'Mesa 10', zone: 'salon', capacity: 4, status: 'libre', items: [], subtotal: 0, total: 0 },
+  // --- SALÓN PRINCIPAL (8 Mesas Cuadradas a 45° + 1 Hacia Baños + 1 Lounge Booth) ---
+  { id: 'tbl-salon-1', number: 'Mesa 01', zone: 'salon', capacity: 4, status: 'libre', items: [], subtotal: 0, tipPercentage: 0, tipAmount: 0, total: 0, posX: 26, posY: 56, rotation: 45, shape: 'square' },
+  { id: 'tbl-salon-2', number: 'Mesa 02', zone: 'salon', capacity: 4, status: 'libre', items: [], subtotal: 0, tipPercentage: 0, tipAmount: 0, total: 0, posX: 35, posY: 46, rotation: 45, shape: 'square' },
+  { id: 'tbl-salon-3', number: 'Mesa 03', zone: 'salon', capacity: 4, status: 'libre', items: [], subtotal: 0, tipPercentage: 0, tipAmount: 0, total: 0, posX: 34, posY: 64, rotation: 45, shape: 'square' },
+  { id: 'tbl-salon-4', number: 'Mesa 04', zone: 'salon', capacity: 4, status: 'libre', items: [], subtotal: 0, tipPercentage: 0, tipAmount: 0, total: 0, posX: 45, posY: 46, rotation: 45, shape: 'square' },
+  { id: 'tbl-salon-5', number: 'Mesa 05', zone: 'salon', capacity: 4, status: 'libre', items: [], subtotal: 0, tipPercentage: 0, tipAmount: 0, total: 0, posX: 44, posY: 63, rotation: 45, shape: 'square' },
+  { id: 'tbl-salon-6', number: 'Mesa 06', zone: 'salon', capacity: 4, status: 'libre', items: [], subtotal: 0, tipPercentage: 0, tipAmount: 0, total: 0, posX: 53, posY: 34, rotation: 45, shape: 'square' },
+  { id: 'tbl-salon-7', number: 'Mesa 07', zone: 'salon', capacity: 4, status: 'libre', items: [], subtotal: 0, tipPercentage: 0, tipAmount: 0, total: 0, posX: 54, posY: 48, rotation: 45, shape: 'square' },
+  { id: 'tbl-salon-8', number: 'Mesa 08', zone: 'salon', capacity: 4, status: 'libre', items: [], subtotal: 0, tipPercentage: 0, tipAmount: 0, total: 0, posX: 64, posY: 43, rotation: 45, shape: 'square' },
+  { id: 'tbl-salon-9', number: 'Mesa 09', zone: 'salon', capacity: 4, status: 'libre', items: [], subtotal: 0, tipPercentage: 0, tipAmount: 0, total: 0, posX: 64, posY: 58, rotation: 45, shape: 'round' },
+  { id: 'tbl-salon-10', number: 'Mesa 10 (Lounge)', zone: 'salon', capacity: 6, status: 'libre', items: [], subtotal: 0, tipPercentage: 0, tipAmount: 0, total: 0, posX: 24, posY: 77, rotation: 0, shape: 'booth' },
 
-  // --- BARRA CAFÉ & COCTELERÍA (3 BARRAS) ---
-  { id: 'tbl-barra-1', number: 'Barra B1', zone: 'barra', capacity: 2, status: 'libre', items: [], subtotal: 0, total: 0 },
-  { id: 'tbl-barra-2', number: 'Barra B2', zone: 'barra', capacity: 2, status: 'libre', items: [], subtotal: 0, total: 0 },
-  { id: 'tbl-barra-3', number: 'Barra B3', zone: 'barra', capacity: 2, status: 'libre', items: [], subtotal: 0, total: 0 },
+  // --- BARRAS & COUNTERS DEL PLANO ---
+  { id: 'tbl-barra-1', number: 'Barra Cerveza', zone: 'barra', capacity: 5, status: 'libre', items: [], subtotal: 0, tipPercentage: 0, tipAmount: 0, total: 0, posX: 31, posY: 32, rotation: 18, shape: 'bar' },
+  { id: 'tbl-barra-2', number: 'Barra Vinos & Café', zone: 'barra', capacity: 5, status: 'libre', items: [], subtotal: 0, tipPercentage: 0, tipAmount: 0, total: 0, posX: 46, posY: 24, rotation: 18, shape: 'bar' },
+  { id: 'tbl-barra-3', number: 'Barra Cocineta', zone: 'barra', capacity: 3, status: 'libre', items: [], subtotal: 0, tipPercentage: 0, tipAmount: 0, total: 0, posX: 58, posY: 22, rotation: -20, shape: 'bar' },
 ];
 
 export const DEFAULT_SALES: SaleRecord[] = [];

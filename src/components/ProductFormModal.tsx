@@ -210,7 +210,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   <div className="form-group">
                     <label className="form-label">Costo Insumo / Preparación ($)</label>
                     <div className="price-input-wrapper">
-                      <span className="price-prefix">$</span>
+                      <span className="price-prefix cost-prefix">$</span>
                       <input
                         type="number"
                         min="0"
@@ -219,7 +219,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         onChange={(e) =>
                           setCost(e.target.value === '' ? '' : parseFloat(e.target.value))
                         }
-                        className="form-input"
+                        className="form-input cost-input-highlight"
                         placeholder="0"
                       />
                     </div>
@@ -309,7 +309,12 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   alt={name || 'Vista previa'}
                   className="preview-img"
                 />
-                <div className="preview-price-overlay">
+                <div className="preview-cost-overlay" title="Costo Insumo / Preparación">
+                  <span className="preview-cost-label">Costo Insumo:</span>
+                  <span className="preview-cost-currency">$</span>
+                  <span className="preview-cost-val">{(numCost || 0).toLocaleString('es-CO')}</span>
+                </div>
+                <div className="preview-price-overlay" title="Precio de Venta al Público">
                   <span className="preview-price-currency">$</span>
                   <span className="preview-price-val">{(numPrice || 0).toLocaleString('es-CO')}</span>
                 </div>

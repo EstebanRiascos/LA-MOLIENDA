@@ -2,7 +2,7 @@ import { Product, Table, SaleRecord, SystemStats } from '../types';
 import { DEFAULT_PRODUCTS, DEFAULT_TABLES, DEFAULT_SALES } from './defaults';
 
 const STORAGE_KEY_PRODUCTS = 'lamolienda_products_prod_v2';
-const STORAGE_KEY_TABLES = 'lamolienda_tables_prod_v3';
+const STORAGE_KEY_TABLES = 'lamolienda_tables_prod_v4';
 const STORAGE_KEY_SALES = 'lamolienda_sales_prod_v2';
 const STORAGE_KEY_THEME = 'lamolienda_theme_v1';
 const STORAGE_KEY_STAFF = 'lamolienda_current_staff_v1';
@@ -21,6 +21,7 @@ export function resetAllDataToProduction(): void {
     localStorage.removeItem('lamolienda_sales_v1');
     localStorage.removeItem('lamolienda_products_v1');
     localStorage.removeItem('lamolienda_tables_prod_v2');
+    localStorage.removeItem('lamolienda_tables_prod_v3');
     localStorage.removeItem(STORAGE_KEY_TABLES);
     localStorage.removeItem(STORAGE_KEY_SALES);
     localStorage.removeItem(STORAGE_KEY_PRODUCTS);
@@ -37,12 +38,20 @@ export function getStoredProducts(): Product[] {
       saveStoredProducts(DEFAULT_PRODUCTS);
       return DEFAULT_PRODUCTS;
     }
-    const parsed = JSON.parse(raw);
+    const parsed: Product[] = JSON.parse(raw);
     if (!Array.isArray(parsed) || parsed.length === 0) {
       saveStoredProducts(DEFAULT_PRODUCTS);
       return DEFAULT_PRODUCTS;
     }
-    return parsed;
+    // Reconcile and heal any broken/outdated image URLs
+    const healed = parsed.map((p) => {
+      const def = DEFAULT_PRODUCTS.find((d) => d.id === p.id);
+      if (def && (!p.image || p.image.includes('1574056067201') || p.image.includes('1608278243343'))) {
+        return { ...p, image: def.image };
+      }
+      return p;
+    });
+    return healed;
   } catch (err) {
     console.error('Error loading products from storage:', err);
     return DEFAULT_PRODUCTS;
@@ -65,12 +74,27 @@ export function getStoredTables(): Table[] {
       saveStoredTables(DEFAULT_TABLES);
       return DEFAULT_TABLES;
     }
-    const parsed = JSON.parse(raw);
+    const parsed: Table[] = JSON.parse(raw);
     if (!Array.isArray(parsed) || parsed.length === 0) {
       saveStoredTables(DEFAULT_TABLES);
       return DEFAULT_TABLES;
     }
-    return parsed;
+
+    // Asegurar que cada mesa tenga coordenadas y propiedades del plano
+    const synchronized = parsed.map((t, idx) => {
+      const defaultMatch = DEFAULT_TABLES.find((d) => d.id === t.id);
+      return {
+        ...t,
+        tipPercentage: t.tipPercentage ?? 0,
+        tipAmount: t.tipAmount ?? 0,
+        posX: t.posX ?? defaultMatch?.posX ?? 25 + ((idx * 15) % 60),
+        posY: t.posY ?? defaultMatch?.posY ?? 40 + Math.floor(idx / 4) * 15,
+        rotation: t.rotation ?? defaultMatch?.rotation ?? 0,
+        shape: t.shape ?? defaultMatch?.shape ?? 'square',
+      };
+    });
+
+    return synchronized;
   } catch (err) {
     console.error('Error loading tables from storage:', err);
     return DEFAULT_TABLES;

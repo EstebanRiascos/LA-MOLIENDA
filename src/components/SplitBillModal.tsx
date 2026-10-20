@@ -19,10 +19,11 @@ export const SplitBillModal: React.FC<SplitBillModalProps> = ({
   if (!isOpen || !table) return null;
 
   const [numPeople, setNumPeople] = useState<number>(table.capacity || 2);
-  const [includeTip, setIncludeTip] = useState(true);
+  const [includeTip, setIncludeTip] = useState(Boolean(table.tipPercentage && table.tipPercentage > 0));
 
+  const tipRatePercent = table.tipPercentage && table.tipPercentage > 0 ? table.tipPercentage : 10;
   const subtotal = table.subtotal;
-  const tipAmount = includeTip ? Math.round(subtotal * 0.1) : 0;
+  const tipAmount = includeTip ? Math.round(subtotal * (tipRatePercent / 100)) : 0;
   const grandTotal = subtotal + tipAmount;
 
   const subtotalPerPerson = numPeople > 0 ? Math.round(subtotal / numPeople) : 0;
@@ -75,7 +76,7 @@ Monto por persona: ${formatCurrency(totalPerPerson)} (Consumo: ${formatCurrency(
                 checked={includeTip}
                 onChange={(e) => setIncludeTip(e.target.checked)}
               />
-              <span>Incluir 10% Propina</span>
+              <span>Incluir {tipRatePercent}% Propina</span>
             </label>
           </div>
 
