@@ -107,3 +107,18 @@ export interface CashClosingSummary {
   totalSales: number;
   salesCount: number;
 }
+
+export type UserRole = 'admin' | 'cajero' | 'mesero';
+
+export interface SystemUser {
+  id: string;
+  username: string; // ej: "admin"
+  name: string; // ej: "Administrador Principal"
+  role: UserRole;
+  password?: string; // Para administradores o acceso con credenciales
+  pin?: string; // 4 dígitos numéricos para acceso rápido o táctil (ej: "1234")
+  active: boolean;
+  createdAt: string;
+  lastLoginAt?: string;
+}
+

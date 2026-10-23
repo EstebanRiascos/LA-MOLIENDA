@@ -1209,7 +1209,7 @@ export const FloorPlan3DView: React.FC<FloorPlan3DViewProps> = ({
               </div>
               <button
                 type="button"
-                className="hud-close-btn"
+                className="modal-close-btn hud-close-btn"
                 onClick={() => setSelectedTableId(null)}
                 title="Cerrar panel"
               >

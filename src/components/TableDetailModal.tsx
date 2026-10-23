@@ -16,7 +16,7 @@ import {
   Search,
   MessageSquare,
 } from 'lucide-react';
-import { Table, Product, OrderItem, ProductCategory } from '../types';
+import { Table, Product, OrderItem, ProductCategory, UserRole } from '../types';
 import { CATEGORIES } from '../utils/defaults';
 import { formatCurrency } from '../utils/storage';
 
@@ -31,6 +31,7 @@ interface TableDetailModalProps {
   onOpenSplitBill: (table: Table) => void;
   onOpenTransfer: (table: Table) => void;
   onShowNotification: (msg: string) => void;
+  currentUserRole?: UserRole;
 }
 
 export const TableDetailModal: React.FC<TableDetailModalProps> = ({
@@ -44,6 +45,7 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
   onOpenSplitBill,
   onOpenTransfer,
   onShowNotification,
+  currentUserRole,
 }) => {
   if (!isOpen || !table) return null;
 
@@ -224,11 +226,11 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
           <div className="modal-header-actions">
             <button
               type="button"
-              className="btn-icon-subtle"
+              className="modal-close-btn"
               onClick={onClose}
-              title="Cerrar ventana"
+              title="Cerrar comanda"
             >
-              <X size={20} />
+              <X size={18} />
             </button>
           </div>
         </div>
@@ -459,15 +461,18 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
                   <ArrowRightLeft size={15} /> Cambiar Mesa
                 </button>
 
-                <button
-                  type="button"
-                  className="btn-flow-action btn-checkout-main"
-                  onClick={() => onOpenCheckout(table)}
-                  title="Cobrar la cuenta de la mesa y liberar espacio"
-                  disabled={table.items.length === 0}
-                >
-                  <CreditCard size={16} /> Cobrar Cuenta
-                </button>
+                {/* Botón Cobrar (Oculto para Meseros - Cobro exclusivo en Caja) */}
+                {currentUserRole !== 'mesero' && (
+                  <button
+                    type="button"
+                    className="btn-flow-action btn-checkout-main"
+                    onClick={() => onOpenCheckout(table)}
+                    title="Cobrar la cuenta de la mesa y liberar espacio"
+                    disabled={table.items.length === 0}
+                  >
+                    <CreditCard size={16} /> Cobrar Cuenta
+                  </button>
+                )}
               </div>
             </div>
           </div>

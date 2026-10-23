@@ -1,0 +1,253 @@
+import { SystemUser } from '../types';
+
+const STORAGE_KEY_USERS = 'lamolienda_users_prod_v1';
+const STORAGE_KEY_CURRENT_SESSION = 'lamolienda_session_user_v1';
+
+export const DEFAULT_USERS: SystemUser[] = [
+  {
+    id: 'user_admin_01',
+    username: 'admin',
+    name: 'Administrador Principal',
+    role: 'admin',
+    password: 'admin', // Contraseña inicial por defecto
+    pin: '1234',      // PIN rápido de 4 dígitos
+    active: true,
+    createdAt: '2026-01-01T00:00:00.000Z',
+  },
+  {
+    id: 'user_cajero_01',
+    username: 'caja',
+    name: 'Caja General',
+    role: 'cajero',
+    pin: '2222',
+    active: true,
+    createdAt: '2026-01-01T00:00:00.000Z',
+  },
+  {
+    id: 'user_mesero_01',
+    username: 'carlos',
+    name: 'Carlos M. (Barista)',
+    role: 'mesero',
+    pin: '3333',
+    active: true,
+    createdAt: '2026-01-01T00:00:00.000Z',
+  },
+];
+
+/**
+ * Obtener todos los usuarios registrados
+ */
+export function getStoredUsers(): SystemUser[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_USERS);
+    if (!raw) {
+      saveStoredUsers(DEFAULT_USERS);
+      return DEFAULT_USERS;
+    }
+    const parsed: SystemUser[] = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      saveStoredUsers(DEFAULT_USERS);
+      return DEFAULT_USERS;
+    }
+    return parsed;
+  } catch (err) {
+    console.error('Error al cargar usuarios:', err);
+    return DEFAULT_USERS;
+  }
+}
+
+/**
+ * Guardar lista de usuarios en almacenamiento local
+ */
+export function saveStoredUsers(users: SystemUser[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
+  } catch (err) {
+    console.error('Error al guardar usuarios:', err);
+  }
+}
+
+/**
+ * Obtener usuario con sesión activa en este momento
+ */
+export function getStoredSessionUser(): SystemUser | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_CURRENT_SESSION);
+    if (!raw) return null;
+    const user: SystemUser = JSON.parse(raw);
+    // Verificar que el usuario aún exista y esté activo
+    const allUsers = getStoredUsers();
+    const current = allUsers.find((u) => u.id === user.id && u.active);
+    return current || null;
+  } catch (err) {
+    console.error('Error al recuperar sesión:', err);
+    return null;
+  }
+}
+
+/**
+ * Guardar o limpiar sesión activa
+ */
+export function saveStoredSessionUser(user: SystemUser | null): void {
+  try {
+    if (!user) {
+      localStorage.removeItem(STORAGE_KEY_CURRENT_SESSION);
+    } else {
+      localStorage.setItem(STORAGE_KEY_CURRENT_SESSION, JSON.stringify(user));
+    }
+  } catch (err) {
+    console.error('Error al guardar sesión activa:', err);
+  }
+}
+
+/**
+ * Autenticación mediante Usuario y Contraseña (Recomendado para Administrador)
+ */
+export function authenticateWithPassword(
+  usernameInput: string,
+  passwordInput: string
+): { success: boolean; user?: SystemUser; error?: string } {
+  const users = getStoredUsers();
+  const cleanUsername = usernameInput.trim().toLowerCase();
+
+  const found = users.find(
+    (u) => u.username.toLowerCase() === cleanUsername && u.active
+  );
+
+  if (!found) {
+    return { success: false, error: 'Usuario no encontrado o inactivo.' };
+  }
+
+  if (found.password !== passwordInput) {
+    return { success: false, error: 'Contraseña incorrecta.' };
+  }
+
+  // Actualizar lastLoginAt
+  const updatedUser = { ...found, lastLoginAt: new Date().toISOString() };
+  const updatedUsers = users.map((u) => (u.id === found.id ? updatedUser : u));
+  saveStoredUsers(updatedUsers);
+  saveStoredSessionUser(updatedUser);
+
+  return { success: true, user: updatedUser };
+}
+
+/**
+ * Autenticación mediante PIN numérico de 4 dígitos (Meseros, Cajeros y acceso rápido)
+ */
+export function authenticateWithPin(
+  pinInput: string
+): { success: boolean; user?: SystemUser; error?: string } {
+  const users = getStoredUsers();
+  const cleanPin = pinInput.trim();
+
+  if (cleanPin.length !== 4) {
+    return { success: false, error: 'El PIN debe ser exactamente de 4 dígitos.' };
+  }
+
+  const found = users.find((u) => u.pin === cleanPin && u.active);
+
+  if (!found) {
+    return { success: false, error: 'PIN incorrecto o usuario no asignado.' };
+  }
+
+  // Actualizar lastLoginAt
+  const updatedUser = { ...found, lastLoginAt: new Date().toISOString() };
+  const updatedUsers = users.map((u) => (u.id === found.id ? updatedUser : u));
+  saveStoredUsers(updatedUsers);
+  saveStoredSessionUser(updatedUser);
+
+  return { success: true, user: updatedUser };
+}
+
+/**
+ * Cerrar sesión
+ */
+export function logoutSession(): void {
+  saveStoredSessionUser(null);
+}
+
+/**
+ * Actualizar datos de un usuario existente
+ */
+export function updateStoredUser(updated: SystemUser): boolean {
+  const users = getStoredUsers();
+  const index = users.findIndex((u) => u.id === updated.id);
+  if (index === -1) return false;
+
+  // Validación: si se edita el username, verificar que no esté duplicado
+  const dup = users.find(
+    (u) => u.id !== updated.id && u.username.toLowerCase() === updated.username.toLowerCase()
+  );
+  if (dup) return false;
+
+  users[index] = updated;
+  saveStoredUsers(users);
+
+  // Si se actualizó el usuario actual de la sesión, refrescar sesión
+  const current = getStoredSessionUser();
+  if (current && current.id === updated.id) {
+    saveStoredSessionUser(updated);
+  }
+
+  return true;
+}
+
+/**
+ * Crear un nuevo usuario en el sistema
+ */
+export function createStoredUser(
+  newUser: Omit<SystemUser, 'id' | 'createdAt'>
+): { success: boolean; user?: SystemUser; error?: string } {
+  const users = getStoredUsers();
+  const cleanUsername = newUser.username.trim().toLowerCase();
+
+  if (!cleanUsername) {
+    return { success: false, error: 'El nombre de usuario es obligatorio.' };
+  }
+
+  const exists = users.some((u) => u.username.toLowerCase() === cleanUsername);
+  if (exists) {
+    return { success: false, error: `El usuario "${cleanUsername}" ya existe.` };
+  }
+
+  if (newUser.pin) {
+    const pinExists = users.some((u) => u.pin === newUser.pin);
+    if (pinExists) {
+      return { success: false, error: `El PIN "${newUser.pin}" ya está en uso por otro usuario.` };
+    }
+  }
+
+  const created: SystemUser = {
+    ...newUser,
+    id: `user_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    username: cleanUsername,
+    createdAt: new Date().toISOString(),
+  };
+
+  users.push(created);
+  saveStoredUsers(users);
+
+  return { success: true, user: created };
+}
+
+/**
+ * Eliminar o desactivar usuario
+ */
+export function deleteStoredUser(id: string): { success: boolean; error?: string } {
+  const users = getStoredUsers();
+  const user = users.find((u) => u.id === id);
+  if (!user) return { success: false, error: 'Usuario no encontrado.' };
+
+  // Evitar eliminar el único admin
+  if (user.role === 'admin') {
+    const activeAdmins = users.filter((u) => u.role === 'admin' && u.active);
+    if (activeAdmins.length <= 1) {
+      return { success: false, error: 'No se puede eliminar el único Administrador del sistema.' };
+    }
+  }
+
+  const filtered = users.filter((u) => u.id !== id);
+  saveStoredUsers(filtered);
+
+  return { success: true };
+}

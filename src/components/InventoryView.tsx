@@ -13,7 +13,7 @@ import {
   Check,
   X,
 } from 'lucide-react';
-import { Product, ProductCategory } from '../types';
+import { Product, ProductCategory, UserRole } from '../types';
 import { CATEGORIES } from '../utils/defaults';
 import { formatCurrency } from '../utils/storage';
 
@@ -26,6 +26,7 @@ interface InventoryViewProps {
   onQuickUpdateCost?: (productId: string, newCost: number) => void;
   onQuickAdjustStock: (productId: string, delta: number) => void;
   onShowNotification: (msg: string) => void;
+  currentUserRole?: UserRole;
 }
 
 export const InventoryView: React.FC<InventoryViewProps> = ({
@@ -37,7 +38,9 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   onQuickUpdateCost,
   onQuickAdjustStock,
   onShowNotification,
+  currentUserRole,
 }) => {
+  const isAdmin = currentUserRole === 'admin';
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ProductCategory | 'all'>('all');
   const [stockFilter, setStockFilter] = useState<'all' | 'normal' | 'low' | 'out'>('all');
@@ -156,7 +159,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           </div>
           <div className="inv-stat-text">
             <span className="inv-stat-label">Margen Bruto Promedio</span>
-            <span className="inv-stat-value">{averageMargin.toFixed(1)}%</span>
+            <span className="inv-stat-value">{isAdmin ? `${averageMargin.toFixed(1)}%` : '••••'}</span>
           </div>
         </div>
 
@@ -214,15 +217,17 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         </div>
 
         <div className="toolbar-right">
-          {/* Add Product Button */}
-          <button
-            type="button"
-            className="btn-add-product"
-            onClick={onOpenNewProduct}
-          >
-            <Plus size={16} strokeWidth={2.5} />
-            <span>Nuevo Producto</span>
-          </button>
+          {/* Add Product Button (Solo Admin) */}
+          {isAdmin && (
+            <button
+              type="button"
+              className="btn-add-product"
+              onClick={onOpenNewProduct}
+            >
+              <Plus size={16} strokeWidth={2.5} />
+              <span>Nuevo Producto</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -263,14 +268,14 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   <ArrowUpDown size={13} />
                 </span>
               </th>
-              <th className="th-center">Ajuste Rápido</th>
-              <th style={{ width: '100px' }} className="th-center">Acciones</th>
+              {isAdmin && <th className="th-center">Ajuste Rápido</th>}
+              {isAdmin && <th style={{ width: '100px' }} className="th-center">Acciones</th>}
             </tr>
           </thead>
           <tbody>
             {sortedProducts.length === 0 ? (
               <tr>
-                <td colSpan={9} className="inv-empty-cell">
+                <td colSpan={isAdmin ? 9 : 7} className="inv-empty-cell">
                   No se encontraron productos que coincidan con los filtros.
                 </td>
               </tr>
@@ -314,9 +319,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                       </span>
                     </td>
 
-                    {/* Cost - Editable inline! */}
+                    {/* Cost */}
                     <td className="td-cost">
-                      {editingCostId === product.id ? (
+                      {!isAdmin ? (
+                        <span className="cost-amount" style={{ color: 'var(--text-muted)' }} title="Dato confidencial para Administrador">••••</span>
+                      ) : editingCostId === product.id ? (
                         <div className="inline-price-edit">
                           <input
                             type="number"
@@ -358,9 +365,15 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                       )}
                     </td>
 
-                    {/* Sale Price - Editable inline! */}
+                    {/* Sale Price - Editable inline for Admin only! */}
                     <td className="td-price">
-                      {editingPriceId === product.id ? (
+                      {!isAdmin ? (
+                        <div className="price-display-box" style={{ cursor: 'default' }}>
+                          <span className="sale-price-highlight">
+                            {formatCurrency(product.price)}
+                          </span>
+                        </div>
+                      ) : editingPriceId === product.id ? (
                         <div className="inline-price-edit">
                           <input
                             type="number"
@@ -406,22 +419,26 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
                     {/* Margin */}
                     <td className="td-margin">
-                      <div
-                        className={`margin-chip ${
-                          margin >= 60 ? 'chip-high' : margin >= 35 ? 'chip-mid' : 'chip-low'
-                        }`}
-                        title={`Margen Bruto: ${margin.toFixed(1)}% | Ganancia neta: ${formatCurrency(
-                          product.price - product.cost
-                        )} por unidad`}
-                      >
-                        <span className="margin-chip-val">{margin.toFixed(1)}%</span>
-                        <div className="margin-chip-track">
-                          <div
-                            className="margin-chip-fill"
-                            style={{ width: `${Math.min(100, Math.max(0, margin))}%` }}
-                          />
+                      {!isAdmin ? (
+                        <span style={{ color: 'var(--text-muted)' }} title="Dato confidencial para Administrador">••••</span>
+                      ) : (
+                        <div
+                          className={`margin-chip ${
+                            margin >= 60 ? 'chip-high' : margin >= 35 ? 'chip-mid' : 'chip-low'
+                          }`}
+                          title={`Margen Bruto: ${margin.toFixed(1)}% | Ganancia neta: ${formatCurrency(
+                            product.price - product.cost
+                          )} por unidad`}
+                        >
+                          <span className="margin-chip-val">{margin.toFixed(1)}%</span>
+                          <div className="margin-chip-track">
+                            <div
+                              className="margin-chip-fill"
+                              style={{ width: `${Math.min(100, Math.max(0, margin))}%` }}
+                            />
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </td>
 
                     {/* Stock level */}
@@ -467,50 +484,54 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                       </div>
                     </td>
 
-                    {/* Quick Adjust buttons */}
-                    <td className="td-adjust">
-                      <div className="quick-adjust-group">
-                        <button
-                          type="button"
-                          className="btn-adjust minus"
-                          onClick={() => onQuickAdjustStock(product.id, -1)}
-                          disabled={product.stock <= 0}
-                          title="Restar 1 al stock"
-                        >
-                          -1
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-adjust plus"
-                          onClick={() => onQuickAdjustStock(product.id, +1)}
-                          title="Sumar 1 al stock"
-                        >
-                          +1
-                        </button>
-                      </div>
-                    </td>
+                    {/* Quick Adjust buttons (Solo Admin) */}
+                    {isAdmin && (
+                      <td className="td-adjust">
+                        <div className="quick-adjust-group">
+                          <button
+                            type="button"
+                            className="btn-adjust minus"
+                            onClick={() => onQuickAdjustStock(product.id, -1)}
+                            disabled={product.stock <= 0}
+                            title="Restar 1 al stock"
+                          >
+                            -1
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-adjust plus"
+                            onClick={() => onQuickAdjustStock(product.id, +1)}
+                            title="Sumar 1 al stock"
+                          >
+                            +1
+                          </button>
+                        </div>
+                      </td>
+                    )}
 
-                    {/* Actions */}
-                    <td className="td-actions">
-                      <div className="row-actions-group">
-                        <button
-                          type="button"
-                          className="btn-row-action"
-                          onClick={() => onEditProduct(product)}
-                          title="Editar detalles completos del producto"
-                        >
-                          <Edit2 size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-row-action danger"
-                          onClick={() => onDeleteProduct(product.id)}
-                          title="Eliminar producto"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </td>
+                    {/* Actions (Solo Admin puede editar ficha completa o borrar producto) */}
+                    {isAdmin && (
+                      <td className="td-actions">
+                        <div className="row-actions-group">
+                          <button
+                            type="button"
+                            className="btn-row-action"
+                            onClick={() => onEditProduct(product)}
+                            title="Editar detalles completos del producto"
+                          >
+                            <Edit2 size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-row-action danger"
+                            onClick={() => onDeleteProduct(product.id)}
+                            title="Eliminar producto"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })

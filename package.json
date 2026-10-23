@@ -2,7 +2,7 @@
   "name": "la-molienda-pos",
   "version": "1.0.0",
   "description": "La Molienda Café Bar - Sistema Integral de Ventas (POS), Control de Cuentas por Mesa e Inventario",
-  "author": "La Molienda",
+  "author": "Juan Esteban Riascos Madarriaga - Ingeniero de Sistemas",
   "main": "dist-electron/main.js",
   "type": "module",
   "scripts": {
@@ -27,6 +27,7 @@
     "cross-env": "^7.0.3",
     "electron": "^33.2.1",
     "electron-builder": "^25.1.8",
+    "puppeteer-core": "^25.15.0",
     "typescript": "^5.7.2",
     "vite": "^6.0.3",
     "vite-plugin-electron": "^0.29.0",

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Product, Table, TableZone, SaleRecord, OrderItem, SystemStats } from './types';
+import { Product, Table, TableZone, SaleRecord, OrderItem, SystemStats, SystemUser } from './types';
 import {
   getStoredProducts,
   saveStoredProducts,
@@ -14,6 +14,10 @@ import {
   getStoredStaffList,
   calculateSystemStats,
 } from './utils/storage';
+import {
+  getStoredSessionUser,
+  logoutSession,
+} from './utils/authStorage';
 import { DEFAULT_TABLES, DEFAULT_PRODUCTS } from './utils/defaults';
 import { exportLaMoliendaReport } from './utils/excelExporter';
 
@@ -34,17 +38,35 @@ import { SplitBillModal } from './components/SplitBillModal';
 import { TableTransferModal } from './components/TableTransferModal';
 import { CashClosingModal } from './components/CashClosingModal';
 import { TableFormModal } from './components/TableFormModal';
+import { LoginModal } from './components/LoginModal';
+import { UserManagementModal } from './components/UserManagementModal';
+import { AboutModal } from './components/AboutModal';
+import { Info } from 'lucide-react';
 
 export const App: React.FC = () => {
   // Theme state
-  const [theme, setTheme] = useState<'dark' | 'light'>(() => getStoredTheme());
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('theme') === 'light') return 'light';
+    if (params.get('theme') === 'dark') return 'dark';
+    return getStoredTheme();
+  });
 
   // Active section pill
-  const [activeSection, setActiveSection] = useState<ActiveSection>('mesas');
+  const [activeSection, setActiveSection] = useState<ActiveSection>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sec = params.get('section') as ActiveSection;
+    if (['mesas', 'pos', 'inventario', 'caja'].includes(sec)) return sec;
+    return 'mesas';
+  });
   const [slideDirection, setSlideDirection] = useState<'right' | 'left'>('right');
 
   const handleSectionChange = (newSec: ActiveSection) => {
     if (newSec === activeSection) return;
+    if (currentUser?.role === 'mesero' && (newSec === 'inventario' || newSec === 'caja')) {
+      showNotification('⚠️ Acceso restringido: Los meseros solo tienen acceso a Mesas y POS.');
+      return;
+    }
     const order: ActiveSection[] = ['mesas', 'pos', 'inventario', 'caja'];
     const oldIdx = order.indexOf(activeSection);
     const newIdx = order.indexOf(newSec);
@@ -57,16 +79,48 @@ export const App: React.FC = () => {
   const [tables, setTables] = useState<Table[]>(() => getStoredTables());
   const [sales, setSales] = useState<SaleRecord[]>(() => getStoredSales());
 
+  // Authentication & Users state
+  const [currentUser, setCurrentUser] = useState<SystemUser | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('mockAdmin') === '1') {
+      return { id: 'admin-1', username: 'admin', name: 'Administrador Principal', role: 'admin', active: true, createdAt: new Date().toISOString() };
+    }
+    return getStoredSessionUser();
+  });
+  const [isLoginOpen, setIsLoginOpen] = useState<boolean>(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('login') === '1') return true;
+    if (params.get('mockAdmin') === '1') return false;
+    return !getStoredSessionUser();
+  });
+  const [isUserManagementOpen, setIsUserManagementOpen] = useState<boolean>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('modal') === 'users';
+  });
+
   // Staff state
-  const [currentStaff, setCurrentStaff] = useState<string>(() => getStoredCurrentStaff());
+  const [currentStaff, setCurrentStaff] = useState<string>(() => {
+    const session = getStoredSessionUser();
+    return session ? session.name : getStoredCurrentStaff();
+  });
   const [staffList] = useState<string[]>(() => getStoredStaffList());
 
   // Notification state
   const [notification, setNotification] = useState<string | null>(null);
 
   // Modal states
-  const [activeTableDetail, setActiveTableDetail] = useState<Table | null>(null);
-  const [isTableDetailOpen, setIsTableDetailOpen] = useState(false);
+  const [activeTableDetail, setActiveTableDetail] = useState<Table | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('modal') === 'table') {
+      const stored = getStoredTables();
+      return stored.find((t) => t.status !== 'libre') || stored[0] || null;
+    }
+    return null;
+  });
+  const [isTableDetailOpen, setIsTableDetailOpen] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('modal') === 'table';
+  });
 
   const [paymentTable, setPaymentTable] = useState<Table | null>(null);
   const [directPaymentItems, setDirectPaymentItems] = useState<OrderItem[] | null>(null);
@@ -74,8 +128,18 @@ export const App: React.FC = () => {
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
 
   const [ticketSaleRecord, setTicketSaleRecord] = useState<SaleRecord | null>(null);
-  const [ticketTable, setTicketTable] = useState<Table | null>(null);
-  const [isTicketOpen, setIsTicketOpen] = useState(false);
+  const [ticketTable, setTicketTable] = useState<Table | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('modal') === 'ticket') {
+      const stored = getStoredTables();
+      return stored.find((t) => t.status !== 'libre') || stored[0] || null;
+    }
+    return null;
+  });
+  const [isTicketOpen, setIsTicketOpen] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('modal') === 'ticket';
+  });
 
   const [isProductFormOpen, setIsProductFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -89,14 +153,36 @@ export const App: React.FC = () => {
   const [transferOriginTable, setTransferOriginTable] = useState<Table | null>(null);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
 
-  const [isCashClosingOpen, setIsCashClosingOpen] = useState(false);
+  const [isCashClosingOpen, setIsCashClosingOpen] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('modal') === 'closing';
+  });
+  const [isAboutModalOpen, setIsAboutModalOpen] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('modal') === 'about';
+  });
 
   // Table management states
   const [isTableFormOpen, setIsTableFormOpen] = useState(false);
   const [editingTable, setEditingTable] = useState<Table | null>(null);
 
   // POS active comanda state (preserved across tab navigation)
-  const [posCartItems, setPosCartItems] = useState<OrderItem[]>([]);
+  const [posCartItems, setPosCartItems] = useState<OrderItem[]>(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('cart') === '1') {
+      const prods = getStoredProducts();
+      return prods.slice(0, 3).map((p, idx) => ({
+        id: `demo-${idx}`,
+        productId: p.id,
+        productName: p.name,
+        productImage: p.image,
+        unitPrice: p.price,
+        quantity: idx === 0 ? 2 : 1,
+        status: 'pending' as const,
+      }));
+    }
+    return [];
+  });
   const [posTargetTableId, setPosTargetTableId] = useState<string>('direct_takeaway');
   const [posTipPercentage, setPosTipPercentage] = useState<number>(0);
   const [posPatronNote, setPosPatronNote] = useState<string>('');
@@ -354,6 +440,10 @@ export const App: React.FC = () => {
 
   // --- CHECKOUT & PAYMENTS ---
   const handleCheckoutTable = (table: Table) => {
+    if (currentUser?.role === 'mesero') {
+      showNotification('⚠️ Función exclusiva de Caja: Los meseros solo pueden registrar pedidos y pre-cuentas.');
+      return;
+    }
     setPaymentTable(table);
     setDirectPaymentItems(null);
     setDirectPatronName('');
@@ -362,6 +452,10 @@ export const App: React.FC = () => {
   };
 
   const handleDirectSaleCheckout = (items: OrderItem[], patronName?: string) => {
+    if (currentUser?.role === 'mesero') {
+      showNotification('⚠️ Función exclusiva de Caja: Carga el pedido a una mesa para registrar la comanda.');
+      return;
+    }
     setPaymentTable(null);
     setDirectPaymentItems(items);
     setDirectPatronName(patronName || 'Venta Rápida / Llevar');
@@ -465,13 +559,21 @@ export const App: React.FC = () => {
     setPosTipPercentage(0);
   };
 
-  // --- INVENTORY OPERATIONS ---
+  // --- INVENTORY OPERATIONS (ADMIN ONLY) ---
   const handleOpenNewProduct = () => {
+    if (currentUser?.role !== 'admin') {
+      showNotification('⚠️ Acción restringida: Solo el Administrador puede registrar nuevos productos.');
+      return;
+    }
     setEditingProduct(null);
     setIsProductFormOpen(true);
   };
 
   const handleEditProduct = (prod: Product) => {
+    if (currentUser?.role !== 'admin') {
+      showNotification('⚠️ Acción restringida: Solo el Administrador puede modificar los datos del producto.');
+      return;
+    }
     setEditingProduct(prod);
     setIsProductFormOpen(true);
   };
@@ -516,18 +618,30 @@ export const App: React.FC = () => {
   };
 
   const handleQuickUpdatePrice = (productId: string, newPrice: number) => {
+    if (currentUser?.role !== 'admin') {
+      showNotification('⚠️ Acción restringida: Solo el Administrador puede modificar precios.');
+      return;
+    }
     const updated = products.map((p) => (p.id === productId ? { ...p, price: newPrice } : p));
     setProducts(updated);
     saveStoredProducts(updated);
   };
 
   const handleQuickUpdateCost = (productId: string, newCost: number) => {
+    if (currentUser?.role !== 'admin') {
+      showNotification('⚠️ Acción restringida: Solo el Administrador puede modificar costos.');
+      return;
+    }
     const updated = products.map((p) => (p.id === productId ? { ...p, cost: newCost } : p));
     setProducts(updated);
     saveStoredProducts(updated);
   };
 
   const handleQuickAdjustStock = (productId: string, delta: number) => {
+    if (currentUser?.role !== 'admin') {
+      showNotification('⚠️ Acción restringida: Solo el Administrador puede alterar el stock de inventario.');
+      return;
+    }
     const inCart = posCartItems
       .filter((i) => i.productId === productId)
       .reduce((sum, i) => sum + i.quantity, 0);
@@ -575,6 +689,32 @@ export const App: React.FC = () => {
     }
   };
 
+  // Auth Handlers
+  const handleLoginSuccess = (user: SystemUser) => {
+    setCurrentUser(user);
+    setIsLoginOpen(false);
+    setCurrentStaff(user.name);
+    saveStoredCurrentStaff(user.name);
+    // Si el usuario es mesero y estaba en inventario o caja, devolverlo a mesas
+    if (user.role === 'mesero' && (activeSection === 'inventario' || activeSection === 'caja')) {
+      setActiveSection('mesas');
+    }
+    showNotification(`¡Bienvenido, ${user.name}! Sesión iniciada con rol ${user.role.toUpperCase()}.`);
+  };
+
+  const handleLogout = () => {
+    logoutSession();
+    setCurrentUser(null);
+    setIsLoginOpen(true);
+    showNotification('Sesión cerrada. Hasta pronto.');
+  };
+
+  const handleUserUpdated = (updatedUser: SystemUser) => {
+    setCurrentUser(updatedUser);
+    setCurrentStaff(updatedUser.name);
+    saveStoredCurrentStaff(updatedUser.name);
+  };
+
   return (
     <div className="app-container">
       {/* Multi-logo ambient background canvas across the entire system */}
@@ -595,6 +735,9 @@ export const App: React.FC = () => {
         currentStaff={currentStaff}
         staffList={staffList}
         onChangeStaff={handleChangeStaff}
+        currentUser={currentUser}
+        onOpenUserManagement={() => setIsUserManagementOpen(true)}
+        onLogout={handleLogout}
       />
 
       {/* Main Content Area */}
@@ -608,7 +751,7 @@ export const App: React.FC = () => {
         )}
 
         {/* Top KPI Statistics Strip */}
-        <StatsCards stats={stats} />
+        <StatsCards stats={stats} currentUserRole={currentUser?.role} />
 
         {/* Section 1: Mesas & Cuentas (Floor map & Live orders) */}
         {activeSection === 'mesas' && (
@@ -641,6 +784,7 @@ export const App: React.FC = () => {
               onEditTableForm={handleEditTableForm}
               onDeleteTable={handleDeleteTable}
               onUpdateTables={handleUpdateAllTables}
+              currentUserRole={currentUser?.role}
             />
           </div>
         )}
@@ -662,12 +806,13 @@ export const App: React.FC = () => {
               setTipPercentage={setPosTipPercentage}
               patronNote={posPatronNote}
               setPatronNote={setPosPatronNote}
+              currentUserRole={currentUser?.role}
             />
           </div>
         )}
 
-        {/* Section 3: Gestión de Inventario & Precios */}
-        {activeSection === 'inventario' && (
+        {/* Section 3: Gestión de Inventario & Precios (Solo Admin y Cajero) */}
+        {activeSection === 'inventario' && currentUser?.role !== 'mesero' && (
           <div key="inventario" className={`view-slider-container ${slideDirection === 'right' ? 'slide-from-right' : 'slide-from-left'}`}>
             <InventoryView
               products={synchronizedProducts}
@@ -678,12 +823,13 @@ export const App: React.FC = () => {
               onQuickUpdateCost={handleQuickUpdateCost}
               onQuickAdjustStock={handleQuickAdjustStock}
               onShowNotification={showNotification}
+              currentUserRole={currentUser?.role}
             />
           </div>
         )}
 
-        {/* Section 4: Caja, Arqueo & Historial de Ventas */}
-        {activeSection === 'caja' && (
+        {/* Section 4: Caja, Arqueo & Historial de Ventas (Solo Admin y Cajero) */}
+        {activeSection === 'caja' && currentUser?.role !== 'mesero' && (
           <div key="caja" className={`view-slider-container ${slideDirection === 'right' ? 'slide-from-right' : 'slide-from-left'}`}>
             <SalesHistoryView
               sales={sales}
@@ -694,6 +840,39 @@ export const App: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* System Status & Developer Attribution Footer */}
+      <footer className="app-system-footer">
+        <div className="footer-content">
+          <div className="footer-left">
+            <span className="footer-status-indicator" title="Sistema operando normalmente" />
+            <span className="footer-app-label">La Molienda POS</span>
+            <span className="footer-sep">&bull;</span>
+            <span className="footer-version-tag">v1.0.0</span>
+          </div>
+
+          <div className="footer-center">
+            <span className="footer-dev-attribution">
+              Desarrollado por{' '}
+              <strong className="footer-dev-highlight">Juan Esteban Riascos Madarriaga</strong>
+              <span className="footer-sep-bar">|</span>
+              <span className="footer-profession">Ingeniero de Sistemas</span>
+            </span>
+          </div>
+
+          <div className="footer-right">
+            <button
+              type="button"
+              className="footer-info-btn"
+              onClick={() => setIsAboutModalOpen(true)}
+              title="Ficha técnica del sistema y autoría de desarrollo"
+            >
+              <Info size={13} />
+              <span>Acerca del Sistema</span>
+            </button>
+          </div>
+        </div>
+      </footer>
 
       {/* MODALS */}
 
@@ -709,6 +888,7 @@ export const App: React.FC = () => {
         onOpenSplitBill={handleSplitBill}
         onOpenTransfer={handleTransferTable}
         onShowNotification={showNotification}
+        currentUserRole={currentUser?.role}
       />
 
       {/* 2. Checkout / Payment Modal */}
@@ -784,6 +964,28 @@ export const App: React.FC = () => {
           setEditingTable(null);
         }}
         onSave={handleSaveTableForm}
+      />
+
+      {/* 10. Authentication & Shift Login Screen */}
+      <LoginModal
+        isOpen={isLoginOpen}
+        onLoginSuccess={handleLoginSuccess}
+      />
+
+      {/* 11. Admin User & Permissions Management Modal */}
+      {currentUser && (
+        <UserManagementModal
+          isOpen={isUserManagementOpen}
+          onClose={() => setIsUserManagementOpen(false)}
+          currentUser={currentUser}
+          onUserUpdated={handleUserUpdated}
+        />
+      )}
+
+      {/* 12. About System & Developer Credits Modal */}
+      <AboutModal
+        isOpen={isAboutModalOpen}
+        onClose={() => setIsAboutModalOpen(false)}
       />
     </div>
   );

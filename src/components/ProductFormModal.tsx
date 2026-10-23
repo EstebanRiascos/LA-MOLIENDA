@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Image as ImageIcon, Check, DollarSign, Upload, Sparkles } from 'lucide-react';
+import { X, Image as ImageIcon, Check, CheckCircle, DollarSign, Upload, Sparkles } from 'lucide-react';
 import { Product, ProductCategory } from '../types';
 import { CATEGORIES, PRODUCT_IMAGE_PRESETS } from '../utils/defaults';
 import { formatCurrency } from '../utils/storage';
@@ -117,8 +117,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               Configura el precio de venta, costo de insumos, imagen y control de inventario.
             </p>
           </div>
-          <button type="button" className="btn-icon-subtle" onClick={onClose}>
-            <X size={20} />
+          <button type="button" className="modal-close-btn" onClick={onClose} title="Cerrar modal">
+            <X size={18} />
           </button>
         </div>
 
@@ -405,8 +405,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
             <button type="button" className="btn-cancel" onClick={onClose}>
               Cancelar
             </button>
-            <button type="submit" className="btn-save-product">
-              <Check size={16} />
+            <button type="submit" className="btn-confirm-open">
+              <CheckCircle size={16} />
               <span>{initialData ? 'Guardar Cambios' : 'Registrar Producto'}</span>
             </button>
           </div>

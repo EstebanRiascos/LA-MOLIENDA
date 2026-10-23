@@ -36,3 +36,10 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Temp browser automation profiles and test screenshots
+.edge_profile/
+.edge_manual_profile/
+.tmp_edge_shot/
+test_shot.png
+

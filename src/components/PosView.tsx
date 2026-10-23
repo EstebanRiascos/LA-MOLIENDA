@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   Search,
   Plus,
+  PlusCircle,
   Minus,
   Trash2,
   ShoppingBag,
@@ -12,7 +13,7 @@ import {
   AlertTriangle,
   ArrowRight,
 } from 'lucide-react';
-import { Product, Table, ProductCategory, OrderItem } from '../types';
+import { Product, Table, ProductCategory, OrderItem, UserRole } from '../types';
 import { CATEGORIES } from '../utils/defaults';
 import { formatCurrency } from '../utils/storage';
 
@@ -30,6 +31,7 @@ interface PosViewProps {
   setTipPercentage?: (p: number) => void;
   patronNote?: string;
   setPatronNote?: (note: string) => void;
+  currentUserRole?: UserRole;
 }
 
 export const PosView: React.FC<PosViewProps> = ({
@@ -46,6 +48,7 @@ export const PosView: React.FC<PosViewProps> = ({
   setTipPercentage: propsSetTipPercentage,
   patronNote: propsPatronNote,
   setPatronNote: propsSetPatronNote,
+  currentUserRole,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<ProductCategory | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -176,6 +179,10 @@ export const PosView: React.FC<PosViewProps> = ({
     }
 
     if (targetTableId === 'direct_takeaway') {
+      if (currentUserRole === 'mesero') {
+        onShowNotification('⚠️ Función exclusiva de Caja: Selecciona una mesa de salón/barra para cargar el pedido.');
+        return;
+      }
       // Venta directa / Llevar
       onDirectSaleCheckout(cartItems, patronNote || 'Venta Rápida / Llevar');
       setCartItems([]);
@@ -314,7 +321,8 @@ export const PosView: React.FC<PosViewProps> = ({
                       className={`btn-pos-add ${isOutOfStock ? 'disabled' : ''}`}
                       disabled={isOutOfStock}
                     >
-                      <Plus size={15} /> Añadir a Comanda
+                      <PlusCircle size={15} />
+                      <span>Añadir a Comanda</span>
                     </button>
                   </div>
                 </div>
@@ -467,18 +475,25 @@ export const PosView: React.FC<PosViewProps> = ({
             type="button"
             className={`btn-dispatch-order ${cartItems.length > 0 ? 'ready-to-dispatch' : ''}`}
             onClick={handleDispatchOrder}
-            disabled={cartItems.length === 0}
+            disabled={cartItems.length === 0 || (targetTableId === 'direct_takeaway' && currentUserRole === 'mesero')}
           >
             {targetTableId === 'direct_takeaway' ? (
-              <>
-                <CreditCard size={17} className="dispatch-icon" />
-                <span>Cobrar Venta Rápida</span>
-                {cartItems.length > 0 && (
-                  <span className="dispatch-badge">
-                    {cartItems.reduce((acc, i) => acc + i.quantity, 0)}
-                  </span>
-                )}
-              </>
+              currentUserRole === 'mesero' ? (
+                <>
+                  <ShoppingBag size={17} className="dispatch-icon" />
+                  <span>Cobro en Caja Requerido</span>
+                </>
+              ) : (
+                <>
+                  <CreditCard size={17} className="dispatch-icon" />
+                  <span>Cobrar Venta Rápida</span>
+                  {cartItems.length > 0 && (
+                    <span className="dispatch-badge">
+                      {cartItems.reduce((acc, i) => acc + i.quantity, 0)}
+                    </span>
+                  )}
+                </>
+              )
             ) : (
               <>
                 <Send size={17} className="dispatch-icon" />

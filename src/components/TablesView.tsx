@@ -21,7 +21,7 @@ import {
   LayoutGrid,
   Compass,
 } from 'lucide-react';
-import { Table, TableZone, TableStatus, Product } from '../types';
+import { Table, TableZone, TableStatus, Product, UserRole } from '../types';
 import { formatCurrency } from '../utils/storage';
 import { FloorPlan3DView } from './FloorPlan3DView';
 
@@ -38,6 +38,7 @@ interface TablesViewProps {
   onEditTableForm: (table: Table) => void;
   onDeleteTable: (table: Table) => void;
   onUpdateTables?: (tables: Table[]) => void;
+  currentUserRole?: UserRole;
 }
 
 export const TablesView: React.FC<TablesViewProps> = ({
@@ -52,6 +53,7 @@ export const TablesView: React.FC<TablesViewProps> = ({
   onEditTableForm,
   onDeleteTable,
   onUpdateTables,
+  currentUserRole,
 }) => {
   const [viewMode, setViewMode] = useState<'cards' | 'plan_3d'>('cards');
   const [selectedZone, setSelectedZone] = useState<TableZone | 'todas'>('todas');
@@ -81,7 +83,7 @@ export const TablesView: React.FC<TablesViewProps> = ({
         };
       case 'barra':
         return {
-          label: 'Barra Café & Bar',
+          label: 'Barra',
           icon: <Wine size={12} className="zone-tag-icon" />,
           watermarkIcon: <Wine size={100} strokeWidth={1.6} />,
           className: 'zone-barra',
@@ -203,7 +205,7 @@ export const TablesView: React.FC<TablesViewProps> = ({
             onClick={() => setSelectedZone('barra')}
           >
             <Wine size={13} className="pill-zone-icon icon-barra" />
-            <span>Barra Café & Bar</span>
+            <span>Barra</span>
             <span className="pill-count">{zonesCount.barra}</span>
           </button>
           {zonesCount.takeaway > 0 && (
@@ -249,16 +251,18 @@ export const TablesView: React.FC<TablesViewProps> = ({
             <span>Abrir Mesa</span>
           </button>
 
-          {/* Add New Table / Bar button */}
-          <button
-            type="button"
-            className="btn-add-table-action"
-            onClick={onOpenNewTableForm}
-            title="Agregar una nueva mesa, barra o espacio de atención"
-          >
-            <Plus size={15} strokeWidth={2.6} />
-            <span>Nueva Mesa / Barra</span>
-          </button>
+          {/* Add New Table / Bar button (Exclusivo para Administrador) */}
+          {currentUserRole === 'admin' && (
+            <button
+              type="button"
+              className="btn-add-table-action"
+              onClick={onOpenNewTableForm}
+              title="Agregar una nueva mesa, barra o espacio de atención"
+            >
+              <Plus size={15} strokeWidth={2.6} />
+              <span>Nueva Mesa / Barra</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -325,33 +329,35 @@ export const TablesView: React.FC<TablesViewProps> = ({
                     )}
                   </div>
 
-                  {/* Card Management Controls (Edit / Delete) */}
-                  <div className="table-card-mgmt-btns">
-                    <button
-                      type="button"
-                      className="btn-card-mgmt edit"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEditTableForm(table);
-                      }}
-                      title={`Editar configuración de ${table.number}`}
-                    >
-                      <Edit2 size={13} />
-                    </button>
-                    {isFree && (
+                  {/* Card Management Controls (Edit / Delete) - Solo Admin */}
+                  {currentUserRole === 'admin' && (
+                    <div className="table-card-mgmt-btns">
                       <button
                         type="button"
-                        className="btn-card-mgmt delete"
+                        className="btn-card-mgmt edit"
                         onClick={(e) => {
                           e.stopPropagation();
-                          onDeleteTable(table);
+                          onEditTableForm(table);
                         }}
-                        title={`Eliminar ${table.number}`}
+                        title={`Editar configuración de ${table.number}`}
                       >
-                        <Trash2 size={13} />
+                        <Edit2 size={13} />
                       </button>
-                    )}
-                  </div>
+                      {isFree && (
+                        <button
+                          type="button"
+                          className="btn-card-mgmt delete"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteTable(table);
+                          }}
+                          title={`Eliminar ${table.number}`}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* If Table has active consumption */}
@@ -387,7 +393,7 @@ export const TablesView: React.FC<TablesViewProps> = ({
                 {isFree ? (
                   <button
                     type="button"
-                    className="btn-table-action btn-open-table"
+                    className="btn-open-table"
                     onClick={() => onOpenTable(table)}
                   >
                     <PlusCircle size={15} /> Abrir Mesa / Comanda
@@ -396,7 +402,7 @@ export const TablesView: React.FC<TablesViewProps> = ({
                   <>
                     <button
                       type="button"
-                      className="btn-table-action btn-manage-account"
+                      className="btn-manage-account"
                       onClick={() => onSelectTable(table)}
                       title="Gestionar comanda, agregar productos o notas"
                     >
@@ -422,15 +428,18 @@ export const TablesView: React.FC<TablesViewProps> = ({
                         <ArrowRightLeft size={16} />
                       </button>
 
-                      <button
-                        type="button"
-                        className="btn-checkout-quick"
-                        onClick={() => onCheckout(table)}
-                        title="Cobrar cuenta y cerrar mesa"
-                      >
-                        <CreditCard size={15} />
-                        <span>Cobrar</span>
-                      </button>
+                      {/* Botón Cobrar (Oculto para Mesero - Solo Caja y Admin) */}
+                      {currentUserRole !== 'mesero' && (
+                        <button
+                          type="button"
+                          className="btn-checkout-quick"
+                          onClick={() => onCheckout(table)}
+                          title="Cobrar cuenta y cerrar mesa"
+                        >
+                          <CreditCard size={15} />
+                          <span>Cobrar</span>
+                        </button>
+                      )}
                     </div>
                   </>
                 )}

@@ -80,8 +80,8 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
               </span>
             </div>
           </div>
-          <button type="button" className="btn-icon-subtle" onClick={onClose}>
-            <X size={20} />
+          <button type="button" className="modal-close-btn" onClick={onClose} title="Cerrar modal">
+            <X size={18} />
           </button>
         </div>
 

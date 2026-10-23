@@ -55,8 +55,8 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 : 'Ticket de revisión previo al pago'}
             </span>
           </div>
-          <button type="button" className="btn-icon-subtle" onClick={onClose}>
-            <X size={20} />
+          <button type="button" className="modal-close-btn" onClick={onClose} title="Cerrar ticket">
+            <X size={18} />
           </button>
         </div>
 
@@ -188,6 +188,9 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 : 'ESTE DOCUMENTO NO ES FACTURA DE VENTA - PRE-CUENTA DE CONTROL'}
             </p>
             <div className="simulated-barcode">||| ||||| || ||||||| |||| ||| |||| ||</div>
+            <p className="receipt-dev-credit">
+              Software POS elaborado por Juan Esteban Riascos Madarriaga &bull; Ing. de Sistemas
+            </p>
           </div>
         </div>
 

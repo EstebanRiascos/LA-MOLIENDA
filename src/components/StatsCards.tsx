@@ -1,13 +1,14 @@
 import React from 'react';
 import { DollarSign, LayoutGrid, Clock, AlertTriangle, TrendingUp } from 'lucide-react';
-import { SystemStats } from '../types';
+import { SystemStats, UserRole } from '../types';
 import { formatCurrency } from '../utils/storage';
 
 interface StatsCardsProps {
   stats: SystemStats;
+  currentUserRole?: UserRole;
 }
 
-export const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
+export const StatsCards: React.FC<StatsCardsProps> = ({ stats, currentUserRole }) => {
   const occupancyRate =
     stats.totalTablesCount > 0
       ? Math.round((stats.activeTablesCount / stats.totalTablesCount) * 100)
@@ -15,17 +16,19 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
 
   return (
     <div className="kpi-grid">
-      {/* 1. Ventas del Día */}
-      <div className="kpi-card">
-        <div className="kpi-icon-box box-emerald">
-          <DollarSign size={22} />
+      {/* 1. Ventas del Día (Oculto para Mesero) */}
+      {currentUserRole !== 'mesero' && (
+        <div className="kpi-card">
+          <div className="kpi-icon-box box-emerald">
+            <DollarSign size={22} />
+          </div>
+          <div className="kpi-content">
+            <span className="kpi-label">Ventas de Hoy</span>
+            <span className="kpi-value">{formatCurrency(stats.todaySales)}</span>
+            <span className="kpi-subtext">{stats.todayOrdersCount} cuentas cobradas</span>
+          </div>
         </div>
-        <div className="kpi-content">
-          <span className="kpi-label">Ventas de Hoy</span>
-          <span className="kpi-value">{formatCurrency(stats.todaySales)}</span>
-          <span className="kpi-subtext">{stats.todayOrdersCount} cuentas cobradas</span>
-        </div>
-      </div>
+      )}
 
       {/* 2. Mesas Ocupadas */}
       <div className="kpi-card">

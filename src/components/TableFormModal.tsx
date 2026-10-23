@@ -7,6 +7,7 @@ import {
   Coffee,
   Sparkles,
   Check,
+  CheckCircle,
   CheckCircle2,
   LayoutGrid,
 } from 'lucide-react';
@@ -129,7 +130,7 @@ export const TableFormModal: React.FC<TableFormModalProps> = ({
     },
     {
       id: 'barra',
-      label: 'Barra Café & Bar',
+      label: 'Barra',
       icon: '🍸',
       desc: 'Puestos de barista y coctelería',
     },
@@ -166,11 +167,11 @@ export const TableFormModal: React.FC<TableFormModalProps> = ({
           </div>
           <button
             type="button"
-            className="btn-icon-subtle"
+            className="modal-close-btn"
             onClick={onClose}
             title="Cerrar modal"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
@@ -296,13 +297,13 @@ export const TableFormModal: React.FC<TableFormModalProps> = ({
           <div className="modal-footer-row">
             <button
               type="button"
-              className="btn-standard btn-secondary"
+              className="btn-cancel"
               onClick={onClose}
             >
               Cancelar
             </button>
-            <button type="submit" className="btn-standard btn-primary-gold">
-              <Check size={16} />
+            <button type="submit" className="btn-confirm-open">
+              <CheckCircle size={16} />
               <span>{isEditing ? 'Guardar Cambios' : 'Crear Espacio'}</span>
             </button>
           </div>
