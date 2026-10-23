@@ -7070,21 +7070,18 @@ body {
   }
 
   html, body {
-    margin: 0 auto !important;
+    margin: 0 !important;
     padding: 0 !important;
-    width: 80mm !important;
-    min-width: 80mm !important;
-    max-width: 80mm !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
     height: auto !important;
     min-height: 0 !important;
     max-height: none !important;
     overflow: visible !important;
     background: #fff !important;
     color: #000 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
+    display: block !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -7095,17 +7092,14 @@ body {
 
   .modal-backdrop {
     position: static !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
+    display: block !important;
     padding: 0 !important;
-    margin: 0 auto !important;
+    margin: 0 !important;
     background: transparent !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    width: 80mm !important;
-    max-width: 80mm !important;
+    width: 100% !important;
+    max-width: 100% !important;
     height: auto !important;
     min-height: 0 !important;
   }
@@ -7113,14 +7107,11 @@ body {
   .modal-container,
   .ticket-modal-wrapper {
     position: static !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
+    display: block !important;
     max-height: none !important;
-    max-width: 80mm !important;
-    width: 80mm !important;
-    margin: 0 auto !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
     padding: 0 !important;
     border: none !important;
     box-shadow: none !important;
@@ -7136,16 +7127,16 @@ body {
   #printable-receipt {
     display: block !important;
     position: relative !important;
-    width: 72mm !important;
-    max-width: 72mm !important;
-    margin: 0 auto !important;
-    padding: 2mm 0 8mm 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 1mm 1.5mm 8mm 1.5mm !important;
     box-sizing: border-box !important;
     box-shadow: none !important;
     border: none !important;
     background: #fff !important;
     color: #000 !important;
-    font-size: 0.68rem !important;
+    font-size: 0.72rem !important;
     line-height: 1.35 !important;
     page-break-after: avoid !important;
     page-break-inside: avoid !important;
@@ -7158,8 +7149,8 @@ body {
 
   #printable-receipt .receipt-logo {
     display: block !important;
-    width: 46px !important;
-    height: 46px !important;
+    width: 48px !important;
+    height: 48px !important;
     margin: 0 auto 3px auto !important;
     object-fit: contain !important;
     filter: grayscale(100%) contrast(400%) brightness(70%) !important;
@@ -7168,21 +7159,21 @@ body {
   }
 
   #printable-receipt .receipt-company {
-    font-size: 1.05rem !important;
+    font-size: 1.08rem !important;
     font-weight: 800 !important;
     letter-spacing: 0.04em !important;
     margin: 0 !important;
   }
 
   #printable-receipt .receipt-tagline {
-    font-size: 0.62rem !important;
+    font-size: 0.65rem !important;
     font-weight: 600 !important;
     color: #000 !important;
     margin-bottom: 2px !important;
   }
 
   #printable-receipt .receipt-meta-contact {
-    font-size: 0.58rem !important;
+    font-size: 0.60rem !important;
     line-height: 1.35 !important;
     color: #000 !important;
   }
@@ -7193,7 +7184,7 @@ body {
   }
 
   #printable-receipt .receipt-wifi {
-    font-size: 0.60rem !important;
+    font-size: 0.62rem !important;
     font-weight: 700 !important;
     white-space: nowrap !important;
   }
@@ -7211,7 +7202,7 @@ body {
 
   /* Info block: Atendido por, Ubicación, Fecha, etc. */
   #printable-receipt .receipt-info-block {
-    font-size: 0.68rem !important;
+    font-size: 0.70rem !important;
     gap: 0.15rem !important;
   }
 
@@ -7219,7 +7210,7 @@ body {
     display: flex !important;
     justify-content: space-between !important;
     align-items: baseline !important;
-    white-space: nowrap !important;
+    gap: 8px !important;
   }
 
   #printable-receipt .info-line span:first-child {
@@ -7231,9 +7222,8 @@ body {
   #printable-receipt .info-line span:last-child,
   #printable-receipt .info-line strong {
     text-align: right !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
+    white-space: normal !important;
+    word-break: normal !important;
     font-weight: 700 !important;
   }
 
@@ -7241,13 +7231,14 @@ body {
   #printable-receipt .receipt-items-head {
     display: flex !important;
     justify-content: space-between !important;
-    font-size: 0.68rem !important;
+    align-items: baseline !important;
+    font-size: 0.70rem !important;
     font-weight: 700 !important;
   }
 
   #printable-receipt .receipt-item-entry {
     margin-bottom: 0.25rem !important;
-    font-size: 0.68rem !important;
+    font-size: 0.70rem !important;
   }
 
   #printable-receipt .entry-row {
@@ -7258,9 +7249,10 @@ body {
 
   #printable-receipt .head-qty,
   #printable-receipt .entry-qty {
-    width: 18px !important;
-    min-width: 18px !important;
+    width: 28px !important;
+    min-width: 28px !important;
     flex-shrink: 0 !important;
+    text-align: left !important;
     font-weight: 700 !important;
   }
 
@@ -7268,14 +7260,15 @@ body {
   #printable-receipt .entry-name {
     flex: 1 !important;
     padding: 0 4px !important;
+    text-align: left !important;
     word-break: normal !important;
     overflow-wrap: break-word !important;
   }
 
   #printable-receipt .head-total,
   #printable-receipt .entry-amount {
-    width: 72px !important;
-    min-width: 72px !important;
+    width: 78px !important;
+    min-width: 78px !important;
     flex-shrink: 0 !important;
     text-align: right !important;
     white-space: nowrap !important;
@@ -7283,54 +7276,66 @@ body {
   }
 
   #printable-receipt .entry-note {
-    font-size: 0.58rem !important;
-    margin-left: 18px !important;
+    font-size: 0.60rem !important;
+    margin-left: 28px !important;
     font-style: italic !important;
   }
 
   /* Totals */
   #printable-receipt .receipt-totals-block {
-    font-size: 0.70rem !important;
+    font-size: 0.72rem !important;
     gap: 0.2rem !important;
   }
 
   #printable-receipt .total-line {
     display: flex !important;
     justify-content: space-between !important;
+    align-items: baseline !important;
+    gap: 8px !important;
+  }
+
+  #printable-receipt .total-line span:first-child {
+    flex-shrink: 0 !important;
     white-space: nowrap !important;
   }
 
+  #printable-receipt .total-line span:last-child {
+    text-align: right !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+  }
+
   #printable-receipt .grand-total-line {
-    font-size: 0.88rem !important;
+    font-size: 0.92rem !important;
     font-weight: 800 !important;
   }
 
   /* Footer */
   #printable-receipt .receipt-footer {
-    font-size: 0.58rem !important;
+    font-size: 0.60rem !important;
     gap: 0.15rem !important;
     margin-top: 0.35rem !important;
     color: #000 !important;
   }
 
   #printable-receipt .thanks-msg {
-    font-size: 0.74rem !important;
+    font-size: 0.76rem !important;
     font-weight: 800 !important;
   }
 
   #printable-receipt .follow-msg,
   #printable-receipt .footer-notice {
-    font-size: 0.56rem !important;
+    font-size: 0.58rem !important;
   }
 
   #printable-receipt .simulated-barcode {
-    font-size: 0.75rem !important;
+    font-size: 0.78rem !important;
     letter-spacing: 0.16em !important;
     margin-top: 0.25rem !important;
   }
 
   #printable-receipt .receipt-dev-credit {
-    font-size: 0.52rem !important;
+    font-size: 0.54rem !important;
     color: #333 !important;
   }
 
