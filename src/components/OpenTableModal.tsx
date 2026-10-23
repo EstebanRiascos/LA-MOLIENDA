@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, LayoutGrid, User, Users, CheckCircle, Coffee, Plus, Minus } from 'lucide-react';
 import { Table } from '../types';
 
@@ -23,14 +23,31 @@ export const OpenTableModal: React.FC<OpenTableModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const freeTables = tables.filter((t) => t.status === 'libre');
+  const openableTables = tables.filter(
+    (t) => t.status === 'libre' || t.id === preSelectedTable?.id
+  );
 
   const [selectedTableId, setSelectedTableId] = useState<string>(
-    preSelectedTable?.id || freeTables[0]?.id || ''
+    preSelectedTable?.id || openableTables[0]?.id || ''
   );
-  const [patronName, setPatronName] = useState('');
+  const [patronName, setPatronName] = useState(preSelectedTable?.reservationName || '');
   const [waiter, setWaiter] = useState(currentStaff || staffList[0]);
-  const [pax, setPax] = useState<number>(preSelectedTable?.capacity || 2);
+  const [pax, setPax] = useState<number>(
+    preSelectedTable?.reservationPax || preSelectedTable?.capacity || 2
+  );
+
+  useEffect(() => {
+    if (preSelectedTable) {
+      setSelectedTableId(preSelectedTable.id);
+      setPatronName(preSelectedTable.reservationName || '');
+      setPax(preSelectedTable.reservationPax || preSelectedTable.capacity || 2);
+    } else {
+      const firstAvailable = tables.find((t) => t.status === 'libre');
+      setSelectedTableId(firstAvailable?.id || '');
+      setPatronName('');
+      setPax(firstAvailable?.capacity || 2);
+    }
+  }, [preSelectedTable, isOpen]);
 
   const selectedTable = tables.find((t) => t.id === selectedTableId);
 
@@ -98,12 +115,15 @@ export const OpenTableModal: React.FC<OpenTableModalProps> = ({
                     className="form-select select-table-highlight input-with-padding"
                     required
                   >
-                    {freeTables.length === 0 ? (
-                      <option value="">No hay mesas libres</option>
+                    {openableTables.length === 0 ? (
+                      <option value="">No hay mesas libres o disponibles</option>
                     ) : (
-                      freeTables.map((t) => (
+                      openableTables.map((t) => (
                         <option key={t.id} value={t.id}>
                           {t.number} ({t.zone.toUpperCase()}) — {t.capacity}p
+                          {t.status === 'reservada'
+                            ? ` [RESERVADA: ${t.reservationName || 'Cliente'}]`
+                            : ''}
                         </option>
                       ))
                     )}

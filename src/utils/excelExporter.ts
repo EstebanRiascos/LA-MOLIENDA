@@ -25,10 +25,17 @@ async function getLogoBase64(): Promise<string | null> {
   }
 }
 
+export interface ExportReportOptions {
+  periodLabel?: string;
+  filenameSuffix?: string;
+  filterSummary?: string;
+}
+
 export async function exportLaMoliendaReport(
   sales: SaleRecord[],
   products: Product[],
-  _tables: Table[]
+  _tables: Table[],
+  options?: ExportReportOptions
 ): Promise<void> {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Juan Esteban Riascos Madarriaga (Ingeniero de Sistemas) - La Molienda Café Bar';
@@ -94,45 +101,126 @@ export async function exportLaMoliendaReport(
     { width: 26 }, // Referencia / Voucher
   ];
 
-  // Incrustar Logo (Top Left)
-  if (logoId !== null) {
-    salesSheet.addImage(logoId, {
-      tl: { col: 0.15, row: 0.15 },
-      ext: { width: 68, height: 68 },
-      editAs: 'undefined',
-    });
-  }
-
-  // Encabezado Institucional
-  salesSheet.getRow(1).height = 26;
-  salesSheet.getRow(2).height = 20;
-  salesSheet.getRow(3).height = 18;
-  salesSheet.getRow(4).height = 10; // Spacer
-
-  salesSheet.mergeCells('B1:J1');
-  const sTitle = salesSheet.getCell('B1');
-  sTitle.value = 'LA MOLIENDA CAFÉ & BAR';
-  sTitle.font = { name: 'Arial', size: 15, bold: true, color: { argb: 'FF4A2810' } };
-  sTitle.alignment = { vertical: 'middle', horizontal: 'left' };
-
-  salesSheet.mergeCells('B2:J2');
-  const sSub = salesSheet.getCell('B2');
-  sSub.value = 'REPORTE OFICIAL DE VENTAS, FACTURACIÓN Y OPERACIONES';
-  sSub.font = { name: 'Arial', size: 10.5, bold: true, color: { argb: 'FF7C3A14' } };
-  sSub.alignment = { vertical: 'middle', horizontal: 'left' };
-
-  salesSheet.mergeCells('B3:J3');
-  const sMeta = salesSheet.getCell('B3');
-  sMeta.value = `Generado el: ${dateFormatted} a las ${timeFormatted} • Sistema POS La Molienda (Desarrollado por Juan Esteban Riascos Madarriaga - Ingeniero de Sistemas)`;
-  sMeta.font = { name: 'Arial', size: 8.5, italic: true, color: { argb: 'FF8C7A6B' } };
-  sMeta.alignment = { vertical: 'middle', horizontal: 'left' };
-
   // Cálculos de KPI de ventas
   const completedSales = sales.filter((s) => s.status === 'completada');
   const totalGrand = completedSales.reduce((sum, s) => sum + s.total, 0);
   const totalSub = completedSales.reduce((sum, s) => sum + s.subtotal, 0);
   const totalTips = completedSales.reduce((sum, s) => sum + s.tipAmount, 0);
   const avgTicket = completedSales.length > 0 ? Math.round(totalGrand / completedSales.length) : 0;
+
+  // Alturas de Filas del Masthead
+  salesSheet.getRow(1).height = 30;
+  salesSheet.getRow(2).height = 24;
+  salesSheet.getRow(3).height = 22;
+  salesSheet.getRow(4).height = 5; // Golden accent divider line
+
+  // Colorear todo el fondo del Masthead (Filas 1 a 3, Columnas A a J)
+  for (let r = 1; r <= 3; r++) {
+    const row = salesSheet.getRow(r);
+    for (let c = 1; c <= 10; c++) {
+      const cell = row.getCell(c);
+      if (c >= 8) {
+        // Tarjeta derecha ejecutiva de Período & Filtro (Cols H, I, J)
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF2A1E14' },
+        };
+      } else {
+        // Bloque institucional (Cols A a G)
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF1A120B' },
+        };
+      }
+    }
+  }
+
+  // Incrustar Logo (Top Left en Celda A1:A3)
+  if (logoId !== null) {
+    salesSheet.addImage(logoId, {
+      tl: { col: 0.18, row: 0.16 },
+      ext: { width: 68, height: 68 },
+      editAs: 'undefined',
+    });
+  }
+
+  // Celda A1:A3 (Bloque del Logo con borde sutil)
+  salesSheet.mergeCells('A1:A3');
+  const aLogoCell = salesSheet.getCell('A1');
+  aLogoCell.border = {
+    top: { style: 'thin', color: { argb: 'FFB45309' } },
+    bottom: { style: 'thin', color: { argb: 'FFB45309' } },
+    left: { style: 'thin', color: { argb: 'FFB45309' } },
+  };
+
+  // Bloque Central: Nombre y Subtítulo
+  salesSheet.mergeCells('B1:G1');
+  const sTitle = salesSheet.getCell('B1');
+  sTitle.value = 'LA MOLIENDA CAFÉ & BAR';
+  sTitle.font = { name: 'Arial', size: 16, bold: true, color: { argb: 'FFF59E0B' } };
+  sTitle.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+  sTitle.border = { top: { style: 'thin', color: { argb: 'FFB45309' } } };
+
+  salesSheet.mergeCells('B2:G2');
+  const sSub = salesSheet.getCell('B2');
+  sSub.value = 'REPORTE OFICIAL DE OPERACIONES, VENTAS Y FACTURACIÓN';
+  sSub.font = { name: 'Arial', size: 10.5, bold: true, color: { argb: 'FFFFFFFF' } };
+  sSub.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+
+  salesSheet.mergeCells('B3:G3');
+  const sMeta = salesSheet.getCell('B3');
+  sMeta.value = `Sistema POS La Molienda • Desarrollado por Ing. Juan Esteban Riascos Madarriaga`;
+  sMeta.font = { name: 'Arial', size: 8.5, italic: true, color: { argb: 'FFD6C7B7' } };
+  sMeta.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+  sMeta.border = { bottom: { style: 'thin', color: { argb: 'FFB45309' } } };
+
+  // Tarjeta Ejecutiva Derecha: Período y Filtro Activo (Cols H, I, J)
+  const periodText = options?.periodLabel ? options.periodLabel.toUpperCase() : 'CONSOLIDADO GENERAL';
+
+  salesSheet.mergeCells('H1:J1');
+  const sCardHead = salesSheet.getCell('H1');
+  sCardHead.value = 'PERÍODO SELECCIONADO';
+  sCardHead.font = { name: 'Arial', size: 8, bold: true, color: { argb: 'FFF59E0B' } };
+  sCardHead.alignment = { vertical: 'middle', horizontal: 'center' };
+  sCardHead.border = {
+    top: { style: 'medium', color: { argb: 'FFD97706' } },
+    left: { style: 'medium', color: { argb: 'FFD97706' } },
+    right: { style: 'medium', color: { argb: 'FFD97706' } },
+  };
+
+  salesSheet.mergeCells('H2:J2');
+  const sCardBody = salesSheet.getCell('H2');
+  sCardBody.value = periodText;
+  sCardBody.font = { name: 'Arial', size: 10.5, bold: true, color: { argb: 'FFFFFFFF' } };
+  sCardBody.alignment = { vertical: 'middle', horizontal: 'center' };
+  sCardBody.border = {
+    left: { style: 'medium', color: { argb: 'FFD97706' } },
+    right: { style: 'medium', color: { argb: 'FFD97706' } },
+  };
+
+  salesSheet.mergeCells('H3:J3');
+  const sCardFoot = salesSheet.getCell('H3');
+  sCardFoot.value = `Emisión: ${dateFormatted} ${timeFormatted} • ${completedSales.length} txs`;
+  sCardFoot.font = { name: 'Arial', size: 8, bold: true, color: { argb: 'FF10B981' } };
+  sCardFoot.alignment = { vertical: 'middle', horizontal: 'center' };
+  sCardFoot.border = {
+    bottom: { style: 'medium', color: { argb: 'FFD97706' } },
+    left: { style: 'medium', color: { argb: 'FFD97706' } },
+    right: { style: 'medium', color: { argb: 'FFD97706' } },
+  };
+
+  // Fila 4: Línea de acento dorado divisoria
+  const divRow = salesSheet.getRow(4);
+  for (let c = 1; c <= 10; c++) {
+    const dCell = divRow.getCell(c);
+    dCell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFD97706' },
+    };
+  }
 
   // TARJETAS EJECUTIVAS (KPIs) - Filas 5 y 6
   salesSheet.getRow(5).height = 17;
@@ -315,36 +403,112 @@ export async function exportLaMoliendaReport(
     { width: 17 }, // Estado Stock
   ];
 
+  // Alturas de Filas del Masthead
+  invSheet.getRow(1).height = 30;
+  invSheet.getRow(2).height = 24;
+  invSheet.getRow(3).height = 22;
+  invSheet.getRow(4).height = 5; // Golden accent divider line
+
+  // Colorear todo el fondo del Masthead (Filas 1 a 3, Columnas A a I)
+  for (let r = 1; r <= 3; r++) {
+    const row = invSheet.getRow(r);
+    for (let c = 1; c <= 9; c++) {
+      const cell = row.getCell(c);
+      if (c >= 7) {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF2A1E14' },
+        };
+      } else {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF1A120B' },
+        };
+      }
+    }
+  }
+
+  // Incrustar Logo (Top Left en Celda A1:A3)
   if (logoId !== null) {
     invSheet.addImage(logoId, {
-      tl: { col: 0.15, row: 0.15 },
+      tl: { col: 0.18, row: 0.16 },
       ext: { width: 68, height: 68 },
       editAs: 'undefined',
     });
   }
 
-  invSheet.getRow(1).height = 26;
-  invSheet.getRow(2).height = 20;
-  invSheet.getRow(3).height = 18;
-  invSheet.getRow(4).height = 10;
+  invSheet.mergeCells('A1:A3');
+  const aLogoInv = invSheet.getCell('A1');
+  aLogoInv.border = {
+    top: { style: 'thin', color: { argb: 'FFB45309' } },
+    bottom: { style: 'thin', color: { argb: 'FFB45309' } },
+    left: { style: 'thin', color: { argb: 'FFB45309' } },
+  };
 
-  invSheet.mergeCells('B1:I1');
+  invSheet.mergeCells('B1:F1');
   const iTitle = invSheet.getCell('B1');
   iTitle.value = 'LA MOLIENDA CAFÉ & BAR';
-  iTitle.font = { name: 'Arial', size: 15, bold: true, color: { argb: 'FF4A2810' } };
-  iTitle.alignment = { vertical: 'middle', horizontal: 'left' };
+  iTitle.font = { name: 'Arial', size: 16, bold: true, color: { argb: 'FFF59E0B' } };
+  iTitle.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+  iTitle.border = { top: { style: 'thin', color: { argb: 'FFB45309' } } };
 
-  invSheet.mergeCells('B2:I2');
+  invSheet.mergeCells('B2:F2');
   const iSub = invSheet.getCell('B2');
   iSub.value = 'CATÁLOGO DE PRODUCTOS, COSTOS DE INSUMO Y STOCK';
-  iSub.font = { name: 'Arial', size: 10.5, bold: true, color: { argb: 'FF0F766E' } };
-  iSub.alignment = { vertical: 'middle', horizontal: 'left' };
+  iSub.font = { name: 'Arial', size: 10.5, bold: true, color: { argb: 'FFFFFFFF' } };
+  iSub.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
 
-  invSheet.mergeCells('B3:I3');
+  invSheet.mergeCells('B3:F3');
   const iMeta = invSheet.getCell('B3');
-  iMeta.value = `Control de inventario valorizado • Monitoreo de márgenes de utilidad • ${products.length} Referencias activas`;
-  iMeta.font = { name: 'Arial', size: 8.5, italic: true, color: { argb: 'FF8C7A6B' } };
-  iMeta.alignment = { vertical: 'middle', horizontal: 'left' };
+  iMeta.value = `Control de inventario valorizado • Monitoreo de márgenes de utilidad • Desarrollado por Ing. Juan Esteban Riascos`;
+  iMeta.font = { name: 'Arial', size: 8.5, italic: true, color: { argb: 'FFD6C7B7' } };
+  iMeta.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+  iMeta.border = { bottom: { style: 'thin', color: { argb: 'FFB45309' } } };
+
+  invSheet.mergeCells('G1:I1');
+  const iCardHead = invSheet.getCell('G1');
+  iCardHead.value = 'CATÁLOGO DE INVENTARIO';
+  iCardHead.font = { name: 'Arial', size: 8, bold: true, color: { argb: 'FFF59E0B' } };
+  iCardHead.alignment = { vertical: 'middle', horizontal: 'center' };
+  iCardHead.border = {
+    top: { style: 'medium', color: { argb: 'FFD97706' } },
+    left: { style: 'medium', color: { argb: 'FFD97706' } },
+    right: { style: 'medium', color: { argb: 'FFD97706' } },
+  };
+
+  invSheet.mergeCells('G2:I2');
+  const iCardBody = invSheet.getCell('G2');
+  iCardBody.value = `${products.length} REFERENCIAS ACTIVAS`;
+  iCardBody.font = { name: 'Arial', size: 10.5, bold: true, color: { argb: 'FFFFFFFF' } };
+  iCardBody.alignment = { vertical: 'middle', horizontal: 'center' };
+  iCardBody.border = {
+    left: { style: 'medium', color: { argb: 'FFD97706' } },
+    right: { style: 'medium', color: { argb: 'FFD97706' } },
+  };
+
+  invSheet.mergeCells('G3:I3');
+  const iCardFoot = invSheet.getCell('G3');
+  iCardFoot.value = `Auditoría: ${dateFormatted} ${timeFormatted}`;
+  iCardFoot.font = { name: 'Arial', size: 8, bold: true, color: { argb: 'FF10B981' } };
+  iCardFoot.alignment = { vertical: 'middle', horizontal: 'center' };
+  iCardFoot.border = {
+    bottom: { style: 'medium', color: { argb: 'FFD97706' } },
+    left: { style: 'medium', color: { argb: 'FFD97706' } },
+    right: { style: 'medium', color: { argb: 'FFD97706' } },
+  };
+
+  // Fila 4: Línea de acento dorado divisoria
+  const divRowInv = invSheet.getRow(4);
+  for (let c = 1; c <= 9; c++) {
+    const dCell = divRowInv.getCell(c);
+    dCell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFD97706' },
+    };
+  }
 
   // Cálculos de KPI de Inventario
   const totalStockVal = products.reduce((sum, p) => sum + (p.price * p.stock), 0);
@@ -521,36 +685,102 @@ export async function exportLaMoliendaReport(
     { width: 16 }, // Participación %
   ];
 
+  // Alturas de Filas del Masthead
+  cashSheet.getRow(1).height = 30;
+  cashSheet.getRow(2).height = 24;
+  cashSheet.getRow(3).height = 22;
+  cashSheet.getRow(4).height = 5; // Golden accent divider line
+
+  // Colorear fondo de Filas 1 a 3 (Cols A a D)
+  for (let r = 1; r <= 3; r++) {
+    const row = cashSheet.getRow(r);
+    for (let c = 1; c <= 4; c++) {
+      const cell = row.getCell(c);
+      if (c === 4) {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF2A1E14' },
+        };
+      } else {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF1A120B' },
+        };
+      }
+    }
+  }
+
+  // Incrustar Logo (Top Left en Celda A1:A3)
   if (logoId !== null) {
     cashSheet.addImage(logoId, {
-      tl: { col: 0.15, row: 0.15 },
+      tl: { col: 0.08, row: 0.16 },
       ext: { width: 68, height: 68 },
       editAs: 'undefined',
     });
   }
 
-  cashSheet.getRow(1).height = 26;
-  cashSheet.getRow(2).height = 20;
-  cashSheet.getRow(3).height = 18;
-  cashSheet.getRow(4).height = 14;
-
-  cashSheet.mergeCells('B1:D1');
+  cashSheet.mergeCells('B1:C1');
   const cTitle = cashSheet.getCell('B1');
   cTitle.value = 'LA MOLIENDA CAFÉ & BAR';
-  cTitle.font = { name: 'Arial', size: 15, bold: true, color: { argb: 'FF4A2810' } };
-  cTitle.alignment = { vertical: 'middle', horizontal: 'left' };
+  cTitle.font = { name: 'Arial', size: 16, bold: true, color: { argb: 'FFF59E0B' } };
+  cTitle.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+  cTitle.border = { top: { style: 'thin', color: { argb: 'FFB45309' } } };
 
-  cashSheet.mergeCells('B2:D2');
+  cashSheet.mergeCells('B2:C2');
   const cSub = cashSheet.getCell('B2');
-  cSub.value = 'CUADRE DE CAJA, ARQUEO Y DESGLOSE POR MEDIO DE PAGO';
-  cSub.font = { name: 'Arial', size: 10.5, bold: true, color: { argb: 'FF7C3A14' } };
-  cSub.alignment = { vertical: 'middle', horizontal: 'left' };
+  cSub.value = 'CUADRE DE CAJA, ARQUEO Y MEDIOS DE PAGO';
+  cSub.font = { name: 'Arial', size: 10.5, bold: true, color: { argb: 'FFFFFFFF' } };
+  cSub.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
 
-  cashSheet.mergeCells('B3:D3');
+  cashSheet.mergeCells('B3:C3');
   const cMeta = cashSheet.getCell('B3');
-  cMeta.value = `Fecha de corte: ${dateFormatted} • Balance consolidado para auditoría contable`;
-  cMeta.font = { name: 'Arial', size: 8.5, italic: true, color: { argb: 'FF8C7A6B' } };
-  cMeta.alignment = { vertical: 'middle', horizontal: 'left' };
+  cMeta.value = `Balance de auditoría contable • Desarrollado por Ing. Juan Esteban Riascos`;
+  cMeta.font = { name: 'Arial', size: 8.5, italic: true, color: { argb: 'FFD6C7B7' } };
+  cMeta.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+  cMeta.border = { bottom: { style: 'thin', color: { argb: 'FFB45309' } } };
+
+  // Tarjeta derecha Col D
+  const cCardHead = cashSheet.getCell('D1');
+  cCardHead.value = 'CORTE FINANCIERO';
+  cCardHead.font = { name: 'Arial', size: 8, bold: true, color: { argb: 'FFF59E0B' } };
+  cCardHead.alignment = { vertical: 'middle', horizontal: 'center' };
+  cCardHead.border = {
+    top: { style: 'medium', color: { argb: 'FFD97706' } },
+    left: { style: 'medium', color: { argb: 'FFD97706' } },
+    right: { style: 'medium', color: { argb: 'FFD97706' } },
+  };
+
+  const cCardBody = cashSheet.getCell('D2');
+  cCardBody.value = options?.periodLabel ? options.periodLabel.toUpperCase() : dateFormatted;
+  cCardBody.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+  cCardBody.alignment = { vertical: 'middle', horizontal: 'center' };
+  cCardBody.border = {
+    left: { style: 'medium', color: { argb: 'FFD97706' } },
+    right: { style: 'medium', color: { argb: 'FFD97706' } },
+  };
+
+  const cCardFoot = cashSheet.getCell('D3');
+  cCardFoot.value = `${completedSales.length} transacciones auditadas`;
+  cCardFoot.font = { name: 'Arial', size: 8, bold: true, color: { argb: 'FF10B981' } };
+  cCardFoot.alignment = { vertical: 'middle', horizontal: 'center' };
+  cCardFoot.border = {
+    bottom: { style: 'medium', color: { argb: 'FFD97706' } },
+    left: { style: 'medium', color: { argb: 'FFD97706' } },
+    right: { style: 'medium', color: { argb: 'FFD97706' } },
+  };
+
+  // Fila 4: Línea de acento dorado divisoria
+  const divRowCash = cashSheet.getRow(4);
+  for (let c = 1; c <= 4; c++) {
+    const dCell = divRowCash.getCell(c);
+    dCell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFD97706' },
+    };
+  }
 
   // Totales por medio de pago
   const cashSales = completedSales.filter((s) => s.paymentMethod === 'efectivo');
@@ -662,7 +892,10 @@ export async function exportLaMoliendaReport(
   const url = window.URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = `La_Molienda_Reporte_Ejecutivo_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  const cleanSuffix = (options?.filenameSuffix || `Consolidado_${new Date().toISOString().slice(0, 10)}`)
+    .replace(/[/\\?%*:|"<>]/g, '-')
+    .replace(/\s+/g, '_');
+  anchor.download = `La_Molienda_Reporte_${cleanSuffix}.xlsx`;
   anchor.click();
   window.URL.revokeObjectURL(url);
 }

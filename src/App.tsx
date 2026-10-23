@@ -19,7 +19,7 @@ import {
   logoutSession,
 } from './utils/authStorage';
 import { DEFAULT_TABLES, DEFAULT_PRODUCTS } from './utils/defaults';
-import { exportLaMoliendaReport } from './utils/excelExporter';
+import { exportLaMoliendaReport, ExportReportOptions } from './utils/excelExporter';
 
 import { Header, ActiveSection } from './components/Header';
 import { StatsCards } from './components/StatsCards';
@@ -38,6 +38,7 @@ import { SplitBillModal } from './components/SplitBillModal';
 import { TableTransferModal } from './components/TableTransferModal';
 import { CashClosingModal } from './components/CashClosingModal';
 import { TableFormModal } from './components/TableFormModal';
+import { ReserveTableModal } from './components/ReserveTableModal';
 import { LoginModal } from './components/LoginModal';
 import { UserManagementModal } from './components/UserManagementModal';
 import { AboutModal } from './components/AboutModal';
@@ -147,6 +148,9 @@ export const App: React.FC = () => {
   const [isOpenTableModalOpen, setIsOpenTableModalOpen] = useState(false);
   const [preSelectedOpenTable, setPreSelectedOpenTable] = useState<Table | null>(null);
 
+  const [isReserveModalOpen, setIsReserveModalOpen] = useState(false);
+  const [preSelectedReserveTable, setPreSelectedReserveTable] = useState<Table | null>(null);
+
   const [splitBillTable, setSplitBillTable] = useState<Table | null>(null);
   const [isSplitBillOpen, setIsSplitBillOpen] = useState(false);
 
@@ -165,6 +169,47 @@ export const App: React.FC = () => {
   // Table management states
   const [isTableFormOpen, setIsTableFormOpen] = useState(false);
   const [editingTable, setEditingTable] = useState<Table | null>(null);
+
+  // Lock background scrolling when any modal is open
+  const isAnyModalOpen = Boolean(
+    isTableDetailOpen ||
+    isPaymentOpen ||
+    isTicketOpen ||
+    isProductFormOpen ||
+    isOpenTableModalOpen ||
+    isReserveModalOpen ||
+    isSplitBillOpen ||
+    isTransferModalOpen ||
+    isCashClosingOpen ||
+    isTableFormOpen ||
+    isLoginOpen ||
+    isUserManagementOpen ||
+    isAboutModalOpen
+  );
+
+  useEffect(() => {
+    if (isAnyModalOpen) {
+      document.body.classList.add('modal-open');
+      document.documentElement.classList.add('modal-open');
+
+      const handleWheel = (e: WheelEvent) => {
+        const target = e.target as HTMLElement | null;
+        if (target && target.classList.contains('modal-backdrop')) {
+          e.preventDefault();
+        }
+      };
+
+      window.addEventListener('wheel', handleWheel, { passive: false });
+      return () => {
+        document.body.classList.remove('modal-open');
+        document.documentElement.classList.remove('modal-open');
+        window.removeEventListener('wheel', handleWheel);
+      };
+    } else {
+      document.body.classList.remove('modal-open');
+      document.documentElement.classList.remove('modal-open');
+    }
+  }, [isAnyModalOpen]);
 
   // POS active comanda state (preserved across tab navigation)
   const [posCartItems, setPosCartItems] = useState<OrderItem[]>(() => {
@@ -318,6 +363,69 @@ export const App: React.FC = () => {
     setIsOpenTableModalOpen(true);
   };
 
+  const handleOpenReserveModal = (table?: Table) => {
+    setPreSelectedReserveTable(table || null);
+    setIsReserveModalOpen(true);
+  };
+
+  const handleConfirmReserveTable = (
+    tableId: string,
+    reservationData: {
+      name: string;
+      phone?: string;
+      date: string;
+      time: string;
+      pax: number;
+      notes?: string;
+    }
+  ) => {
+    const updated = tables.map((t) =>
+      t.id === tableId
+        ? {
+            ...t,
+            status: 'reservada' as const,
+            reservationName: reservationData.name,
+            reservationPhone: reservationData.phone,
+            reservationDate: reservationData.date,
+            reservationTime: reservationData.time,
+            reservationPax: reservationData.pax,
+            reservationNotes: reservationData.notes,
+          }
+        : t
+    );
+    setTables(updated);
+    saveStoredTables(updated);
+    setIsReserveModalOpen(false);
+
+    const target = updated.find((t) => t.id === tableId);
+    showNotification(`Mesa ${target?.number} reservada para ${reservationData.name}.`);
+  };
+
+  const handleCancelReservation = (table: Table) => {
+    const confirmed = window.confirm(
+      `¿Deseas cancelar la reserva de "${table.number}" para ${table.reservationName || 'el cliente'} y dejarla libre?`
+    );
+    if (!confirmed) return;
+
+    const updated = tables.map((t) =>
+      t.id === table.id
+        ? {
+            ...t,
+            status: 'libre' as const,
+            reservationName: undefined,
+            reservationPhone: undefined,
+            reservationDate: undefined,
+            reservationTime: undefined,
+            reservationPax: undefined,
+            reservationNotes: undefined,
+          }
+        : t
+    );
+    setTables(updated);
+    saveStoredTables(updated);
+    showNotification(`Reserva de ${table.number} cancelada. Mesa libre.`);
+  };
+
   const handleConfirmOpenTable = (
     tableId: string,
     patronName: string,
@@ -333,6 +441,12 @@ export const App: React.FC = () => {
             patronName,
             waiter,
             capacity: pax,
+            reservationName: undefined,
+            reservationPhone: undefined,
+            reservationDate: undefined,
+            reservationTime: undefined,
+            reservationPax: undefined,
+            reservationNotes: undefined,
             items: [],
             subtotal: 0,
             tipPercentage: 0,
@@ -687,10 +801,12 @@ export const App: React.FC = () => {
   };
 
   // --- EXPORT TO EXCEL ---
-  const handleExportExcel = async () => {
+  const handleExportExcel = async (customSales?: SaleRecord[], options?: ExportReportOptions) => {
     try {
-      await exportLaMoliendaReport(sales, products, tables);
-      showNotification('Reporte oficial de La Molienda descargado en Excel (.xlsx).');
+      const salesToExport = customSales !== undefined ? customSales : sales;
+      await exportLaMoliendaReport(salesToExport, products, tables, options);
+      const desc = options?.periodLabel ? ` (${options.periodLabel})` : '';
+      showNotification(`Reporte oficial de La Molienda descargado en Excel${desc}.`);
     } catch (err: any) {
       alert(`Error al generar reporte Excel: ${err.message}`);
     }
@@ -790,6 +906,8 @@ export const App: React.FC = () => {
               onOpenNewTableForm={handleOpenNewTableForm}
               onEditTableForm={handleEditTableForm}
               onDeleteTable={handleDeleteTable}
+              onReserveTable={handleOpenReserveModal}
+              onCancelReservation={handleCancelReservation}
               onUpdateTables={handleUpdateAllTables}
               currentUserRole={currentUser?.role}
             />
@@ -823,6 +941,7 @@ export const App: React.FC = () => {
           <div key="inventario" className={`view-slider-container ${slideDirection === 'right' ? 'slide-from-right' : 'slide-from-left'}`}>
             <InventoryView
               products={synchronizedProducts}
+              sales={sales}
               onOpenNewProduct={handleOpenNewProduct}
               onEditProduct={handleEditProduct}
               onDeleteProduct={handleDeleteProduct}
@@ -971,6 +1090,15 @@ export const App: React.FC = () => {
           setEditingTable(null);
         }}
         onSave={handleSaveTableForm}
+      />
+
+      {/* 9.1. Table Reservation Modal */}
+      <ReserveTableModal
+        isOpen={isReserveModalOpen}
+        tables={tables}
+        preSelectedTable={preSelectedReserveTable}
+        onClose={() => setIsReserveModalOpen(false)}
+        onConfirmReserve={handleConfirmReserveTable}
       />
 
       {/* 10. Authentication & Shift Login Screen */}

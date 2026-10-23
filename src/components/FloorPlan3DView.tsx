@@ -31,7 +31,8 @@ import {
   CornerDownRight,
   ChevronRight,
   Flame,
-  CheckCircle2
+  CheckCircle2,
+  BookmarkCheck,
 } from 'lucide-react';
 import { Table, Product, TableZone } from '../types';
 import { formatCurrency } from '../utils/storage';
@@ -48,6 +49,7 @@ interface FloorPlan3DViewProps {
   onOpenNewTableForm: () => void;
   onEditTableForm: (table: Table) => void;
   onDeleteTable: (table: Table) => void;
+  onReserveTable?: (table?: Table) => void;
   onUpdateTables: (tables: Table[]) => void;
 }
 
@@ -64,6 +66,7 @@ export const FloorPlan3DView: React.FC<FloorPlan3DViewProps> = ({
   onOpenNewTableForm,
   onEditTableForm,
   onDeleteTable,
+  onReserveTable,
   onUpdateTables,
 }) => {
   // Camera & view states
@@ -1026,6 +1029,7 @@ export const FloorPlan3DView: React.FC<FloorPlan3DViewProps> = ({
                 const isOccupied = table.status === 'ocupada';
                 const isPreBill = table.status === 'por_cobrar';
                 const isFree = table.status === 'libre';
+                const isReserved = table.status === 'reservada';
                 const isSelected = selectedTableId === table.id;
                 const isHovered = hoveredTableId === table.id;
                 const isDragging = draggingTableId === table.id;
@@ -1034,6 +1038,7 @@ export const FloorPlan3DView: React.FC<FloorPlan3DViewProps> = ({
                 let statusColorClass = 'status-free';
                 if (isOccupied) statusColorClass = 'status-occupied';
                 if (isPreBill) statusColorClass = 'status-prebill';
+                if (isReserved) statusColorClass = 'status-reserved';
 
                 // Counter-tilt for Upright 3D Billboard Card:
                 // Cancels camera pitch & yaw so labels are ALWAYS facing the viewer, 100% horizontal and razor sharp!
@@ -1199,6 +1204,7 @@ export const FloorPlan3DView: React.FC<FloorPlan3DViewProps> = ({
                 <span className={`hud-badge ${selectedTable.status}`}>
                   {selectedTable.status === 'ocupada' && '● Ocupada'}
                   {selectedTable.status === 'por_cobrar' && '● Pre-cuenta'}
+                  {selectedTable.status === 'reservada' && '● Reservada'}
                   {selectedTable.status === 'libre' && '● Libre'}
                 </span>
                 <span className="hud-zone-tag">
@@ -1223,17 +1229,81 @@ export const FloorPlan3DView: React.FC<FloorPlan3DViewProps> = ({
                   <p className="hud-info-text">
                     Mesa disponible con capacidad para <strong>{selectedTable.capacity} personas</strong>.
                   </p>
-                  <button
-                    type="button"
-                    className="btn-hud-action btn-open-primary"
-                    onClick={() => {
-                      onOpenTable(selectedTable);
-                      setSelectedTableId(null);
-                    }}
-                  >
-                    <Plus size={15} />
-                    <span>Abrir Mesa & Comenzar Pedido</span>
-                  </button>
+                  <div className="hud-actions-split">
+                    <button
+                      type="button"
+                      className="btn-hud-action btn-open-primary"
+                      onClick={() => {
+                        onOpenTable(selectedTable);
+                        setSelectedTableId(null);
+                      }}
+                    >
+                      <Plus size={15} />
+                      <span>Abrir Mesa</span>
+                    </button>
+                    {onReserveTable && (
+                      <button
+                        type="button"
+                        className="btn-hud-action btn-reserve-primary"
+                        onClick={() => {
+                          onReserveTable(selectedTable);
+                          setSelectedTableId(null);
+                        }}
+                      >
+                        <BookmarkCheck size={15} />
+                        <span>Reservar</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : selectedTable.status === 'reservada' ? (
+                <div className="hud-reserved-state">
+                  <div className="hud-reserved-info-box">
+                    <p className="hud-info-text">
+                      Reservada para: <strong>{selectedTable.reservationName || 'Cliente'}</strong>
+                    </p>
+                    <p className="hud-subtext">
+                      Hora: <strong>{selectedTable.reservationTime || 'Pendiente'}</strong>
+                      {selectedTable.reservationDate && ` (${selectedTable.reservationDate})`}
+                      {' • '}Capacidad: <strong>{selectedTable.reservationPax || selectedTable.capacity} pax</strong>
+                    </p>
+                    {selectedTable.reservationPhone && (
+                      <p className="hud-subtext">
+                        Tel: <strong>{selectedTable.reservationPhone}</strong>
+                      </p>
+                    )}
+                    {selectedTable.reservationNotes && (
+                      <p className="hud-notes-box">
+                        "{selectedTable.reservationNotes}"
+                      </p>
+                    )}
+                  </div>
+                  <div className="hud-actions-split">
+                    <button
+                      type="button"
+                      className="btn-hud-action btn-open-primary"
+                      onClick={() => {
+                        onOpenTable(selectedTable);
+                        setSelectedTableId(null);
+                      }}
+                    >
+                      <Plus size={15} />
+                      <span>Ocupar Mesa</span>
+                    </button>
+                    {onReserveTable && (
+                      <button
+                        type="button"
+                        className="btn-hud-action btn-reserve-primary"
+                        onClick={() => {
+                          onReserveTable(selectedTable);
+                          setSelectedTableId(null);
+                        }}
+                      >
+                        <BookmarkCheck size={15} />
+                        <span>Editar Reserva</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="hud-occupied-state">

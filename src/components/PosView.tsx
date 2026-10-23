@@ -438,33 +438,6 @@ export const PosView: React.FC<PosViewProps> = ({
             <span>{formatCurrency(cartSubtotal)}</span>
           </div>
 
-          <div className="ticket-tip-selector">
-            <span>Propina sugerida:</span>
-            <div className="ticket-tip-pills">
-              <button
-                type="button"
-                className={`ticket-tip-btn ${tipPercentage === 0 ? 'active' : ''}`}
-                onClick={() => setTipPercentage(0)}
-              >
-                0%
-              </button>
-              <button
-                type="button"
-                className={`ticket-tip-btn ${tipPercentage === 10 ? 'active' : ''}`}
-                onClick={() => setTipPercentage(10)}
-              >
-                10%
-              </button>
-              <button
-                type="button"
-                className={`ticket-tip-btn ${tipPercentage === 15 ? 'active' : ''}`}
-                onClick={() => setTipPercentage(15)}
-              >
-                15%
-              </button>
-            </div>
-          </div>
-
           <div className="ticket-summary-line grand-total">
             <span>TOTAL:</span>
             <span className="grand-total-amount">{formatCurrency(cartTotal)}</span>

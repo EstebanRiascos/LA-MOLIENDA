@@ -57,6 +57,13 @@ export interface Table {
   tipPercentage?: number; // 0, 10, 15
   tipAmount?: number;
   total: number;
+  // Campos de Reserva de Mesa
+  reservationName?: string;
+  reservationPhone?: string;
+  reservationDate?: string; // YYYY-MM-DD
+  reservationTime?: string; // HH:mm
+  reservationPax?: number;
+  reservationNotes?: string;
   // Propiedades opcionales para el Plano 3D / Arquitectónico
   posX?: number; // Coordenada X porcentual (0 - 100)
   posY?: number; // Coordenada Y porcentual (0 - 100)

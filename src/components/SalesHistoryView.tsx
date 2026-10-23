@@ -11,15 +11,27 @@ import {
   DollarSign,
   Coffee,
   Eye,
+  CalendarDays,
+  Filter,
 } from 'lucide-react';
 import { SaleRecord, PaymentMethod } from '../types';
 import { formatCurrency } from '../utils/storage';
+import { ExportReportOptions } from '../utils/excelExporter';
+
+export type DateFilterPreset =
+  | 'today'
+  | 'yesterday'
+  | 'month'
+  | 'custom_day'
+  | 'range'
+  | 'week'
+  | 'all';
 
 interface SalesHistoryViewProps {
   sales: SaleRecord[];
   onViewSaleTicket: (sale: SaleRecord) => void;
   onOpenCashClosing: () => void;
-  onExportExcel: () => void;
+  onExportExcel: (filteredSales?: SaleRecord[], options?: ExportReportOptions) => void;
 }
 
 export const SalesHistoryView: React.FC<SalesHistoryViewProps> = ({
@@ -28,19 +40,106 @@ export const SalesHistoryView: React.FC<SalesHistoryViewProps> = ({
   onOpenCashClosing,
   onExportExcel,
 }) => {
+  // Timezone-accurate helpers based on browser's local time (Colombia)
+  const getLocalDateString = (dateInput: string | Date = new Date()): string => {
+    const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+    if (isNaN(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const getLocalMonthString = (dateInput: string | Date = new Date()): string => {
+    const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+    if (isNaN(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
+  };
+
+  const todayStr = getLocalDateString();
+  const currentMonthStr = getLocalMonthString();
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [dateFilter, setDateFilter] = useState<'today' | 'week' | 'all'>('today');
+  const [dateFilter, setDateFilter] = useState<DateFilterPreset>('today');
+  const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthStr);
+  const [selectedSingleDate, setSelectedSingleDate] = useState<string>(todayStr);
+  const [startDate, setStartDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(1);
+    return getLocalDateString(d);
+  });
+  const [endDate, setEndDate] = useState<string>(todayStr);
   const [paymentFilter, setPaymentFilter] = useState<PaymentMethod | 'all'>('all');
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  // Currently applied filter state
+  const [appliedFilter, setAppliedFilter] = useState<{
+    preset: DateFilterPreset;
+    month: string;
+    singleDate: string;
+    startDate: string;
+    endDate: string;
+  }>({
+    preset: 'today',
+    month: currentMonthStr,
+    singleDate: todayStr,
+    startDate: (() => {
+      const d = new Date();
+      d.setDate(1);
+      return getLocalDateString(d);
+    })(),
+    endDate: todayStr,
+  });
+
+  const handleSelectPreset = (preset: DateFilterPreset) => {
+    setDateFilter(preset);
+    if (preset === 'today' || preset === 'yesterday' || preset === 'week' || preset === 'all') {
+      setAppliedFilter((prev) => ({ ...prev, preset }));
+    }
+  };
+
+  const handleApplyFilter = () => {
+    setAppliedFilter({
+      preset: dateFilter,
+      month: selectedMonth,
+      singleDate: selectedSingleDate,
+      startDate: startDate,
+      endDate: endDate,
+    });
+  };
+
   const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  // Filter sales
+  // Filter sales based on currently APPLIED filter
   const filteredSales = sales.filter((s) => {
+    const saleDateStr = getLocalDateString(s.date);
+    const saleMonthStr = getLocalMonthString(s.date);
+
     // Date filter
     let matchesDate = true;
-    if (dateFilter === 'today') matchesDate = s.date.slice(0, 10) === todayStr;
-    if (dateFilter === 'week') matchesDate = s.date >= oneWeekAgo;
+    if (appliedFilter.preset === 'today') {
+      matchesDate = saleDateStr === todayStr;
+    } else if (appliedFilter.preset === 'yesterday') {
+      const yesterday = getLocalDateString(new Date(Date.now() - 24 * 60 * 60 * 1000));
+      matchesDate = saleDateStr === yesterday;
+    } else if (appliedFilter.preset === 'month') {
+      matchesDate = saleMonthStr === appliedFilter.month;
+    } else if (appliedFilter.preset === 'custom_day') {
+      matchesDate = saleDateStr === appliedFilter.singleDate;
+    } else if (appliedFilter.preset === 'range') {
+      if (appliedFilter.startDate && appliedFilter.endDate) {
+        matchesDate = saleDateStr >= appliedFilter.startDate && saleDateStr <= appliedFilter.endDate;
+      } else if (appliedFilter.startDate) {
+        matchesDate = saleDateStr >= appliedFilter.startDate;
+      } else if (appliedFilter.endDate) {
+        matchesDate = saleDateStr <= appliedFilter.endDate;
+      }
+    } else if (appliedFilter.preset === 'week') {
+      matchesDate = s.date >= oneWeekAgo;
+    } else if (appliedFilter.preset === 'all') {
+      matchesDate = true;
+    }
 
     // Payment method
     const matchesPayment = paymentFilter === 'all' || s.paymentMethod === paymentFilter;
@@ -55,6 +154,91 @@ export const SalesHistoryView: React.FC<SalesHistoryViewProps> = ({
 
     return matchesDate && matchesPayment && matchesSearch;
   });
+
+  const formatDisplayDate = (dStr: string) => {
+    if (!dStr) return '';
+    const parts = dStr.split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return dStr;
+  };
+
+  const formatMonthDisplay = (mStr: string) => {
+    if (!mStr) return '';
+    const [year, month] = mStr.split('-');
+    const monthNames = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+    ];
+    const mIdx = parseInt(month, 10) - 1;
+    return `${monthNames[mIdx] || month} ${year}`;
+  };
+
+  // Build individualized Excel export metadata from applied filter
+  const getFilterDetails = (): ExportReportOptions => {
+    let periodLabel = '';
+    let filenameSuffix = '';
+
+    switch (appliedFilter.preset) {
+      case 'today':
+        periodLabel = `Ventas de Hoy (${formatDisplayDate(todayStr)})`;
+        filenameSuffix = `Dia_${todayStr}`;
+        break;
+      case 'yesterday': {
+        const yStr = getLocalDateString(new Date(Date.now() - 24 * 60 * 60 * 1000));
+        periodLabel = `Ventas de Ayer (${formatDisplayDate(yStr)})`;
+        filenameSuffix = `Ayer_${yStr}`;
+        break;
+      }
+      case 'month':
+        periodLabel = `Mes de ${formatMonthDisplay(appliedFilter.month)}`;
+        filenameSuffix = `Mes_${appliedFilter.month}`;
+        break;
+      case 'custom_day':
+        periodLabel = `Día ${formatDisplayDate(appliedFilter.singleDate)}`;
+        filenameSuffix = `Dia_${appliedFilter.singleDate}`;
+        break;
+      case 'range':
+        periodLabel = `Del ${formatDisplayDate(appliedFilter.startDate)} al ${formatDisplayDate(appliedFilter.endDate)}`;
+        filenameSuffix = `Rango_${appliedFilter.startDate}_a_${appliedFilter.endDate}`;
+        break;
+      case 'week':
+        periodLabel = 'Últimos 7 Días';
+        filenameSuffix = `Ultimos_7_Dias_${todayStr}`;
+        break;
+      case 'all':
+        periodLabel = 'Historial Consolidado Completo';
+        filenameSuffix = `Historico_Completo_${todayStr}`;
+        break;
+    }
+
+    let filterSummary = `${filteredSales.length} transacciones registradas`;
+    if (paymentFilter !== 'all') {
+      const pLabel = {
+        efectivo: 'Efectivo',
+        tarjeta: 'Datáfono / Tarjeta',
+        transferencia: 'QR / Transferencia',
+        mixto: 'Pago Mixto',
+      }[paymentFilter] || paymentFilter;
+      filterSummary += ` • Método: ${pLabel}`;
+      filenameSuffix += `_${paymentFilter}`;
+    }
+    if (searchQuery.trim()) {
+      filterSummary += ` • Búsqueda: "${searchQuery.trim()}"`;
+    }
+
+    return { periodLabel, filenameSuffix, filterSummary };
+  };
+
+  const handleExportClick = () => {
+    if (filteredSales.length === 0) {
+      const confirmEmpty = window.confirm(
+        'No hay ventas que coincidan con el filtro actual. ¿Deseas descargar el reporte vacío para este período?'
+      );
+      if (!confirmEmpty) return;
+    }
+    const options = getFilterDetails();
+    onExportExcel(filteredSales, options);
+  };
 
   // Calculate totals from filtered
   const totalAmount = filteredSales.reduce((sum, s) => sum + s.total, 0);
@@ -128,82 +312,198 @@ export const SalesHistoryView: React.FC<SalesHistoryViewProps> = ({
       </div>
 
       {/* Control Bar: Filters & Actions */}
-      <div className="sales-toolbar">
-        <div className="toolbar-left">
-          {/* Date Filter Tabs */}
-          <div className="sales-date-tabs">
-            <button
-              type="button"
-              className={`sales-tab-btn ${dateFilter === 'today' ? 'active' : ''}`}
-              onClick={() => setDateFilter('today')}
+      <div className="sales-toolbar-section">
+        <div className="sales-toolbar">
+          <div className="toolbar-left">
+            {/* Primary Date Filter Tabs */}
+            <div className="sales-date-tabs">
+              <button
+                type="button"
+                className={`sales-tab-btn ${dateFilter === 'today' ? 'active' : ''}`}
+                onClick={() => handleSelectPreset('today')}
+              >
+                Hoy
+              </button>
+              <button
+                type="button"
+                className={`sales-tab-btn ${dateFilter === 'yesterday' ? 'active' : ''}`}
+                onClick={() => handleSelectPreset('yesterday')}
+              >
+                Ayer
+              </button>
+              <button
+                type="button"
+                className={`sales-tab-btn ${dateFilter === 'month' ? 'active' : ''}`}
+                onClick={() => handleSelectPreset('month')}
+              >
+                Mes
+              </button>
+              <button
+                type="button"
+                className={`sales-tab-btn ${dateFilter === 'custom_day' ? 'active' : ''}`}
+                onClick={() => handleSelectPreset('custom_day')}
+              >
+                Día
+              </button>
+              <button
+                type="button"
+                className={`sales-tab-btn ${dateFilter === 'range' ? 'active' : ''}`}
+                onClick={() => handleSelectPreset('range')}
+              >
+                Rango
+              </button>
+              <button
+                type="button"
+                className={`sales-tab-btn ${dateFilter === 'week' ? 'active' : ''}`}
+                onClick={() => handleSelectPreset('week')}
+              >
+                7 Días
+              </button>
+              <button
+                type="button"
+                className={`sales-tab-btn ${dateFilter === 'all' ? 'active' : ''}`}
+                onClick={() => handleSelectPreset('all')}
+              >
+                Historial
+              </button>
+            </div>
+
+            {/* Payment Method Filter */}
+            <select
+              value={paymentFilter}
+              onChange={(e) => setPaymentFilter(e.target.value as any)}
+              className="sales-filter-select"
             >
-              Hoy
-            </button>
-            <button
-              type="button"
-              className={`sales-tab-btn ${dateFilter === 'week' ? 'active' : ''}`}
-              onClick={() => setDateFilter('week')}
-            >
-              Últimos 7 Días
-            </button>
-            <button
-              type="button"
-              className={`sales-tab-btn ${dateFilter === 'all' ? 'active' : ''}`}
-              onClick={() => setDateFilter('all')}
-            >
-              Histórico Completo
-            </button>
+              <option value="all">Todos los Medios de Pago</option>
+              <option value="efectivo">Efectivo</option>
+              <option value="tarjeta">Datáfono / Tarjeta</option>
+              <option value="transferencia">QR / Transferencia</option>
+              <option value="mixto">Pago Dividido</option>
+            </select>
+
+            {/* Search Input */}
+            <div className="sales-search-box">
+              <Search size={15} className="sales-search-icon" />
+              <input
+                type="text"
+                placeholder="Buscar por ticket, mesa o cliente..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="sales-search-input"
+              />
+            </div>
           </div>
 
-          {/* Payment Method Filter */}
-          <select
-            value={paymentFilter}
-            onChange={(e) => setPaymentFilter(e.target.value as any)}
-            className="sales-filter-select"
-          >
-            <option value="all">Todos los Medios de Pago</option>
-            <option value="efectivo">Efectivo</option>
-            <option value="tarjeta">Datáfono / Tarjeta</option>
-            <option value="transferencia">QR / Transferencia</option>
-            <option value="mixto">Pago Dividido</option>
-          </select>
+          <div className="toolbar-right">
+            {/* Cierre de Caja Button */}
+            <button
+              type="button"
+              className="btn-cash-closing-action"
+              onClick={onOpenCashClosing}
+              title="Realizar arqueo de caja y cuadre del turno"
+            >
+              <Lock size={15} />
+              <span>Cierre de Caja</span>
+            </button>
 
-          {/* Search Input */}
-          <div className="sales-search-box">
-            <Search size={15} className="sales-search-icon" />
-            <input
-              type="text"
-              placeholder="Buscar por ticket, mesa o cliente..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="sales-search-input"
-            />
+            {/* Export to Excel Individualized */}
+            <button
+              type="button"
+              className="btn-export-excel-action"
+              onClick={handleExportClick}
+              title={`Descargar reporte Excel individualizado con este filtro (${getFilterDetails().periodLabel})`}
+            >
+              <FileSpreadsheet size={15} color="#10b981" />
+              <span>Exportar Excel ({filteredSales.length})</span>
+            </button>
           </div>
         </div>
 
-        <div className="toolbar-right">
-          {/* Cierre de Caja Button */}
-          <button
-            type="button"
-            className="btn-cash-closing-action"
-            onClick={onOpenCashClosing}
-            title="Realizar arqueo de caja y cuadre del turno"
-          >
-            <Lock size={15} />
-            <span>Cierre de Caja</span>
-          </button>
+        {/* Secondary Date Range Controls when month, custom_day or range is selected */}
+        {(dateFilter === 'month' || dateFilter === 'custom_day' || dateFilter === 'range') && (
+          <div className="sales-secondary-date-bar">
+            {dateFilter === 'month' && (
+              <div className="sales-custom-date-box">
+                <CalendarDays size={15} className="icon-cal-picker" />
+                <span className="date-input-lbl">Seleccionar Mes:</span>
+                <input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleApplyFilter()}
+                  className="sales-input-date"
+                />
+                <button
+                  type="button"
+                  className="btn-apply-filter"
+                  onClick={handleApplyFilter}
+                  title="Aplicar mes y filtrar la tabla"
+                >
+                  <Filter size={14} />
+                  <span>Aplicar Filtro</span>
+                </button>
+              </div>
+            )}
 
-          {/* Export to Excel */}
-          <button
-            type="button"
-            className="btn-export-excel-action"
-            onClick={onExportExcel}
-            title="Exportar informe de ventas a Excel (.xlsx)"
-          >
-            <FileSpreadsheet size={15} color="#10b981" />
-            <span>Exportar Excel</span>
-          </button>
-        </div>
+            {dateFilter === 'custom_day' && (
+              <div className="sales-custom-date-box">
+                <CalendarDays size={15} className="icon-cal-picker" />
+                <span className="date-input-lbl">Fecha Específica:</span>
+                <input
+                  type="date"
+                  value={selectedSingleDate}
+                  onChange={(e) => setSelectedSingleDate(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleApplyFilter()}
+                  className="sales-input-date"
+                />
+                <button
+                  type="button"
+                  className="btn-apply-filter"
+                  onClick={handleApplyFilter}
+                  title="Aplicar fecha y filtrar la tabla"
+                >
+                  <Filter size={14} />
+                  <span>Aplicar Filtro</span>
+                </button>
+              </div>
+            )}
+
+            {dateFilter === 'range' && (
+              <div className="sales-custom-date-box range-group">
+                <CalendarDays size={15} className="icon-cal-picker" />
+                <span className="date-input-lbl">Desde:</span>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleApplyFilter()}
+                  className="sales-input-date"
+                />
+                <span className="date-input-lbl">Hasta:</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleApplyFilter()}
+                  className="sales-input-date"
+                />
+                <button
+                  type="button"
+                  className="btn-apply-filter"
+                  onClick={handleApplyFilter}
+                  title="Aplicar rango de fechas y filtrar la tabla"
+                >
+                  <Filter size={14} />
+                  <span>Aplicar Filtro</span>
+                </button>
+              </div>
+            )}
+
+            <div className="sales-active-filter-tag">
+              <span>Filtro activo: <strong>{getFilterDetails().periodLabel}</strong></span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Transactions Table */}

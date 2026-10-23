@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   Users,
+  User,
   Clock,
   Coffee,
   Plus,
@@ -20,6 +21,9 @@ import {
   ShoppingBag,
   LayoutGrid,
   Compass,
+  BookmarkCheck,
+  Calendar,
+  Phone,
 } from 'lucide-react';
 import { Table, TableZone, TableStatus, Product, UserRole } from '../types';
 import { formatCurrency } from '../utils/storage';
@@ -37,6 +41,8 @@ interface TablesViewProps {
   onOpenNewTableForm: () => void;
   onEditTableForm: (table: Table) => void;
   onDeleteTable: (table: Table) => void;
+  onReserveTable?: (table?: Table) => void;
+  onCancelReservation?: (table: Table) => void;
   onUpdateTables?: (tables: Table[]) => void;
   currentUserRole?: UserRole;
 }
@@ -52,6 +58,8 @@ export const TablesView: React.FC<TablesViewProps> = ({
   onOpenNewTableForm,
   onEditTableForm,
   onDeleteTable,
+  onReserveTable,
+  onCancelReservation,
   onUpdateTables,
   currentUserRole,
 }) => {
@@ -163,6 +171,7 @@ export const TablesView: React.FC<TablesViewProps> = ({
           onOpenNewTableForm={onOpenNewTableForm}
           onEditTableForm={onEditTableForm}
           onDeleteTable={onDeleteTable}
+          onReserveTable={onReserveTable}
           onUpdateTables={onUpdateTables || (() => {})}
         />
       ) : (
@@ -235,6 +244,7 @@ export const TablesView: React.FC<TablesViewProps> = ({
               <option value="todas">Todos los Estados</option>
               <option value="ocupada">Ocupadas (Activas)</option>
               <option value="por_cobrar">Pre-cuenta Entregada</option>
+              <option value="reservada">Mesas Reservadas</option>
               <option value="libre">Mesas Libres</option>
             </select>
             <ChevronDown size={14} className="select-status-chevron" />
@@ -250,6 +260,19 @@ export const TablesView: React.FC<TablesViewProps> = ({
             <Plus size={15} strokeWidth={2.6} />
             <span>Abrir Mesa</span>
           </button>
+
+          {/* Reservar Mesa Button */}
+          {onReserveTable && (
+            <button
+              type="button"
+              className="btn-reserve-table-action"
+              onClick={() => onReserveTable()}
+              title="Registrar una nueva reserva de mesa"
+            >
+              <BookmarkCheck size={15} strokeWidth={2.4} />
+              <span>Reservar Mesa</span>
+            </button>
+          )}
 
           {/* Add New Table / Bar button (Exclusivo para Administrador) */}
           {currentUserRole === 'admin' && (
@@ -272,6 +295,7 @@ export const TablesView: React.FC<TablesViewProps> = ({
           const isOccupied = table.status === 'ocupada';
           const isPreBill = table.status === 'por_cobrar';
           const isFree = table.status === 'libre';
+          const isReserved = table.status === 'reservada';
           const timeText = getElapsedTime(table.openedAt);
           const zoneInfo = getZoneInfo(table.zone);
           const pendingCount = (table.items || []).filter((i) => (i.status || 'pending') !== 'served').length;
@@ -279,6 +303,7 @@ export const TablesView: React.FC<TablesViewProps> = ({
           let cardStatusClass = 'table-card-free';
           if (isOccupied) cardStatusClass = 'table-card-occupied';
           if (isPreBill) cardStatusClass = 'table-card-prebill';
+          if (isReserved) cardStatusClass = 'table-card-reserved';
 
           return (
             <div key={table.id} className={`table-card ${cardStatusClass}`}>
@@ -305,6 +330,11 @@ export const TablesView: React.FC<TablesViewProps> = ({
                   {isPreBill && (
                     <span className="status-badge status-prebill">
                       <Receipt size={12} /> Pre-cuenta
+                    </span>
+                  )}
+                  {isReserved && (
+                    <span className="status-badge status-reserved">
+                      <BookmarkCheck size={12} /> Reservada
                     </span>
                   )}
                   {isFree && (
@@ -361,8 +391,43 @@ export const TablesView: React.FC<TablesViewProps> = ({
                   )}
                 </div>
 
-                {/* If Table has active consumption */}
-                {isOccupied || isPreBill ? (
+                {/* If Table is Reserved */}
+                {isReserved ? (
+                  <div className="table-reserved-summary">
+                    <div className="reserved-client-row">
+                      <span className="reserved-client-name" title="Titular de la reserva">
+                        <User size={13} /> {table.reservationName || 'Reserva Apartada'}
+                      </span>
+                      {table.reservationTime && (
+                        <span className="reserved-time-badge" title="Hora de reserva">
+                          <Clock size={12} /> {table.reservationTime}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="reserved-meta-row">
+                      <span className="reserved-pax" title="Comensales esperados">
+                        <Users size={12} /> {table.reservationPax || table.capacity} pax
+                      </span>
+                      {table.reservationDate && (
+                        <span className="reserved-date" title="Fecha">
+                          <Calendar size={12} /> {table.reservationDate}
+                        </span>
+                      )}
+                      {table.reservationPhone && (
+                        <span className="reserved-phone" title="Teléfono">
+                          <Phone size={12} /> {table.reservationPhone}
+                        </span>
+                      )}
+                    </div>
+
+                    {table.reservationNotes && (
+                      <div className="reserved-notes-row" title="Notas especiales">
+                        <span>"{table.reservationNotes}"</span>
+                      </div>
+                    )}
+                  </div>
+                ) : isOccupied || isPreBill ? (
                   <div className="table-active-order-summary">
                     <div className="order-patron-info">
                       <span className="patron-name">
@@ -392,13 +457,61 @@ export const TablesView: React.FC<TablesViewProps> = ({
               {/* Card Actions Footer */}
               <div className="table-card-actions">
                 {isFree ? (
-                  <button
-                    type="button"
-                    className="btn-open-table"
-                    onClick={() => onOpenTable(table)}
-                  >
-                    <PlusCircle size={15} /> Abrir Mesa / Comanda
-                  </button>
+                  <div className="table-card-free-actions">
+                    <button
+                      type="button"
+                      className="btn-open-table"
+                      onClick={() => onOpenTable(table)}
+                      title={`Abrir comanda inmediata en ${table.number}`}
+                    >
+                      <PlusCircle size={15} /> Abrir Mesa
+                    </button>
+                    {onReserveTable && (
+                      <button
+                        type="button"
+                        className="btn-reserve-table-quick"
+                        onClick={() => onReserveTable(table)}
+                        title={`Apartar o reservar ${table.number}`}
+                      >
+                        <BookmarkCheck size={14} /> Reservar
+                      </button>
+                    )}
+                  </div>
+                ) : isReserved ? (
+                  <div className="table-card-reserved-actions">
+                    <button
+                      type="button"
+                      className="btn-occupy-reserved"
+                      onClick={() => onOpenTable(table)}
+                      title={`Abrir comanda para la reserva de ${table.reservationName || table.number}`}
+                    >
+                      <PlusCircle size={15} />
+                      <span>Ocupar Mesa</span>
+                    </button>
+
+                    <div className="table-quick-buttons">
+                      {onReserveTable && (
+                        <button
+                          type="button"
+                          className="btn-icon-subtle edit-reserve"
+                          onClick={() => onReserveTable(table)}
+                          title="Modificar datos de la reserva"
+                        >
+                          <Edit2 size={15} />
+                        </button>
+                      )}
+                      {onCancelReservation && (
+                        <button
+                          type="button"
+                          className="btn-icon-subtle cancel-reserve"
+                          onClick={() => onCancelReservation(table)}
+                          title="Cancelar y liberar reserva"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 ) : (
                   <>
                     <button

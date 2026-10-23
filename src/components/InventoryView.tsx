@@ -7,18 +7,28 @@ import {
   AlertTriangle,
   Package,
   TrendingUp,
+  TrendingDown,
+  Flame,
+  ChevronDown,
+  ChevronUp,
+  BarChart2,
+  Trophy,
+  Medal,
+  Award,
+  Crown,
   DollarSign,
   Layers,
   ArrowUpDown,
   Check,
   X,
 } from 'lucide-react';
-import { Product, ProductCategory, UserRole } from '../types';
+import { Product, ProductCategory, UserRole, SaleRecord } from '../types';
 import { CATEGORIES } from '../utils/defaults';
 import { formatCurrency } from '../utils/storage';
 
 interface InventoryViewProps {
   products: Product[];
+  sales?: SaleRecord[];
   onOpenNewProduct: () => void;
   onEditProduct: (product: Product) => void;
   onDeleteProduct: (productId: string) => void;
@@ -31,6 +41,7 @@ interface InventoryViewProps {
 
 export const InventoryView: React.FC<InventoryViewProps> = ({
   products,
+  sales = [],
   onOpenNewProduct,
   onEditProduct,
   onDeleteProduct,
@@ -46,6 +57,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   const [stockFilter, setStockFilter] = useState<'all' | 'normal' | 'low' | 'out'>('all');
   const [sortBy, setSortBy] = useState<'name' | 'price' | 'cost' | 'stock' | 'margin'>('name');
   const [sortAsc, setSortAsc] = useState(true);
+  const [isSalesPerformanceExpanded, setIsSalesPerformanceExpanded] = useState<boolean>(true);
 
   // Inline price editing state
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
@@ -66,6 +78,46 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         ) / products.length
       : 0;
   const lowStockCount = products.filter((p) => p.stock <= p.minStock).length;
+
+  // Sales rotation & performance calculation (Más y Menos Vendidos)
+  const salesMap = new Map<string, { quantity: number; revenue: number }>();
+  let totalUnitsSold = 0;
+
+  (sales || []).forEach((sale) => {
+    if (sale.status === 'anulada') return;
+    (sale.items || []).forEach((item) => {
+      const q = item.quantity || 0;
+      const rev = q * (item.unitPrice || 0);
+      totalUnitsSold += q;
+      const current = salesMap.get(item.productId) || { quantity: 0, revenue: 0 };
+      salesMap.set(item.productId, {
+        quantity: current.quantity + q,
+        revenue: current.revenue + rev,
+      });
+    });
+  });
+
+  const productsWithSalesStats = products.map((p) => {
+    const stat = salesMap.get(p.id) || { quantity: 0, revenue: 0 };
+    return {
+      ...p,
+      soldCount: stat.quantity,
+      salesRevenue: stat.revenue,
+    };
+  });
+
+  // Top selling products (filtered by soldCount > 0, highest soldCount first, top 5)
+  const topSelling = [...productsWithSalesStats]
+    .filter((p) => p.soldCount > 0)
+    .sort((a, b) => b.soldCount - a.soldCount || b.salesRevenue - a.salesRevenue)
+    .slice(0, 5);
+
+  const maxTopSold = topSelling.length > 0 ? topSelling[0].soldCount : 1;
+
+  // Least selling products (lowest soldCount first; if ties, items with highest stock in warehouse first, top 5)
+  const leastSelling = [...productsWithSalesStats]
+    .sort((a, b) => a.soldCount - b.soldCount || b.stock - a.stock)
+    .slice(0, 5);
 
   // Filter products
   const filteredProducts = products.filter((p) => {
@@ -172,6 +224,236 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
             <span className="inv-stat-value">{lowStockCount} ítems</span>
           </div>
         </div>
+      </div>
+
+      {/* Tarjeta de Rotación de Ventas (Productos Más y Menos Vendidos) */}
+      <div className="inventory-sales-performance-card">
+        <div className="sales-perf-header">
+          <div className="sales-perf-header-left">
+            <div className="sales-perf-icon">
+              <BarChart2 size={20} />
+            </div>
+            <div className="sales-perf-title-group">
+              <div className="sales-perf-title-row">
+                <h3 className="sales-perf-title">Rotación de Ventas: Más y Menos Vendidos</h3>
+                <span className="sales-perf-badge-live">Demanda en Tiempo Real</span>
+              </div>
+              <p className="sales-perf-subtitle">
+                Análisis de rotación calculado automáticamente desde las comandas cobradas en mesas y ventas de caja (POS).
+              </p>
+            </div>
+          </div>
+          <div className="sales-perf-header-actions">
+            <div className="sales-perf-stat-pill" title="Total de unidades despachadas en ventas registradas">
+              <Flame size={14} className="icon-fire-pill" />
+              <span><strong>{totalUnitsSold}</strong> {totalUnitsSold === 1 ? 'unidad vendida' : 'unidades vendidas'}</span>
+            </div>
+            <button
+              type="button"
+              className="sales-perf-toggle-btn"
+              onClick={() => setIsSalesPerformanceExpanded(!isSalesPerformanceExpanded)}
+              title={isSalesPerformanceExpanded ? 'Contraer tarjeta' : 'Expandir tarjeta'}
+            >
+              <span>{isSalesPerformanceExpanded ? 'Contraer' : 'Expandir'}</span>
+              {isSalesPerformanceExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+          </div>
+        </div>
+
+        {isSalesPerformanceExpanded && (
+          <div className="sales-perf-grid">
+            {/* Panel Izquierdo: Más Vendidos */}
+            <div className="sales-perf-column top-sellers-column">
+              <div className="sales-col-header">
+                <div className="sales-col-title-wrap">
+                  <div className="sales-col-icon-flame">
+                    <Flame size={16} />
+                  </div>
+                  <div>
+                    <h4 className="sales-col-title">🔥 Más Vendidos (Alta Rotación)</h4>
+                    <span className="sales-col-desc">Mayor demanda y facturación en el negocio</span>
+                  </div>
+                </div>
+                <span className="sales-col-badge top-badge">Top Salidas</span>
+              </div>
+
+              <div className="sales-perf-list">
+                {topSelling.length === 0 ? (
+                  <div className="sales-perf-empty">
+                    <Package size={30} className="empty-perf-icon" />
+                    <h5>Sin ventas registradas aún</h5>
+                    <p>
+                      Al cobrar pedidos y cuentas en mesas o POS, los productos estrella con más salidas aparecerán aquí automáticamente.
+                    </p>
+                  </div>
+                ) : (
+                  topSelling.map((product, idx) => {
+                    const percentOfTop = Math.max(12, Math.round((product.soldCount / maxTopSold) * 100));
+                    return (
+                      <div
+                        key={product.id}
+                        className="sales-perf-item top-item"
+                        onClick={() => {
+                          setSearchQuery(product.name);
+                          onShowNotification(`Filtrando en inventario: ${product.name}`);
+                        }}
+                        title={`Click para buscar "${product.name}" en la tabla de inventario`}
+                      >
+                        <div className="rank-badge-cell">
+                          <span className={`rank-badge rank-${idx + 1}`}>
+                            {idx === 0 ? (
+                              <>
+                                <Trophy size={13} className="badge-rank-icon icon-trophy" />
+                                <span>1º</span>
+                              </>
+                            ) : idx === 1 ? (
+                              <>
+                                <Medal size={13} className="badge-rank-icon icon-medal" />
+                                <span>2º</span>
+                              </>
+                            ) : idx === 2 ? (
+                              <>
+                                <Award size={13} className="badge-rank-icon icon-award" />
+                                <span>3º</span>
+                              </>
+                            ) : (
+                              <span>#{idx + 1}</span>
+                            )}
+                          </span>
+                        </div>
+
+                        <div className="sales-perf-thumb">
+                          {product.image ? (
+                            <img src={product.image} alt={product.name} />
+                          ) : (
+                            <div className="sales-perf-thumb-fallback">
+                              {product.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="sales-perf-info">
+                          <div className="sales-perf-name-row">
+                            <span className="sales-perf-name">{product.name}</span>
+                          </div>
+                          <div className="sales-perf-tags">
+                            <span className="sales-perf-tag cat-tag">
+                              {CATEGORIES.find((c) => c.id === product.category)?.label || product.category}
+                            </span>
+                            <span className="sales-perf-tag stock-tag">
+                              Stock: {product.stock} {product.unit}s
+                            </span>
+                          </div>
+                          <div className="sales-perf-progress-bar-bg" title={`${percentOfTop}% relativo al producto líder`}>
+                            <div
+                              className="sales-perf-progress-bar-fill top-fill"
+                              style={{ width: `${percentOfTop}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="sales-perf-metrics">
+                          <span className="sales-metric-sold top-sold">
+                            <strong>{product.soldCount}</strong> {product.soldCount === 1 ? 'ud. vendida' : 'uds. vendidas'}
+                          </span>
+                          <span className="sales-metric-rev">
+                            {formatCurrency(product.salesRevenue)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Panel Derecho: Menos Vendidos */}
+            <div className="sales-perf-column least-sellers-column">
+              <div className="sales-col-header">
+                <div className="sales-col-title-wrap">
+                  <div className="sales-col-icon-cold">
+                    <TrendingDown size={16} />
+                  </div>
+                  <div>
+                    <h4 className="sales-col-title">❄️ Menos Vendidos (Baja Rotación)</h4>
+                    <span className="sales-col-desc">Menor salida de comandas y stock en reposo</span>
+                  </div>
+                </div>
+                <span className="sales-col-badge cold-badge">Atención Stock</span>
+              </div>
+
+              <div className="sales-perf-list">
+                {leastSelling.length === 0 ? (
+                  <div className="sales-perf-empty">
+                    <Package size={30} className="empty-perf-icon" />
+                    <h5>No hay productos en inventario</h5>
+                  </div>
+                ) : (
+                  leastSelling.map((product, idx) => {
+                    const isZeroSales = product.soldCount === 0;
+                    return (
+                      <div
+                        key={product.id}
+                        className="sales-perf-item least-item"
+                        onClick={() => {
+                          setSearchQuery(product.name);
+                          onShowNotification(`Filtrando en inventario: ${product.name}`);
+                        }}
+                        title={`Click para buscar "${product.name}" en la tabla de inventario`}
+                      >
+                        <div className="rank-badge-cell">
+                          <span className="rank-badge rank-least">
+                            #{idx + 1}
+                          </span>
+                        </div>
+
+                        <div className="sales-perf-thumb">
+                          {product.image ? (
+                            <img src={product.image} alt={product.name} />
+                          ) : (
+                            <div className="sales-perf-thumb-fallback fallback-cold">
+                              {product.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="sales-perf-info">
+                          <div className="sales-perf-name-row">
+                            <span className="sales-perf-name">{product.name}</span>
+                          </div>
+                          <div className="sales-perf-tags">
+                            <span className="sales-perf-tag cat-tag">
+                              {CATEGORIES.find((c) => c.id === product.category)?.label || product.category}
+                            </span>
+                            <span className={`sales-perf-tag ${product.stock > 0 ? 'stock-alert-tag' : 'stock-zero-tag'}`}>
+                              {product.stock > 0 ? `${product.stock} ${product.unit}s en almacén` : 'Sin existencias'}
+                            </span>
+                          </div>
+                          <div className="sales-perf-status-note">
+                            {isZeroSales ? (
+                              <span className="text-warning-subtle">0 salidas registradas</span>
+                            ) : (
+                              <span className="text-muted-subtle">Rotación lenta</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="sales-perf-metrics">
+                          <span className={`sales-metric-sold ${isZeroSales ? 'metric-zero' : ''}`}>
+                            <strong>{product.soldCount}</strong> {product.soldCount === 1 ? 'ud. vendida' : 'uds. vendidas'}
+                          </span>
+                          <span className="sales-metric-rev muted">
+                            {product.soldCount > 0 ? formatCurrency(product.salesRevenue) : '$0'}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Control & Filter Toolbar */}
