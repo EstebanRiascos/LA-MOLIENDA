@@ -2,14 +2,15 @@ import React, { useState, useEffect } from 'react';
 import {
   X,
   Plus,
+  Minus,
   Edit2,
   Users,
-  Coffee,
-  Sparkles,
-  Check,
   CheckCircle,
   CheckCircle2,
   LayoutGrid,
+  MapPin,
+  Sliders,
+  Eye,
 } from 'lucide-react';
 import { Table, TableZone } from '../types';
 
@@ -176,12 +177,17 @@ export const TableFormModal: React.FC<TableFormModalProps> = ({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="table-form-body">
+        <form onSubmit={handleSubmit} className="table-form-wrapper">
+          <div className="table-form-body">
           {error && <div className="form-error-banner">{error}</div>}
 
-          {/* Section: Zone selector */}
-          <div className="form-group">
-            <label className="form-label">Zona o Ubicación *</label>
+          {/* SECCIÓN 1: ZONA O UBICACIÓN */}
+          <div className="table-form-section-card">
+            <div className="section-card-title">
+              <MapPin size={14} />
+              <span>1. Zona o Ubicación del Espacio</span>
+            </div>
+
             <div className="zone-selector-grid">
               {ZONE_OPTIONS.map((opt) => (
                 <button
@@ -203,98 +209,116 @@ export const TableFormModal: React.FC<TableFormModalProps> = ({
             </div>
           </div>
 
-          {/* Section: Number / Name and Capacity Row */}
-          <div className="form-row-two-col">
-            <div className="form-group flex-2">
-              <label className="form-label">Nombre o Número del Espacio *</label>
-              <input
-                type="text"
-                value={number}
-                onChange={(e) => {
-                  setNumber(e.target.value);
-                  setError(null);
-                }}
-                placeholder="Ej: Mesa 07, Terraza T5, Barra B5..."
-                className="input-text-standard"
-                autoFocus
-              />
-              <span className="form-hint">
-                Identificador visual único que verán los baristas y meseros.
-              </span>
+          {/* SECCIÓN 2: IDENTIFICACIÓN Y CAPACIDAD */}
+          <div className="table-form-section-card">
+            <div className="section-card-title">
+              <Sliders size={14} />
+              <span>2. Datos & Capacidad del Espacio</span>
             </div>
 
-            <div className="form-group flex-1">
-              <label className="form-label">Capacidad *</label>
-              <div className="capacity-stepper">
-                <button
-                  type="button"
-                  className="btn-stepper"
-                  onClick={() => setCapacity((c) => Math.max(1, c - 1))}
-                  title="Disminuir"
-                >
-                  -
-                </button>
-                <div className="capacity-value-box">
-                  <Users size={14} />
-                  <span>{capacity} pax</span>
+            <div className="form-row-two-col">
+              {/* Columna Nombre */}
+              <div className="form-group flex-1">
+                <label className="form-label">Nombre o Número del Espacio *</label>
+                <div className="input-with-icon">
+                  <LayoutGrid size={15} className="input-inner-icon" />
+                  <input
+                    type="text"
+                    value={number}
+                    onChange={(e) => {
+                      setNumber(e.target.value);
+                      setError(null);
+                    }}
+                    placeholder="Ej: Mesa 11, Barra 02..."
+                    className="form-input input-with-padding"
+                    autoFocus
+                    required
+                  />
                 </div>
-                <button
-                  type="button"
-                  className="btn-stepper"
-                  onClick={() => setCapacity((c) => Math.min(30, c + 1))}
-                  title="Aumentar"
-                >
-                  +
-                </button>
+                <span className="form-hint">
+                  Identificador visual único que verán los baristas y meseros.
+                </span>
+              </div>
+
+              {/* Columna Capacidad */}
+              <div className="form-group flex-1">
+                <label className="form-label">Capacidad de Comensales *</label>
+                <div className="table-capacity-control-box">
+                  <div className="capacity-stepper">
+                    <button
+                      type="button"
+                      className="btn-pax-step"
+                      onClick={() => setCapacity((c) => Math.max(1, c - 1))}
+                      disabled={capacity <= 1}
+                      title="Disminuir capacidad"
+                    >
+                      <Minus size={14} />
+                    </button>
+                    <div className="pax-count-box">
+                      <span className="pax-num">{capacity}</span>
+                      <span className="pax-txt">{capacity === 1 ? 'persona' : 'personas'}</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-pax-step"
+                      onClick={() => setCapacity((c) => Math.min(30, c + 1))}
+                      title="Aumentar capacidad"
+                    >
+                      <Plus size={14} />
+                    </button>
+                  </div>
+
+                  {/* Atajos integrados en la columna de capacidad */}
+                  <div className="pax-quick-selector">
+                    {[1, 2, 4, 6, 8, 10].map((p) => (
+                      <button
+                        type="button"
+                        key={p}
+                        className={`btn-cap-pill ${capacity === p ? 'active' : ''}`}
+                        onClick={() => setCapacity(p)}
+                      >
+                        {p} pax
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Quick capacity buttons */}
-          <div className="quick-capacity-pills">
-            <span className="quick-lbl">Atajos:</span>
-            {[1, 2, 4, 6, 8, 10].map((p) => (
-              <button
-                type="button"
-                key={p}
-                className={`btn-cap-pill ${capacity === p ? 'active' : ''}`}
-                onClick={() => setCapacity(p)}
-              >
-                {p} pax
-              </button>
-            ))}
-          </div>
+          {/* SECCIÓN 3: VISTA PREVIA COMPACTA EN SALA */}
+          <div className="table-live-preview-compact">
+            <div className="preview-compact-header">
+              <Eye size={13} />
+              <span>Vista Previa en Sala:</span>
+            </div>
 
-          {/* Live Preview Card */}
-          <div className="table-live-preview-box">
-            <span className="preview-label">Vista Previa en Sala:</span>
-            <div className="table-card table-card-free preview-mini-card">
-              <div className="table-card-header">
-                <div className="table-title-box">
-                  <span className="table-num">{number || 'Nombre del Espacio'}</span>
-                  <span className="table-zone-tag">
+            <div className="preview-compact-card">
+              <div className="preview-compact-left">
+                <div className="preview-name-row">
+                  <span className="preview-table-name">{number || 'Nombre del Espacio'}</span>
+                  <span className="preview-zone-tag">
+                    {ZONE_OPTIONS.find((z) => z.id === zone)?.icon}{' '}
                     {ZONE_OPTIONS.find((z) => z.id === zone)?.label}
                   </span>
                 </div>
+                <span className="preview-subtext">Mesa disponible para recibir clientes</span>
+              </div>
+
+              <div className="preview-compact-right">
+                <span className="preview-capacity-badge">
+                  <Users size={13} /> {capacity} {capacity === 1 ? 'persona' : 'personas'}
+                </span>
                 <span className="status-badge status-free">
                   <CheckCircle2 size={12} /> Libre
                 </span>
               </div>
-              <div className="table-card-body">
-                <div className="table-meta-row">
-                  <span className="table-capacity">
-                    <Users size={14} /> {capacity} pax
-                  </span>
-                </div>
-                <div className="table-free-placeholder">
-                  <span className="free-text">Mesa disponible para recibir clientes</span>
-                </div>
-              </div>
             </div>
           </div>
+        </div>
 
-          {/* Footer Actions */}
-          <div className="modal-footer-row">
+        {/* Footer Actions */}
+        <div className="modal-footer">
             <button
               type="button"
               className="btn-cancel"

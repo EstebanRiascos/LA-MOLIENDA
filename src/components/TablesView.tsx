@@ -274,6 +274,7 @@ export const TablesView: React.FC<TablesViewProps> = ({
           const isFree = table.status === 'libre';
           const timeText = getElapsedTime(table.openedAt);
           const zoneInfo = getZoneInfo(table.zone);
+          const pendingCount = (table.items || []).filter((i) => (i.status || 'pending') !== 'served').length;
 
           let cardStatusClass = 'table-card-free';
           if (isOccupied) cardStatusClass = 'table-card-occupied';
@@ -434,7 +435,12 @@ export const TablesView: React.FC<TablesViewProps> = ({
                           type="button"
                           className="btn-checkout-quick"
                           onClick={() => onCheckout(table)}
-                          title="Cobrar cuenta y cerrar mesa"
+                          title={
+                            pendingCount > 0
+                              ? `No se puede cobrar: Hay ${pendingCount} producto(s) por despachar`
+                              : "Cobrar cuenta y cerrar mesa"
+                          }
+                          disabled={pendingCount > 0}
                         >
                           <CreditCard size={15} />
                           <span>Cobrar</span>

@@ -444,6 +444,13 @@ export const App: React.FC = () => {
       showNotification('⚠️ Función exclusiva de Caja: Los meseros solo pueden registrar pedidos y pre-cuentas.');
       return;
     }
+    const pendingItems = table.items.filter((i) => (i.status || 'pending') !== 'served');
+    if (pendingItems.length > 0) {
+      showNotification(
+        `⚠️ No se puede cobrar: Hay ${pendingItems.length} producto(s) sin despachar (${pendingItems.map((p) => p.productName).slice(0, 2).join(', ')}${pendingItems.length > 2 ? '...' : ''}). Márcalos como "Servido" antes de cobrar.`
+      );
+      return;
+    }
     setPaymentTable(table);
     setDirectPaymentItems(null);
     setDirectPatronName('');

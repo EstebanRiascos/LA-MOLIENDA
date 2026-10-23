@@ -8,7 +8,6 @@ import {
   User,
   Coffee,
   Check,
-  Send,
   Receipt,
   CreditCard,
   ArrowRightLeft,
@@ -75,17 +74,16 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
   }, []);
 
   // Recalculate totals helper
-  const recalculateTable = (items: OrderItem[], tipPercent: number = table.tipPercentage ?? 0): Table => {
+  const recalculateTable = (items: OrderItem[]): Table => {
     const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
-    const tipAmount = Math.round(subtotal * (tipPercent / 100));
-    const total = subtotal + tipAmount;
+    const total = subtotal;
 
     return {
       ...table,
       items,
       subtotal,
-      tipPercentage: tipPercent,
-      tipAmount,
+      tipPercentage: 0,
+      tipAmount: 0,
       total,
       status: items.length > 0 ? (table.status === 'libre' ? 'ocupada' : table.status) : 'libre',
     };
@@ -168,21 +166,59 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
     setTempNoteText('');
   };
 
-  // Toggle tip
-  const handleToggleTip = (percent: number) => {
-    onUpdateTable(recalculateTable(table.items, percent));
+  // Cycle item status: pending -> preparing -> served -> pending
+  const handleCycleItemStatus = (itemId: string) => {
+    const nextStatusMap: Record<OrderItem['status'], OrderItem['status']> = {
+      pending: 'preparing',
+      preparing: 'served',
+      served: 'pending',
+    };
+
+    const labelMap: Record<OrderItem['status'], string> = {
+      pending: 'Por despachar',
+      preparing: 'En preparación',
+      served: 'Servido',
+    };
+
+    let updatedName = '';
+    let updatedLabel = '';
+
+    const newItems = table.items.map((i) => {
+      if (i.id === itemId) {
+        const current = i.status || 'pending';
+        const nextStatus = nextStatusMap[current] || 'pending';
+        updatedName = i.productName;
+        updatedLabel = labelMap[nextStatus];
+        return {
+          ...i,
+          status: nextStatus,
+          sentToBarAt: nextStatus === 'served' ? (i.sentToBarAt || new Date().toISOString()) : i.sentToBarAt,
+        };
+      }
+      return i;
+    });
+
+    onUpdateTable(recalculateTable(newItems));
+    if (updatedName) {
+      onShowNotification(`"${updatedName}" ahora está: ${updatedLabel}`);
+    }
   };
 
-  // Send round to Bar / Kitchen
-  const handleSendToBar = () => {
+  // Mark all items as served
+  const handleMarkAllAsServed = () => {
     const newItems = table.items.map((i) => ({
       ...i,
       status: 'served' as const,
-      sentToBarAt: new Date().toISOString(),
+      sentToBarAt: i.sentToBarAt || new Date().toISOString(),
     }));
     onUpdateTable(recalculateTable(newItems));
-    onShowNotification(`Comanda de ${table.number} enviada a barra y cocina.`);
+    onShowNotification('Todos los productos han sido marcados como "Servidos".');
   };
+
+  const pendingDispatchCount = table.items.filter(
+    (i) => (i.status || 'pending') !== 'served'
+  ).length;
+  const hasPendingDispatch = pendingDispatchCount > 0;
 
   // Filter products for quick add
   const filteredProducts = products.filter((p) => {
@@ -193,6 +229,19 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
       p.code.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  const formatElapsedTime = (openedAt?: string) => {
+    if (!openedAt) return '';
+    const totalMins = Math.floor((Date.now() - new Date(openedAt).getTime()) / 60000);
+    if (totalMins < 1) return 'Recién abierta';
+    if (totalMins < 60) return `Abierta hace ${totalMins} min`;
+    const hours = Math.floor(totalMins / 60);
+    const mins = totalMins % 60;
+    if (hours < 24) return `Abierta hace ${hours}h ${mins > 0 ? `${mins}m` : ''}`;
+    const days = Math.floor(hours / 24);
+    const remainingHours = hours % 24;
+    return `Abierta hace ${days}d ${remainingHours > 0 ? `${remainingHours}h` : ''}`;
+  };
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -209,14 +258,20 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
             <div>
               <h2 className="modal-title">Gestión de Cuenta & Comanda</h2>
               <div className="table-header-meta">
-                <span>
-                  <User size={13} /> {table.patronName || 'Cliente en sala'}
+                <span className="table-meta-chip meta-chip-patron">
+                  <User size={12} />
+                  <span>{table.patronName || 'Cliente en sala'}</span>
                 </span>
-                {table.waiter && <span>• Atendido por: {table.waiter}</span>}
+                {table.waiter && (
+                  <span className="table-meta-chip meta-chip-waiter">
+                    <Coffee size={12} />
+                    <span>Atendido por: <strong>{table.waiter}</strong></span>
+                  </span>
+                )}
                 {table.openedAt && (
-                  <span>
-                    • <Clock size={13} /> Abierta hace{' '}
-                    {Math.floor((Date.now() - new Date(table.openedAt).getTime()) / 60000)} min
+                  <span className="table-meta-chip meta-chip-time">
+                    <Clock size={12} />
+                    <span>{formatElapsedTime(table.openedAt)}</span>
                   </span>
                 )}
               </div>
@@ -243,16 +298,6 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
               <span className="col-title">
                 Consumo Actual ({table.items.reduce((s, i) => s + i.quantity, 0)} ítems)
               </span>
-              {table.items.some((i) => i.status === 'pending') && (
-                <button
-                  type="button"
-                  className="btn-send-bar"
-                  onClick={handleSendToBar}
-                  title="Mandar ronda a preparación en barra/cocina"
-                >
-                  <Send size={13} /> Enviar a Barra
-                </button>
-              )}
             </div>
 
             {/* List of Ordered Items */}
@@ -266,63 +311,19 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
               ) : (
                 table.items.map((item) => (
                   <div key={item.id} className="order-item-row">
-                    <img
-                      src={item.productImage}
-                      alt={item.productName}
-                      className="order-item-img"
-                    />
+                    <div className="order-item-main-content">
+                      {/* 1. Thumbnail */}
+                      <img
+                        src={item.productImage}
+                        alt={item.productName}
+                        className="order-item-img"
+                      />
 
-                    <div className="order-item-details">
-                      <div className="item-name-line">
+                      {/* 2. Product Name & Notes */}
+                      <div className="order-item-info-col">
                         <span className="item-name">{item.productName}</span>
-                        <span className="item-subtotal">
-                          {formatCurrency(item.unitPrice * item.quantity)}
-                        </span>
-                      </div>
 
-                      <div className="item-meta-line">
-                        <span className="item-unit-price">
-                          {formatCurrency(item.unitPrice)} c/u
-                        </span>
-
-                        {item.status === 'served' ? (
-                          <span className="item-status-pill served">
-                            <Check size={11} /> Servido
-                          </span>
-                        ) : (
-                          <span className="item-status-pill pending">
-                            Por despachar
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Notes Section */}
-                      {editingNoteItemId === item.id ? (
-                        <div className="item-note-edit-box">
-                          <input
-                            type="text"
-                            placeholder="Ej: Leche deslactosada, sin azúcar, poco hielo..."
-                            value={tempNoteText}
-                            onChange={(e) => setTempNoteText(e.target.value)}
-                            className="input-item-note"
-                            autoFocus
-                          />
-                          <button
-                            type="button"
-                            className="btn-note-save"
-                            onClick={() => handleSaveNote(item.id)}
-                          >
-                            Guardar
-                          </button>
-                          <button
-                            type="button"
-                            className="btn-note-cancel"
-                            onClick={() => setEditingNoteItemId(null)}
-                          >
-                            Cancelar
-                          </button>
-                        </div>
-                      ) : (
+                        {/* Notes Section Badge or Add Button */}
                         <div className="item-note-display">
                           {item.notes ? (
                             <span
@@ -348,37 +349,112 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
                             </button>
                           )}
                         </div>
-                      )}
+                      </div>
+
+                      {/* 3. Status & Unit Price Column */}
+                      <div className="order-item-meta-col">
+                        <button
+                          type="button"
+                          className={`item-status-pill ${item.status || 'pending'}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCycleItemStatus(item.id);
+                          }}
+                          title="Click para cambiar estado (Por despachar → En preparación → Servido)"
+                        >
+                          {item.status === 'served' ? (
+                            <>
+                              <Check size={11} /> Servido
+                            </>
+                          ) : item.status === 'preparing' ? (
+                            <>
+                              <Coffee size={11} /> En preparación
+                            </>
+                          ) : (
+                            <>
+                              <Clock size={11} /> Por despachar
+                            </>
+                          )}
+                        </button>
+                        <span className="item-unit-price">
+                          {formatCurrency(item.unitPrice)} c/u
+                        </span>
+                      </div>
+
+                      {/* 4. Quantity Stepper */}
+                      <div className="order-item-qty-stepper">
+                        <button
+                          type="button"
+                          className="btn-qty-mini btn-qty-minus"
+                          onClick={() => handleDecreaseQty(item.id)}
+                          title="Disminuir"
+                        >
+                          <Minus size={13} />
+                        </button>
+                        <span className="qty-number">{item.quantity}</span>
+                        <button
+                          type="button"
+                          className="btn-qty-mini btn-qty-plus"
+                          onClick={() => handleIncreaseQty(item.id)}
+                          title="Aumentar"
+                        >
+                          <Plus size={13} />
+                        </button>
+                      </div>
+
+                      {/* 5. Subtotal Total Price */}
+                      <div className="order-item-subtotal-col">
+                        <span className="item-subtotal-label">Subtotal</span>
+                        <span className="item-subtotal">
+                          {formatCurrency(item.unitPrice * item.quantity)}
+                        </span>
+                      </div>
+
+                      {/* 6. Delete Action */}
+                      <div className="order-item-del-col">
+                        <button
+                          type="button"
+                          className="btn-qty-delete"
+                          onClick={() => handleRemoveItem(item.id)}
+                          title="Eliminar producto"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </div>
 
-                    {/* Quantity Controls */}
-                    <div className="order-item-qty-controls">
-                      <button
-                        type="button"
-                        className="btn-qty-mini"
-                        onClick={() => handleDecreaseQty(item.id)}
-                        title="Disminuir"
-                      >
-                        <Minus size={13} />
-                      </button>
-                      <span className="qty-number">{item.quantity}</span>
-                      <button
-                        type="button"
-                        className="btn-qty-mini"
-                        onClick={() => handleIncreaseQty(item.id)}
-                        title="Aumentar"
-                      >
-                        <Plus size={13} />
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-qty-delete"
-                        onClick={() => handleRemoveItem(item.id)}
-                        title="Eliminar producto"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
+                    {/* Expandable Note Editor Bar */}
+                    {editingNoteItemId === item.id && (
+                      <div className="item-note-expanded-row">
+                        <MessageSquare size={13} className="note-row-icon" />
+                        <input
+                          type="text"
+                          placeholder="Nota especial: Ej. Leche deslactosada, sin azúcar, poco hielo..."
+                          value={tempNoteText}
+                          onChange={(e) => setTempNoteText(e.target.value)}
+                          className="input-item-note"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveNote(item.id);
+                            if (e.key === 'Escape') setEditingNoteItemId(null);
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="btn-note-save"
+                          onClick={() => handleSaveNote(item.id)}
+                        >
+                          Guardar
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-note-cancel"
+                          onClick={() => setEditingNoteItemId(null)}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))
               )}
@@ -386,48 +462,43 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
 
             {/* Bill Totals Summary */}
             <div className="order-summary-box">
-              <div className="summary-line">
-                <span className="summary-label">Subtotal Consumo:</span>
-                <span className="summary-val">{formatCurrency(table.subtotal)}</span>
-              </div>
-
-              {/* Tip Selection */}
-              <div className="summary-line tip-line">
-                <div className="tip-labels">
-                  <span className="summary-label">Propina Voluntaria:</span>
-                  <div className="tip-toggle-pills">
-                    <button
-                      type="button"
-                      className={`tip-btn ${(table.tipPercentage ?? 0) === 0 ? 'active' : ''}`}
-                      onClick={() => handleToggleTip(0)}
-                    >
-                      0%
-                    </button>
-                    <button
-                      type="button"
-                      className={`tip-btn ${table.tipPercentage === 10 ? 'active' : ''}`}
-                      onClick={() => handleToggleTip(10)}
-                    >
-                      10% (Sugerida)
-                    </button>
-                    <button
-                      type="button"
-                      className={`tip-btn ${table.tipPercentage === 15 ? 'active' : ''}`}
-                      onClick={() => handleToggleTip(15)}
-                    >
-                      15%
-                    </button>
-                  </div>
-                </div>
-                <span className="summary-val">{formatCurrency(table.tipAmount || 0)}</span>
-              </div>
-
               <div className="summary-line total-line">
-                <span className="total-label">TOTAL CUENTA:</span>
+                <div className="total-label-box">
+                  <span className="total-label">Total Cuenta:</span>
+                  <span className="total-sublabel">
+                    {table.items.reduce((s, i) => s + i.quantity, 0)}{' '}
+                    {table.items.reduce((s, i) => s + i.quantity, 0) === 1
+                      ? 'producto consumido'
+                      : 'productos consumidos'}
+                  </span>
+                </div>
                 <span className="total-val">
                   {formatCurrency(table.total || table.subtotal)}
                 </span>
               </div>
+
+              {/* Banner de alerta si hay productos pendientes por despachar */}
+              {hasPendingDispatch && (
+                <div className="pending-dispatch-banner">
+                  <div className="pending-dispatch-info">
+                    <Clock size={16} className="pending-dispatch-icon" />
+                    <div>
+                      <strong>{pendingDispatchCount} producto(s) por despachar</strong>
+                      <span className="pending-dispatch-sub">
+                        Debes servir todos los productos antes de poder cobrar la cuenta.
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-mark-all-served"
+                    onClick={handleMarkAllAsServed}
+                    title="Marcar todos los productos de esta mesa como Servidos"
+                  >
+                    <Check size={13} /> Servir todo
+                  </button>
+                </div>
+              )}
 
               {/* Account Operational Flow Buttons */}
               <div className="order-flow-actions">
@@ -466,9 +537,21 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
                   <button
                     type="button"
                     className="btn-flow-action btn-checkout-main"
-                    onClick={() => onOpenCheckout(table)}
-                    title="Cobrar la cuenta de la mesa y liberar espacio"
-                    disabled={table.items.length === 0}
+                    onClick={() => {
+                      if (hasPendingDispatch) {
+                        onShowNotification(
+                          `⚠️ No se puede cobrar: Hay ${pendingDispatchCount} producto(s) por despachar.`
+                        );
+                        return;
+                      }
+                      onOpenCheckout(table);
+                    }}
+                    title={
+                      hasPendingDispatch
+                        ? `No se puede cobrar: Hay ${pendingDispatchCount} producto(s) pendientes por despachar`
+                        : "Cobrar la cuenta de la mesa y liberar espacio"
+                    }
+                    disabled={table.items.length === 0 || hasPendingDispatch}
                   >
                     <CreditCard size={16} /> Cobrar Cuenta
                   </button>
@@ -542,12 +625,17 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
                       <span className="picker-price-val">{(prod.price || 0).toLocaleString('es-CO')}</span>
                     </span>
                     {prod.stock <= prod.minStock && (
-                      <span className="picker-stock-tag">Stock: {prod.stock}</span>
+                      <span className="picker-stock-tag">
+                        {prod.stock <= 0 ? 'Agotado' : `Stock: ${prod.stock}`}
+                      </span>
                     )}
                   </div>
                   <div className="picker-prod-info">
                     <span className="picker-prod-name">{prod.name}</span>
-                    <button type="button" className="btn-quick-add">
+                    <button
+                      type="button"
+                      className={`btn-quick-add ${prod.stock <= prod.minStock ? 'btn-low-stock' : ''}`}
+                    >
                       <Plus size={13} /> Añadir
                     </button>
                   </div>

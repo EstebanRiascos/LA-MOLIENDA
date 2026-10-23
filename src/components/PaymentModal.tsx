@@ -43,8 +43,6 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const subtotal = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
 
   // States
-  const [tipPercentage, setTipPercentage] = useState<number>(table?.tipPercentage ?? 0);
-  const [customTip, setCustomTip] = useState<number | ''>('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('efectivo');
   const [cashReceived, setCashReceived] = useState<number | ''>('');
   const [voucherReference, setVoucherReference] = useState('');
@@ -57,12 +55,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const [mixedCardAmount, setMixedCardAmount] = useState<number | ''>('');
 
   // Calculations
-  const calculatedTip =
-    customTip !== ''
-      ? Number(customTip) || 0
-      : Math.round(subtotal * (tipPercentage / 100));
-
-  const grandTotal = subtotal + calculatedTip;
+  const calculatedTip = 0;
+  const grandTotal = subtotal;
 
   const numCash = Number(cashReceived) || 0;
   const changeGiven = numCash > grandTotal ? numCash - grandTotal : 0;
@@ -95,6 +89,16 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     if (items.length === 0) {
       alert('No hay productos en esta cuenta.');
       return;
+    }
+
+    if (table) {
+      const pendingItems = (table.items || []).filter((i) => (i.status || 'pending') !== 'served');
+      if (pendingItems.length > 0) {
+        alert(
+          `No se puede cobrar: Hay ${pendingItems.length} producto(s) por despachar en esta mesa (${pendingItems.map((p) => p.productName).slice(0, 2).join(', ')}). Deben marcarse como "Servido" antes de cobrar.`
+        );
+        return;
+      }
     }
 
     // Si el pago no está completo, activamos los anuncios en rojo y bloqueamos
@@ -171,52 +175,6 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
             {/* Financial Summary */}
             <div className="payment-financial-breakdown">
-              <div className="pay-break-row">
-                <span>Subtotal Consumo:</span>
-                <span className="pay-break-val">{formatCurrency(subtotal)}</span>
-              </div>
-
-              {/* Tip Selection */}
-              <div className="pay-tip-section">
-                <span className="tip-title-lbl">Propina del Servicio:</span>
-                <div className="tip-pill-selector">
-                  <button
-                    type="button"
-                    className={`btn-tip-pill ${tipPercentage === 0 && customTip === '' ? 'active' : ''}`}
-                    onClick={() => {
-                      setTipPercentage(0);
-                      setCustomTip('');
-                    }}
-                  >
-                    0%
-                  </button>
-                  <button
-                    type="button"
-                    className={`btn-tip-pill ${tipPercentage === 10 && customTip === '' ? 'active' : ''}`}
-                    onClick={() => {
-                      setTipPercentage(10);
-                      setCustomTip('');
-                    }}
-                  >
-                    10% (Sugerida)
-                  </button>
-                  <button
-                    type="button"
-                    className={`btn-tip-pill ${tipPercentage === 15 && customTip === '' ? 'active' : ''}`}
-                    onClick={() => {
-                      setTipPercentage(15);
-                      setCustomTip('');
-                    }}
-                  >
-                    15%
-                  </button>
-                </div>
-                <div className="pay-tip-amount-row">
-                  <span>Monto propina:</span>
-                  <span className="tip-val">{formatCurrency(calculatedTip)}</span>
-                </div>
-              </div>
-
               {/* GRAND TOTAL */}
               <div className="pay-grand-total-row">
                 <span className="grand-label">TOTAL A COBRAR:</span>

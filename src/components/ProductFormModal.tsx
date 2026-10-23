@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Image as ImageIcon, Check, CheckCircle, DollarSign, Upload, Sparkles } from 'lucide-react';
+import { X, Image as ImageIcon, Check, CheckCircle, DollarSign, Upload, Sparkles, PackagePlus, Edit2 } from 'lucide-react';
 import { Product, ProductCategory } from '../types';
 import { CATEGORIES, PRODUCT_IMAGE_PRESETS } from '../utils/defaults';
 import { formatCurrency } from '../utils/storage';
@@ -109,22 +109,28 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       >
         {/* Header */}
         <div className="modal-header">
-          <div>
-            <h2 className="modal-title">
-              {initialData ? 'Editar Producto & Precio' : 'Registrar Nuevo Producto'}
-            </h2>
-            <p className="modal-subtitle">
-              Configura el precio de venta, costo de insumos, imagen y control de inventario.
-            </p>
+          <div className="product-header-box">
+            <div className="modal-header-icon-badge">
+              {initialData ? <Edit2 size={20} /> : <PackagePlus size={20} />}
+            </div>
+            <div>
+              <h2 className="modal-title">
+                {initialData ? 'Editar Producto & Precio' : 'Registrar Nuevo Producto'}
+              </h2>
+              <p className="modal-subtitle">
+                Configura el precio de venta, costo de insumos, imagen y control de inventario.
+              </p>
+            </div>
           </div>
           <button type="button" className="modal-close-btn" onClick={onClose} title="Cerrar modal">
             <X size={18} />
           </button>
         </div>
 
-        {/* Form Form Body */}
-        <form onSubmit={handleSubmit} className="product-form-body">
-          <div className="form-two-columns">
+        {/* Form Body & Footer */}
+        <form onSubmit={handleSubmit} className="product-form-wrapper">
+          <div className="product-form-body">
+            <div className="form-two-columns">
             {/* LEFT COLUMN: Data Fields & Pricing */}
             <div className="form-col-data">
               <div className="form-group-row">
@@ -398,6 +404,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 </div>
               )}
             </div>
+          </div>
           </div>
 
           {/* Modal Footer */}

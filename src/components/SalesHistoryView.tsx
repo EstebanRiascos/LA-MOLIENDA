@@ -58,7 +58,6 @@ export const SalesHistoryView: React.FC<SalesHistoryViewProps> = ({
 
   // Calculate totals from filtered
   const totalAmount = filteredSales.reduce((sum, s) => sum + s.total, 0);
-  const totalTips = filteredSales.reduce((sum, s) => sum + s.tipAmount, 0);
 
   const totalCash = filteredSales
     .filter((s) => s.paymentMethod === 'efectivo')
@@ -125,12 +124,6 @@ export const SalesHistoryView: React.FC<SalesHistoryViewProps> = ({
           <span className="kpi-mini-lbl">QR / Transferencias</span>
           <span className="kpi-mini-val">{formatCurrency(totalTransfer)}</span>
           <span className="kpi-mini-sub">Nequi / Daviplata</span>
-        </div>
-
-        <div className="sales-kpi-card highlight-amber">
-          <span className="kpi-mini-lbl">Total Propinas</span>
-          <span className="kpi-mini-val">{formatCurrency(totalTips)}</span>
-          <span className="kpi-mini-sub">Para el equipo de servicio</span>
         </div>
       </div>
 

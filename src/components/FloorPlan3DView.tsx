@@ -1301,14 +1301,27 @@ export const FloorPlan3DView: React.FC<FloorPlan3DViewProps> = ({
                       <Coffee size={14} />
                       <span>Pre-cuenta</span>
                     </button>
-                    <button
-                      type="button"
-                      className="hud-btn btn-checkout"
-                      onClick={() => onCheckout(selectedTable)}
-                    >
-                      <CreditCard size={14} />
-                      <span>Cobrar</span>
-                    </button>
+                    {(() => {
+                      const hudPendingCount = (selectedTable.items || []).filter(
+                        (i) => (i.status || 'pending') !== 'served'
+                      ).length;
+                      return (
+                        <button
+                          type="button"
+                          className="hud-btn btn-checkout"
+                          onClick={() => onCheckout(selectedTable)}
+                          disabled={hudPendingCount > 0}
+                          title={
+                            hudPendingCount > 0
+                              ? `No se puede cobrar: Hay ${hudPendingCount} producto(s) por despachar`
+                              : "Cobrar cuenta y cerrar mesa"
+                          }
+                        >
+                          <CreditCard size={14} />
+                          <span>Cobrar</span>
+                        </button>
+                      );
+                    })()}
                   </div>
                 </div>
               )}
