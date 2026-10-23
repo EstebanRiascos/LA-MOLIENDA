@@ -2,6 +2,7 @@ import React from 'react';
 import { X, Printer, Check, Coffee, Sparkles } from 'lucide-react';
 import { SaleRecord, Table } from '../types';
 import { formatCurrency } from '../utils/storage';
+import { playSound } from '../utils/sounds';
 import laMoliendaLogo from '../assets/la_molienda_logo.png';
 
 interface TicketModalProps {
@@ -35,6 +36,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   const ticketCode = saleRecord?.ticketNumber || `PRE-${new Date().getTime().toString().slice(-6)}`;
 
   const handlePrint = () => {
+    playSound('print');
     window.print();
   };
 

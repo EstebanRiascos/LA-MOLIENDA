@@ -1,9 +1,9 @@
 import { Product, Table, SaleRecord, SystemStats } from '../types';
 import { DEFAULT_PRODUCTS, DEFAULT_TABLES, DEFAULT_SALES } from './defaults';
 
-const STORAGE_KEY_PRODUCTS = 'lamolienda_products_prod_v2';
-const STORAGE_KEY_TABLES = 'lamolienda_tables_prod_v4';
-const STORAGE_KEY_SALES = 'lamolienda_sales_prod_v2';
+const STORAGE_KEY_PRODUCTS = 'lamolienda_products_clean_v1';
+const STORAGE_KEY_TABLES = 'lamolienda_tables_clean_v1';
+const STORAGE_KEY_SALES = 'lamolienda_sales_clean_v1';
 const STORAGE_KEY_THEME = 'lamolienda_theme_v1';
 const STORAGE_KEY_STAFF = 'lamolienda_current_staff_v1';
 const STORAGE_KEY_STAFF_LIST = 'lamolienda_staff_list_v1';
@@ -22,6 +22,9 @@ export function resetAllDataToProduction(): void {
     localStorage.removeItem('lamolienda_products_v1');
     localStorage.removeItem('lamolienda_tables_prod_v2');
     localStorage.removeItem('lamolienda_tables_prod_v3');
+    localStorage.removeItem('lamolienda_tables_prod_v4');
+    localStorage.removeItem('lamolienda_sales_prod_v2');
+    localStorage.removeItem('lamolienda_products_prod_v2');
     localStorage.removeItem(STORAGE_KEY_TABLES);
     localStorage.removeItem(STORAGE_KEY_SALES);
     localStorage.removeItem(STORAGE_KEY_PRODUCTS);
@@ -39,19 +42,11 @@ export function getStoredProducts(): Product[] {
       return DEFAULT_PRODUCTS;
     }
     const parsed: Product[] = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) {
+    if (!Array.isArray(parsed)) {
       saveStoredProducts(DEFAULT_PRODUCTS);
       return DEFAULT_PRODUCTS;
     }
-    // Reconcile and heal any broken/outdated image URLs
-    const healed = parsed.map((p) => {
-      const def = DEFAULT_PRODUCTS.find((d) => d.id === p.id);
-      if (def && (!p.image || p.image.includes('1574056067201') || p.image.includes('1608278243343'))) {
-        return { ...p, image: def.image };
-      }
-      return p;
-    });
-    return healed;
+    return parsed;
   } catch (err) {
     console.error('Error loading products from storage:', err);
     return DEFAULT_PRODUCTS;

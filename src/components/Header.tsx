@@ -12,8 +12,11 @@ import {
   ShieldCheck,
   LogOut,
   Users,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import laMoliendaLogo from '../assets/la_molienda_logo.png';
+import { isSoundEnabled, setSoundEnabled } from '../utils/sounds';
 import { SystemUser } from '../types';
 
 export type ActiveSection = 'mesas' | 'pos' | 'inventario' | 'caja';
@@ -55,6 +58,13 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenUserManagement,
   onLogout,
 }) => {
+  const [soundOn, setSoundOn] = React.useState<boolean>(() => isSoundEnabled());
+  const handleToggleSound = () => {
+    const next = !soundOn;
+    setSoundEnabled(next);
+    setSoundOn(next);
+  };
+
   const pillRefs = React.useRef<{ [key in ActiveSection]?: HTMLButtonElement | null }>({});
   const [sliderStyle, setSliderStyle] = React.useState<{ left: number; width: number; ready: boolean }>({
     left: 0,
@@ -222,6 +232,16 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="btn-text-desktop">Excel</span>
             </button>
           )}
+
+          {/* Sound On/Off */}
+          <button
+            type="button"
+            className="btn-icon-circle"
+            onClick={handleToggleSound}
+            title={soundOn ? 'Silenciar sonidos del sistema' : 'Activar sonidos del sistema'}
+          >
+            {soundOn ? <Volume2 size={17} /> : <VolumeX size={17} />}
+          </button>
 
           {/* Theme Toggle */}
           <button

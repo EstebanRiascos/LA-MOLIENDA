@@ -3893,14 +3893,31 @@ body {
 }
 
 .sales-table th {
-  background: var(--bg-input);
-  padding: 0.75rem 0.95rem;
+  background: #140d08;
+  padding: 0.82rem 0.95rem;
   font-size: 0.74rem;
-  font-weight: 700;
-  color: var(--text-muted);
+  font-weight: 800;
+  color: #fdfaf7;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 2px solid #3d281a;
   text-align: center;
+}
+
+.sales-table th:first-child {
+  border-top-left-radius: calc(var(--radius-lg) - 1px);
+}
+
+.sales-table th:last-child {
+  border-top-right-radius: calc(var(--radius-lg) - 1px);
+}
+
+[data-theme='light'] .sales-table th {
+  background: #e2d2c1;
+  color: #2a170b;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  border-bottom: 2px solid #bfa48c;
 }
 
 .sales-table td {
@@ -10599,13 +10616,31 @@ body.modal-open .app-main {
   align-items: center;
   gap: 8px;
   padding: 10px 14px;
-  background: rgba(244, 63, 94, 0.15);
-  border: 1px solid rgba(244, 63, 94, 0.35);
+  background: rgba(239, 68, 68, 0.18);
+  border: 1.5px solid rgba(239, 68, 68, 0.55);
   border-radius: var(--radius-md);
-  color: #fda4af;
-  font-size: 0.82rem;
+  color: #fca5a5;
+  font-size: 0.84rem;
+  font-weight: 700;
   margin-bottom: 16px;
   animation: fadeIn 0.2s ease;
+}
+
+.login-error-alert svg {
+  color: #f87171;
+  flex-shrink: 0;
+}
+
+[data-theme='light'] .login-error-alert {
+  background: #fef2f2;
+  border: 1.5px solid #dc2626;
+  color: #991b1b;
+  font-weight: 750;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.12);
+}
+
+[data-theme='light'] .login-error-alert svg {
+  color: #dc2626;
 }
 
 .login-success-alert {
@@ -12730,3 +12765,166 @@ body.modal-open .app-main {
 }
 
 
+
+/* =========================================================
+   EXIT CONFIRMATION MODAL (cierre de la aplicación)
+   ========================================================= */
+.exit-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(8, 5, 3, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: exitFadeIn 0.18s ease-out;
+}
+
+.exit-modal-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 1.6rem 1.5rem 1.4rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-top: 3px solid var(--accent-amber);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+  animation: exitPopIn 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.exit-modal-logo-wrapper {
+  width: 84px;
+  height: 84px;
+  margin: 0 auto 0.9rem;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--accent-amber);
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.3);
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.exit-modal-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.exit-modal-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 0.45rem;
+}
+
+.exit-modal-text {
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  margin-bottom: 1.3rem;
+}
+
+.exit-modal-actions {
+  display: flex;
+  gap: 0.65rem;
+}
+
+.exit-btn-cancel,
+.exit-btn-confirm {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.7rem 0.8rem;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.exit-btn-cancel {
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.exit-btn-cancel:hover {
+  border-color: var(--accent-amber);
+  color: var(--accent-amber);
+}
+
+.exit-btn-confirm {
+  background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+  color: #fff;
+  border: 1px solid #be123c;
+  box-shadow: 0 3px 12px rgba(225, 29, 72, 0.35);
+}
+
+.exit-btn-confirm:hover {
+  background: linear-gradient(135deg, #be123c 0%, #9f1239 100%);
+  transform: translateY(-1px);
+}
+
+@keyframes exitFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes exitPopIn {
+  from { opacity: 0; transform: scale(0.92) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* =========================================================
+   CIERRE DE CAJA: BOTONES DEL PIE CENTRADOS
+   ========================================================= */
+.cash-closing-modal .modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  flex-wrap: nowrap;
+}
+
+.cash-closing-modal .modal-footer .btn-cancel,
+.cash-closing-modal .modal-footer .btn-print-receipt,
+.cash-closing-modal .modal-footer .btn-confirm-payment {
+  height: 46px;
+  min-height: 46px;
+  margin: 0;
+  padding: 0 1.35rem;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  width: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  font-size: 0.88rem;
+  line-height: 1;
+  box-sizing: border-box;
+}
+
+.cash-closing-modal .modal-footer .btn-cancel {
+  font-weight: 700;
+}
+
+.cash-closing-modal .modal-footer .btn-confirm-payment {
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.cash-closing-modal .modal-footer .btn-confirm-payment span,
+.cash-closing-modal .modal-footer .btn-print-receipt span {
+  white-space: nowrap;
+}

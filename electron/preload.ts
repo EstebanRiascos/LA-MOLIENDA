@@ -14,6 +14,12 @@ const api = {
   saveConfig: (config: any) => ipcRenderer.invoke('config:save', config),
   testDbConnection: (config: any) => ipcRenderer.invoke('config:testDb', config),
   downloadPdf: (defaultFileName: string) => ipcRenderer.invoke('pdf:download', defaultFileName),
+  onCloseRequested: (callback: () => void) => {
+    const listener = () => callback();
+    ipcRenderer.on('app:close-requested', listener);
+    return () => ipcRenderer.removeListener('app:close-requested', listener);
+  },
+  confirmClose: () => ipcRenderer.send('app:confirm-close'),
   isElectron: true,
 };
 

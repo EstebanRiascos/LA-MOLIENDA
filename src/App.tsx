@@ -20,6 +20,7 @@ import {
 } from './utils/authStorage';
 import { DEFAULT_TABLES, DEFAULT_PRODUCTS } from './utils/defaults';
 import { exportLaMoliendaReport, ExportReportOptions } from './utils/excelExporter';
+import { playSound, soundForNotification } from './utils/sounds';
 
 import { Header, ActiveSection } from './components/Header';
 import { StatsCards } from './components/StatsCards';
@@ -42,6 +43,7 @@ import { ReserveTableModal } from './components/ReserveTableModal';
 import { LoginModal } from './components/LoginModal';
 import { UserManagementModal } from './components/UserManagementModal';
 import { AboutModal } from './components/AboutModal';
+import { ExitConfirmModal } from './components/ExitConfirmModal';
 import { Info } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -73,6 +75,7 @@ export const App: React.FC = () => {
     const newIdx = order.indexOf(newSec);
     setSlideDirection(newIdx >= oldIdx ? 'right' : 'left');
     setActiveSection(newSec);
+    playSound('tab');
   };
 
   // Core data states
@@ -105,6 +108,48 @@ export const App: React.FC = () => {
     return session ? session.name : getStoredCurrentStaff();
   });
   const [staffList] = useState<string[]>(() => getStoredStaffList());
+
+  // Exit confirmation (Electron window close)
+  const [isExitConfirmOpen, setIsExitConfirmOpen] = useState<boolean>(false);
+  useEffect(() => {
+    const api = (window as any).electronAPI;
+    if (!api || typeof api.onCloseRequested !== 'function') return;
+    const unsubscribe = api.onCloseRequested(() => setIsExitConfirmOpen(true));
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
+  }, []);
+
+  const handleConfirmExit = () => {
+    const api = (window as any).electronAPI;
+    playSound('goodbye');
+    // Se espera a que termine la melodía de despedida antes de cerrar
+    setTimeout(() => {
+      if (api && typeof api.confirmClose === 'function') {
+        api.confirmClose();
+      } else {
+        setIsExitConfirmOpen(false);
+      }
+    }, 650);
+  };
+
+  // Sonido de advertencia al pedir confirmación de cierre
+  useEffect(() => {
+    if (isExitConfirmOpen) playSound('warning');
+  }, [isExitConfirmOpen]);
+
+  // Sonido de clic en todos los botones (excepto los que tienen sonido propio)
+  useEffect(() => {
+    const handleGlobalClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      const btn = target?.closest('button') as HTMLButtonElement | null;
+      if (!btn || btn.disabled) return;
+      if (btn.closest('[data-sound="none"], .nav-pill, .btn-icon-circle')) return;
+      playSound('click');
+    };
+    document.addEventListener('click', handleGlobalClick, true);
+    return () => document.removeEventListener('click', handleGlobalClick, true);
+  }, []);
 
   // Notification state
   const [notification, setNotification] = useState<string | null>(null);
@@ -211,6 +256,16 @@ export const App: React.FC = () => {
     }
   }, [isAnyModalOpen]);
 
+  // Sonido al abrir / cerrar ventanas (se ignora el login, que tiene su propio sonido)
+  const isSoundModalOpen = isAnyModalOpen && !isLoginOpen;
+  const prevSoundModalOpen = React.useRef<boolean>(isSoundModalOpen);
+  useEffect(() => {
+    if (prevSoundModalOpen.current !== isSoundModalOpen) {
+      playSound(isSoundModalOpen ? 'open' : 'close');
+      prevSoundModalOpen.current = isSoundModalOpen;
+    }
+  }, [isSoundModalOpen]);
+
   // POS active comanda state (preserved across tab navigation)
   const [posCartItems, setPosCartItems] = useState<OrderItem[]>(() => {
     const params = new URLSearchParams(window.location.search);
@@ -266,10 +321,12 @@ export const App: React.FC = () => {
   }, [theme]);
 
   const handleToggleTheme = () => {
+    playSound('toggle');
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
   const showNotification = (msg: string) => {
+    playSound(soundForNotification(msg));
     setNotification(msg);
     setTimeout(() => {
       setNotification((curr) => (curr === msg ? null : curr));
@@ -1019,6 +1076,7 @@ export const App: React.FC = () => {
         table={paymentTable}
         directItems={directPaymentItems || undefined}
         directPatronName={directPatronName}
+        ticketConsecutive={sales.length + 1}
         onClose={() => setIsPaymentOpen(false)}
         onCompletePayment={handleCompletePayment}
       />
@@ -1117,6 +1175,13 @@ export const App: React.FC = () => {
       <AboutModal
         isOpen={isAboutModalOpen}
         onClose={() => setIsAboutModalOpen(false)}
+      />
+
+      {/* 13. Exit Confirmation Modal */}
+      <ExitConfirmModal
+        isOpen={isExitConfirmOpen}
+        onCancel={() => setIsExitConfirmOpen(false)}
+        onConfirm={handleConfirmExit}
       />
     </div>
   );

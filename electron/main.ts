@@ -13,6 +13,7 @@ process.env.VITE_PUBLIC = app.isPackaged
 
 let win: BrowserWindow | null = null;
 const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL'];
+let isQuitConfirmed = false;
 
 function createWindow() {
   win = new BrowserWindow({
@@ -41,6 +42,17 @@ function createWindow() {
     win?.show();
   });
 
+  // Interceptar el cierre (botón X) para pedir confirmación en la interfaz
+  win.on('close', (event) => {
+    if (isQuitConfirmed) return;
+    event.preventDefault();
+    win?.webContents.send('app:close-requested');
+  });
+
+  win.on('closed', () => {
+    win = null;
+  });
+
   if (VITE_DEV_SERVER_URL) {
     win.loadURL(VITE_DEV_SERVER_URL);
   } else {
@@ -62,6 +74,12 @@ app.on('activate', () => {
 });
 
 app.whenReady().then(() => {
+  // El usuario confirmó el cierre desde la ventana de confirmación
+  ipcMain.on('app:confirm-close', () => {
+    isQuitConfirmed = true;
+    app.quit();
+  });
+
   // Guardar y abrir reporte de Excel inmediatamente en la computadora
   ipcMain.handle('excel:saveAndOpen', async (_event, fileName: string, buffer: ArrayBuffer) => {
     try {

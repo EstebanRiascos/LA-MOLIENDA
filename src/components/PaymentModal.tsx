@@ -14,12 +14,14 @@ import {
 } from 'lucide-react';
 import { Table, PaymentMethod, SaleRecord, OrderItem } from '../types';
 import { formatCurrency } from '../utils/storage';
+import { playSound } from '../utils/sounds';
 
 interface PaymentModalProps {
   isOpen: boolean;
   table: Table | null;
   directItems?: OrderItem[];
   directPatronName?: string;
+  ticketConsecutive?: number;
   onClose: () => void;
   onCompletePayment: (saleRecord: SaleRecord, freedTableId?: string) => void;
 }
@@ -29,6 +31,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   table,
   directItems,
   directPatronName,
+  ticketConsecutive,
   onClose,
   onCompletePayment,
 }) => {
@@ -104,12 +107,14 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     // Si el pago no está completo, activamos los anuncios en rojo y bloqueamos
     if (!isPaymentValid()) {
       setHasAttemptedPay(true);
+      playSound('error');
       return;
     }
 
+    const seq = ticketConsecutive ? String(ticketConsecutive).padStart(4, '0') : '0001';
     const saleRecord: SaleRecord = {
       id: `sale-${Date.now()}`,
-      ticketNumber: `TK-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+      ticketNumber: `TK-${new Date().getFullYear()}-${seq}`,
       date: new Date().toISOString(),
       tableNumber: tableTitle,
       zone: tableZone,

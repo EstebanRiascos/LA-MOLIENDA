@@ -34,8 +34,8 @@
     "vite-plugin-electron-renderer": "^0.14.6"
   },
   "build": {
-    "appId": "com.liscore.capacitacion",
-    "productName": "LisCore Capacitacion",
+    "appId": "com.lamolienda.pos",
+    "productName": "La Molienda POS",
     "directories": {
       "output": "release"
     },
