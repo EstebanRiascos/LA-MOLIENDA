@@ -100,7 +100,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="brand-tagline"
               title="Sistema desarrollado por Juan Esteban Riascos Madarriaga — Ingeniero de Sistemas"
             >
-              Sistema POS &bull; Control de Mesas
+              Sistema POS
             </span>
           </div>
         </div>

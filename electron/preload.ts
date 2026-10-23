@@ -4,6 +4,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 const api = {
   openExcelDialog: () => ipcRenderer.invoke('dialog:openExcel'),
   saveExcelDialog: (defaultFileName: string) => ipcRenderer.invoke('dialog:saveExcel', defaultFileName),
+  saveAndOpenExcel: (fileName: string, buffer: ArrayBuffer) => ipcRenderer.invoke('excel:saveAndOpen', fileName, buffer),
   saveBuffer: (filePath: string, buffer: ArrayBuffer) => ipcRenderer.invoke('file:saveBuffer', filePath, buffer),
   readBuffer: (filePath: string) => ipcRenderer.invoke('file:readBuffer', filePath),
   getDesktopSample: () => ipcRenderer.invoke('file:getDesktopSample'),

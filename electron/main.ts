@@ -62,12 +62,40 @@ app.on('activate', () => {
 });
 
 app.whenReady().then(() => {
+  // Guardar y abrir reporte de Excel inmediatamente en la computadora
+  ipcMain.handle('excel:saveAndOpen', async (_event, fileName: string, buffer: ArrayBuffer) => {
+    try {
+      const downloadsDir = app.getPath('downloads');
+      let targetPath = path.join(downloadsDir, fileName);
+
+      try {
+        await fs.writeFile(targetPath, Buffer.from(buffer));
+      } catch (writeErr: any) {
+        if (writeErr.code === 'EBUSY' || writeErr.code === 'EPERM') {
+          const ext = path.extname(fileName);
+          const base = path.basename(fileName, ext);
+          const timeTag = new Date().toTimeString().slice(0, 8).replace(/:/g, '-');
+          targetPath = path.join(downloadsDir, `${base}_${timeTag}${ext}`);
+          await fs.writeFile(targetPath, Buffer.from(buffer));
+        } else {
+          throw writeErr;
+        }
+      }
+
+      await shell.openPath(targetPath);
+      return { success: true, filePath: targetPath };
+    } catch (err: any) {
+      console.error('Error al guardar y abrir Excel:', err);
+      return { success: false, error: err.message };
+    }
+  });
+
   // Save Excel or export file dialog
   ipcMain.handle('dialog:saveExcel', async (_event, defaultFileName: string) => {
     if (!win) return null;
     const { canceled, filePath } = await dialog.showSaveDialog(win, {
-      title: 'Guardar Reporte de Capacitaciones LisCore',
-      defaultPath: defaultFileName || 'LisCore_Capacitaciones.xlsx',
+      title: 'Guardar Reporte - La Molienda Café & Bar',
+      defaultPath: defaultFileName || 'La_Molienda_Reporte.xlsx',
       filters: [{ name: 'Archivos de Excel (*.xlsx)', extensions: ['xlsx'] }],
     });
     if (canceled || !filePath) return null;
