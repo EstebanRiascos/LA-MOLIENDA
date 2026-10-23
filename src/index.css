@@ -7065,6 +7065,10 @@ body {
     margin: 0mm;
   }
 
+  *, *::before, *::after {
+    box-sizing: border-box !important;
+  }
+
   html, body {
     margin: 0 auto !important;
     padding: 0 !important;
@@ -7081,6 +7085,8 @@ body {
     flex-direction: column !important;
     align-items: center !important;
     justify-content: flex-start !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   body * {
@@ -7139,8 +7145,193 @@ body {
     border: none !important;
     background: #fff !important;
     color: #000 !important;
+    font-size: 0.68rem !important;
+    line-height: 1.35 !important;
     page-break-after: avoid !important;
     page-break-inside: avoid !important;
+  }
+
+  /* Thermal Header & Logo */
+  #printable-receipt .receipt-brand-header {
+    margin-bottom: 2px !important;
+  }
+
+  #printable-receipt .receipt-logo {
+    display: block !important;
+    width: 46px !important;
+    height: 46px !important;
+    margin: 0 auto 3px auto !important;
+    object-fit: contain !important;
+    filter: grayscale(100%) contrast(400%) brightness(70%) !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  #printable-receipt .receipt-company {
+    font-size: 1.05rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.04em !important;
+    margin: 0 !important;
+  }
+
+  #printable-receipt .receipt-tagline {
+    font-size: 0.62rem !important;
+    font-weight: 600 !important;
+    color: #000 !important;
+    margin-bottom: 2px !important;
+  }
+
+  #printable-receipt .receipt-meta-contact {
+    font-size: 0.58rem !important;
+    line-height: 1.35 !important;
+    color: #000 !important;
+  }
+
+  #printable-receipt .receipt-meta-contact span {
+    white-space: nowrap !important;
+    display: block !important;
+  }
+
+  #printable-receipt .receipt-wifi {
+    font-size: 0.60rem !important;
+    font-weight: 700 !important;
+    white-space: nowrap !important;
+  }
+
+  /* Dividers */
+  #printable-receipt .receipt-divider-dashed {
+    border-bottom: 1px dashed #000 !important;
+    margin: 0.4rem 0 !important;
+  }
+
+  #printable-receipt .receipt-divider-solid {
+    border-bottom: 1px solid #000 !important;
+    margin: 0.35rem 0 !important;
+  }
+
+  /* Info block: Atendido por, Ubicación, Fecha, etc. */
+  #printable-receipt .receipt-info-block {
+    font-size: 0.68rem !important;
+    gap: 0.15rem !important;
+  }
+
+  #printable-receipt .info-line {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: baseline !important;
+    white-space: nowrap !important;
+  }
+
+  #printable-receipt .info-line span:first-child {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    font-weight: 600 !important;
+  }
+
+  #printable-receipt .info-line span:last-child,
+  #printable-receipt .info-line strong {
+    text-align: right !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    font-weight: 700 !important;
+  }
+
+  /* Products list */
+  #printable-receipt .receipt-items-head {
+    display: flex !important;
+    justify-content: space-between !important;
+    font-size: 0.68rem !important;
+    font-weight: 700 !important;
+  }
+
+  #printable-receipt .receipt-item-entry {
+    margin-bottom: 0.25rem !important;
+    font-size: 0.68rem !important;
+  }
+
+  #printable-receipt .entry-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: baseline !important;
+  }
+
+  #printable-receipt .head-qty,
+  #printable-receipt .entry-qty {
+    width: 18px !important;
+    min-width: 18px !important;
+    flex-shrink: 0 !important;
+    font-weight: 700 !important;
+  }
+
+  #printable-receipt .head-desc,
+  #printable-receipt .entry-name {
+    flex: 1 !important;
+    padding: 0 4px !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+  }
+
+  #printable-receipt .head-total,
+  #printable-receipt .entry-amount {
+    width: 72px !important;
+    min-width: 72px !important;
+    flex-shrink: 0 !important;
+    text-align: right !important;
+    white-space: nowrap !important;
+    font-weight: 700 !important;
+  }
+
+  #printable-receipt .entry-note {
+    font-size: 0.58rem !important;
+    margin-left: 18px !important;
+    font-style: italic !important;
+  }
+
+  /* Totals */
+  #printable-receipt .receipt-totals-block {
+    font-size: 0.70rem !important;
+    gap: 0.2rem !important;
+  }
+
+  #printable-receipt .total-line {
+    display: flex !important;
+    justify-content: space-between !important;
+    white-space: nowrap !important;
+  }
+
+  #printable-receipt .grand-total-line {
+    font-size: 0.88rem !important;
+    font-weight: 800 !important;
+  }
+
+  /* Footer */
+  #printable-receipt .receipt-footer {
+    font-size: 0.58rem !important;
+    gap: 0.15rem !important;
+    margin-top: 0.35rem !important;
+    color: #000 !important;
+  }
+
+  #printable-receipt .thanks-msg {
+    font-size: 0.74rem !important;
+    font-weight: 800 !important;
+  }
+
+  #printable-receipt .follow-msg,
+  #printable-receipt .footer-notice {
+    font-size: 0.56rem !important;
+  }
+
+  #printable-receipt .simulated-barcode {
+    font-size: 0.75rem !important;
+    letter-spacing: 0.16em !important;
+    margin-top: 0.25rem !important;
+  }
+
+  #printable-receipt .receipt-dev-credit {
+    font-size: 0.52rem !important;
+    color: #333 !important;
   }
 
   .no-print {
