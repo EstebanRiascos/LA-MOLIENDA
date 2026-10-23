@@ -79,9 +79,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
             <h2 className="receipt-company">LA MOLIENDA</h2>
             <span className="receipt-tagline">CAFÉ DE ESPECIALIDAD & COCTELERÍA</span>
             <div className="receipt-meta-contact">
-              <span>NIT: 901.482.115-4 • Régimen Simple</span>
-              <span>Calle 67 # 11-42 • Zona Gourmet</span>
-              <span>Tel: (601) 320-4920 • WhatsApp: +57 310 987 6543</span>
+              <span>NIT: 1000859878-8 • Régimen Simple</span>
             </div>
           </div>
 
@@ -141,12 +139,12 @@ export const TicketModal: React.FC<TicketModalProps> = ({
 
           {/* Totals */}
           <div className="receipt-totals-block">
-            <div className="total-line">
+            <div className="receipt-total-row">
               <span>SUBTOTAL:</span>
               <span>{formatCurrency(subtotal)}</span>
             </div>
             <div className="receipt-divider-dashed" />
-            <div className="total-line grand-total-line">
+            <div className="receipt-total-row receipt-grand-total">
               <span>TOTAL A PAGAR:</span>
               <span className="grand-price">{formatCurrency(total)}</span>
             </div>
@@ -154,7 +152,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
             {/* Payment specifics if completed sale */}
             {isCompletedSale && saleRecord && (
               <div className="receipt-payment-details">
-                <div className="total-line">
+                <div className="receipt-total-row">
                   <span>MEDIO DE PAGO:</span>
                   <strong style={{ textTransform: 'uppercase' }}>
                     {saleRecord.paymentMethod}
@@ -162,18 +160,18 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 </div>
                 {saleRecord.paymentMethod === 'efectivo' && (
                   <>
-                    <div className="total-line">
+                    <div className="receipt-total-row">
                       <span>EFECTIVO RECIBIDO:</span>
                       <span>{formatCurrency(saleRecord.cashReceived || 0)}</span>
                     </div>
-                    <div className="total-line">
+                    <div className="receipt-total-row">
                       <span>CAMBIO / VUELTOS:</span>
                       <span>{formatCurrency(saleRecord.changeGiven || 0)}</span>
                     </div>
                   </>
                 )}
                 {saleRecord.referenceNumber && (
-                  <div className="total-line">
+                  <div className="receipt-total-row">
                     <span>REF / VOUCHER:</span>
                     <span>{saleRecord.referenceNumber}</span>
                   </div>
@@ -187,15 +185,28 @@ export const TicketModal: React.FC<TicketModalProps> = ({
           {/* Footer message */}
           <div className="receipt-footer">
             <p className="thanks-msg">¡GRACIAS POR TU VISITA!</p>
-            <p className="follow-msg">Síguenos en Instagram: @lamolienda.cafebar</p>
+            <p className="follow-msg">Síguenos en Instagram: @lamoliendacafebar_</p>
+            <p className="contact-email-msg">Email: lamoliendaacafebar@gmail.com</p>
             <p className="footer-notice">
               {isCompletedSale
                 ? 'DOCUMENTO EQUIVALENTE A FACTURA DE VENTA'
                 : 'ESTE DOCUMENTO NO ES FACTURA DE VENTA - PRE-CUENTA DE CONTROL'}
             </p>
-            <p className="receipt-dev-credit">
-              Software POS desarrollado por Juan Esteban Riascos Madarriaga &bull; Ing. de Sistemas
-            </p>
+            <div className="receipt-divider-dashed" />
+
+            {/* SECCIÓN DE CAPTURA DE CLIENTES / DESARROLLO DE SOFTWARE */}
+            <div className="receipt-promo-dev">
+              <div className="promo-dev-col promo-col-left">
+                <p className="promo-dev-title">¿QUIERES UN SISTEMA POS PARA TU NEGOCIO?</p>
+                <p className="promo-dev-subtitle">Software y Apps a la medida</p>
+              </div>
+              <div className="promo-dev-col promo-col-right">
+                <p className="promo-dev-contact">
+                  <strong>Ing. Esteban Riascos</strong>
+                </p>
+                <p className="promo-dev-phone">WhatsApp: 310 458 2004</p>
+              </div>
+            </div>
           </div>
         </div>
 

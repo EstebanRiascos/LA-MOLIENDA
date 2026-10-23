@@ -554,10 +554,6 @@ export const App: React.FC = () => {
 
   // --- CHECKOUT & PAYMENTS ---
   const handleCheckoutTable = (table: Table) => {
-    if (currentUser?.role === 'mesero') {
-      showNotification('⚠️ Función exclusiva de Caja: Los meseros solo pueden registrar pedidos y pre-cuentas.');
-      return;
-    }
     const pendingItems = table.items.filter((i) => (i.status || 'pending') !== 'served');
     if (pendingItems.length > 0) {
       showNotification(

@@ -274,18 +274,16 @@ export const TablesView: React.FC<TablesViewProps> = ({
             </button>
           )}
 
-          {/* Add New Table / Bar button (Exclusivo para Administrador) */}
-          {currentUserRole === 'admin' && (
-            <button
-              type="button"
-              className="btn-add-table-action"
-              onClick={onOpenNewTableForm}
-              title="Agregar una nueva mesa, barra o espacio de atención"
-            >
-              <Plus size={15} strokeWidth={2.6} />
-              <span>Nueva Mesa / Barra</span>
-            </button>
-          )}
+          {/* Add New Table / Bar button */}
+          <button
+            type="button"
+            className="btn-add-table-action"
+            onClick={onOpenNewTableForm}
+            title="Agregar una nueva mesa, barra o espacio de atención"
+          >
+            <Plus size={15} strokeWidth={2.6} />
+            <span>Nueva Mesa / Barra</span>
+          </button>
         </div>
       </div>
 
@@ -542,23 +540,21 @@ export const TablesView: React.FC<TablesViewProps> = ({
                         <ArrowRightLeft size={16} />
                       </button>
 
-                      {/* Botón Cobrar (Oculto para Mesero - Solo Caja y Admin) */}
-                      {currentUserRole !== 'mesero' && (
-                        <button
-                          type="button"
-                          className="btn-checkout-quick"
-                          onClick={() => onCheckout(table)}
-                          title={
-                            pendingCount > 0
-                              ? `No se puede cobrar: Hay ${pendingCount} producto(s) por despachar`
-                              : "Cobrar cuenta y cerrar mesa"
-                          }
-                          disabled={pendingCount > 0}
-                        >
-                          <CreditCard size={15} />
-                          <span>Cobrar</span>
-                        </button>
-                      )}
+                      {/* Botón Cobrar cuenta */}
+                      <button
+                        type="button"
+                        className="btn-checkout-quick"
+                        onClick={() => onCheckout(table)}
+                        title={
+                          pendingCount > 0
+                            ? `No se puede cobrar: Hay ${pendingCount} producto(s) por despachar`
+                            : "Cobrar cuenta y cerrar mesa"
+                        }
+                        disabled={pendingCount > 0}
+                      >
+                        <CreditCard size={15} />
+                        <span>Cobrar</span>
+                      </button>
                     </div>
                   </>
                 )}

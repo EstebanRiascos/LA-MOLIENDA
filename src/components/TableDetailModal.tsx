@@ -532,30 +532,28 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
                   <ArrowRightLeft size={15} /> Cambiar Mesa
                 </button>
 
-                {/* Botón Cobrar (Oculto para Meseros - Cobro exclusivo en Caja) */}
-                {currentUserRole !== 'mesero' && (
-                  <button
-                    type="button"
-                    className="btn-flow-action btn-checkout-main"
-                    onClick={() => {
-                      if (hasPendingDispatch) {
-                        onShowNotification(
-                          `⚠️ No se puede cobrar: Hay ${pendingDispatchCount} producto(s) por despachar.`
-                        );
-                        return;
-                      }
-                      onOpenCheckout(table);
-                    }}
-                    title={
-                      hasPendingDispatch
-                        ? `No se puede cobrar: Hay ${pendingDispatchCount} producto(s) pendientes por despachar`
-                        : "Cobrar la cuenta de la mesa y liberar espacio"
+                {/* Botón Cobrar Cuenta */}
+                <button
+                  type="button"
+                  className="btn-flow-action btn-checkout-main"
+                  onClick={() => {
+                    if (hasPendingDispatch) {
+                      onShowNotification(
+                        `⚠️ No se puede cobrar: Hay ${pendingDispatchCount} producto(s) por despachar.`
+                      );
+                      return;
                     }
-                    disabled={table.items.length === 0 || hasPendingDispatch}
-                  >
-                    <CreditCard size={16} /> Cobrar Cuenta
-                  </button>
-                )}
+                    onOpenCheckout(table);
+                  }}
+                  title={
+                    hasPendingDispatch
+                      ? `No se puede cobrar: Hay ${pendingDispatchCount} producto(s) pendientes por despachar`
+                      : "Cobrar la cuenta de la mesa y liberar espacio"
+                  }
+                  disabled={table.items.length === 0 || hasPendingDispatch}
+                >
+                  <CreditCard size={16} /> Cobrar Cuenta
+                </button>
               </div>
             </div>
           </div>

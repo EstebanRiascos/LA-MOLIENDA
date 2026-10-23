@@ -430,7 +430,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 <div className="roles-info-item">
                   <Coffee size={16} color="#10b981" />
                   <div>
-                    <strong>Mesero / Barista:</strong> Toma de pedidos por mesa, cambio de comandas y despacho a barra.
+                    <strong>Mesero / Barista:</strong> Toma de pedidos, creación de mesas, comandas, despacho y cobro de cuentas por mesa.
                   </div>
                 </div>
               </div>
