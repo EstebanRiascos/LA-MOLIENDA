@@ -23,6 +23,7 @@ function createWindow() {
     minHeight: 720,
     title: 'La Molienda - Café & Bar | POS & Control de Inventario',
     backgroundColor: '#0e0b08',
+    icon: path.join(__dirname, '../build/icon.png'),
     show: false,
     frame: true,
     webPreferences: {
