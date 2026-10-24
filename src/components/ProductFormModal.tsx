@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, Image as ImageIcon, Check, CheckCircle, DollarSign, Upload, Sparkles, PackagePlus, Edit2 } from 'lucide-react';
+import { X, Image as ImageIcon, Check, CheckCircle, DollarSign, Upload, Link2, PackagePlus, Edit2, RotateCcw } from 'lucide-react';
 import { Product, ProductCategory } from '../types';
-import { CATEGORIES, PRODUCT_IMAGE_PRESETS } from '../utils/defaults';
+import { CATEGORIES } from '../utils/defaults';
 import { formatCurrency } from '../utils/storage';
+import laMoliendaLogo from '../assets/la_molienda_logo.png';
 
 interface ProductFormModalProps {
   isOpen: boolean;
@@ -29,7 +30,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [minStock, setMinStock] = useState<number | ''>(5);
   const [unit, setUnit] = useState<Product['unit']>('copa');
   const [image, setImage] = useState('');
-  const [imageTab, setImageTab] = useState<'presets' | 'url' | 'upload'>('presets');
+  const [imageTab, setImageTab] = useState<'upload' | 'url'>('upload');
 
   useEffect(() => {
     if (initialData) {
@@ -42,7 +43,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setStock(initialData.stock);
       setMinStock(initialData.minStock);
       setUnit(initialData.unit);
-      setImage(initialData.image);
+      setImage(initialData.image || '');
     } else {
       setCode(`PRD-${Math.floor(100 + Math.random() * 900)}`);
       setName('');
@@ -53,7 +54,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setStock(30);
       setMinStock(8);
       setUnit('copa');
-      setImage(PRODUCT_IMAGE_PRESETS[0].url);
+      setImage('');
     }
   }, [initialData, isOpen]);
 
@@ -93,7 +94,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       stock: Number(stock) || 0,
       minStock: Number(minStock) || 0,
       unit,
-      image: image || PRODUCT_IMAGE_PRESETS[0].url,
+      image: image.trim() || laMoliendaLogo,
       available: true,
       updatedAt: new Date().toISOString(),
     };
@@ -311,9 +312,14 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               {/* Live Preview Card */}
               <div className="image-live-preview-box">
                 <img
-                  src={image || PRODUCT_IMAGE_PRESETS[0].url}
+                  src={image || laMoliendaLogo}
                   alt={name || 'Vista previa'}
                   className="preview-img"
+                  style={{
+                    objectFit: image ? 'cover' : 'contain',
+                    background: image ? 'transparent' : '#14100c',
+                    padding: image ? 0 : '1.5rem',
+                  }}
                 />
                 <div className="preview-cost-overlay" title="Costo Insumo / Preparación">
                   <span className="preview-cost-label">Costo Insumo:</span>
@@ -327,22 +333,33 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 <div className="preview-name-overlay">{name || 'Nombre del Producto'}</div>
               </div>
 
-              {/* Selector Tabs: Presets / URL / Upload */}
-              <div className="img-tabs-bar">
-                <button
-                  type="button"
-                  className={`img-tab-btn ${imageTab === 'presets' ? 'active' : ''}`}
-                  onClick={() => setImageTab('presets')}
-                >
-                  <Sparkles size={13} /> Galería de Fotos
-                </button>
-                <button
-                  type="button"
-                  className={`img-tab-btn ${imageTab === 'url' ? 'active' : ''}`}
-                  onClick={() => setImageTab('url')}
-                >
-                  Enlace URL
-                </button>
+              {image && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.4rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setImage('')}
+                    style={{
+                      background: 'transparent',
+                      border: '1px solid var(--border-color)',
+                      color: 'var(--text-muted)',
+                      borderRadius: '6px',
+                      padding: '0.25rem 0.65rem',
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                    }}
+                    title="Quitar foto y usar logo oficial de La Molienda"
+                  >
+                    <RotateCcw size={12} />
+                    <span>Usar logo oficial por defecto</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Selector Tabs: Upload / URL */}
+              <div className="img-tabs-bar" style={{ marginTop: '0.75rem' }}>
                 <button
                   type="button"
                   className={`img-tab-btn ${imageTab === 'upload' ? 'active' : ''}`}
@@ -350,29 +367,14 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 >
                   <Upload size={13} /> Subir Archivo
                 </button>
+                <button
+                  type="button"
+                  className={`img-tab-btn ${imageTab === 'url' ? 'active' : ''}`}
+                  onClick={() => setImageTab('url')}
+                >
+                  <Link2 size={13} /> Enlace URL
+                </button>
               </div>
-
-              {/* Preset Gallery Picker */}
-              {imageTab === 'presets' && (
-                <div className="presets-scroll-grid">
-                  {PRODUCT_IMAGE_PRESETS.map((preset, idx) => (
-                    <div
-                      key={idx}
-                      className={`preset-thumb-card ${image === preset.url ? 'selected' : ''}`}
-                      onClick={() => setImage(preset.url)}
-                      title={preset.label}
-                    >
-                      <img src={preset.url} alt={preset.label} className="preset-thumb-img" />
-                      <span className="preset-thumb-label">{preset.label}</span>
-                      {image === preset.url && (
-                        <div className="preset-selected-check">
-                          <Check size={12} color="#fff" />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
 
               {/* URL Input */}
               {imageTab === 'url' && (

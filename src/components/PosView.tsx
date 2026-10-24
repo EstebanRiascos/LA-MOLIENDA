@@ -16,6 +16,7 @@ import {
 import { Product, Table, ProductCategory, OrderItem, UserRole } from '../types';
 import { CATEGORIES } from '../utils/defaults';
 import { formatCurrency } from '../utils/storage';
+import laMoliendaLogo from '../assets/la_molienda_logo.png';
 
 interface PosViewProps {
   products: Product[];
@@ -279,10 +280,13 @@ export const PosView: React.FC<PosViewProps> = ({
                 {/* Product Image with Price Overlay */}
                 <div className="pos-card-img-box">
                   <img
-                    src={product.image}
+                    src={product.image || laMoliendaLogo}
                     alt={product.name}
                     className="pos-card-img"
                     loading="lazy"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = laMoliendaLogo;
+                    }}
                   />
                   <div className="pos-price-badge">
                     <span className="pos-price-currency">$</span>

@@ -1,44 +1,34 @@
 import { SystemUser } from '../types';
 
-const STORAGE_KEY_USERS = 'lamolienda_users_prod_v1';
-const STORAGE_KEY_CURRENT_SESSION = 'lamolienda_session_user_v1';
+const STORAGE_KEY_USERS = 'lamolienda_users_prod_v2';
+const STORAGE_KEY_CURRENT_SESSION = 'lamolienda_session_user_v2';
 
 export const DEFAULT_USERS: SystemUser[] = [
   {
     id: 'user_admin_01',
     username: 'admin',
-    name: 'Administrador Principal',
+    name: 'Administrador',
     role: 'admin',
-    password: 'admin', // Contraseña inicial por defecto
-    pin: '1234',      // PIN rápido de 4 dígitos
-    active: true,
-    createdAt: '2026-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'user_cajero_01',
-    username: 'caja',
-    name: 'Caja General',
-    role: 'cajero',
-    pin: '2222',
-    active: true,
-    createdAt: '2026-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'user_mesero_01',
-    username: 'carlos',
-    name: 'Carlos M. (Barista)',
-    role: 'mesero',
-    pin: '3333',
+    password: 'admin', // Contraseña solicitada: admin
+    pin: '1234',
     active: true,
     createdAt: '2026-01-01T00:00:00.000Z',
   },
 ];
 
 /**
- * Obtener todos los usuarios registrados
+ * Obtener todos los usuarios registrados (solo admin por defecto)
  */
 export function getStoredUsers(): SystemUser[] {
   try {
+    // Si existía la clave de usuarios anterior con usuarios demo, migrar/limpiar a solo admin
+    if (localStorage.getItem('lamolienda_users_prod_v1')) {
+      localStorage.removeItem('lamolienda_users_prod_v1');
+      localStorage.removeItem('lamolienda_session_user_v1');
+      saveStoredUsers(DEFAULT_USERS);
+      return DEFAULT_USERS;
+    }
+
     const raw = localStorage.getItem(STORAGE_KEY_USERS);
     if (!raw) {
       saveStoredUsers(DEFAULT_USERS);
@@ -49,6 +39,14 @@ export function getStoredUsers(): SystemUser[] {
       saveStoredUsers(DEFAULT_USERS);
       return DEFAULT_USERS;
     }
+
+    // Si la lista aún contiene los usuarios demo antiguos ('caja' o 'carlos'), depurarlos
+    const hasOldDemos = parsed.some((u) => u.username === 'caja' || u.username === 'carlos');
+    if (hasOldDemos) {
+      saveStoredUsers(DEFAULT_USERS);
+      return DEFAULT_USERS;
+    }
+
     return parsed;
   } catch (err) {
     console.error('Error al cargar usuarios:', err);

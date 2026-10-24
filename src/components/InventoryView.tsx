@@ -25,6 +25,7 @@ import {
 import { Product, ProductCategory, UserRole, SaleRecord } from '../types';
 import { CATEGORIES } from '../utils/defaults';
 import { formatCurrency } from '../utils/storage';
+import laMoliendaLogo from '../assets/la_molienda_logo.png';
 
 interface InventoryViewProps {
   products: Product[];
@@ -576,10 +577,13 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     <td className="td-img">
                       <div className="product-thumb-box">
                         <img
-                          src={product.image}
+                          src={product.image || laMoliendaLogo}
                           alt={product.name}
                           className="product-thumb"
                           loading="lazy"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).src = laMoliendaLogo;
+                          }}
                         />
                       </div>
                     </td>

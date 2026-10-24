@@ -5,14 +5,11 @@ const STORAGE_KEY_PRODUCTS = 'lamolienda_products_clean_v1';
 const STORAGE_KEY_TABLES = 'lamolienda_tables_clean_v1';
 const STORAGE_KEY_SALES = 'lamolienda_sales_clean_v1';
 const STORAGE_KEY_THEME = 'lamolienda_theme_v1';
-const STORAGE_KEY_STAFF = 'lamolienda_current_staff_v1';
-const STORAGE_KEY_STAFF_LIST = 'lamolienda_staff_list_v1';
+const STORAGE_KEY_STAFF = 'lamolienda_current_staff_v2';
+const STORAGE_KEY_STAFF_LIST = 'lamolienda_staff_list_v2';
 
 export const DEFAULT_STAFF_LIST = [
-  'Carlos M. (Barista Principal)',
-  'Valentina R. (Jefe de Sala & Barra)',
-  'Andrés S. (Mixólogo & Bartender)',
-  'Caja General',
+  'Administrador',
 ];
 
 export function resetAllDataToProduction(): void {
@@ -165,6 +162,13 @@ export function saveStoredCurrentStaff(staff: string): void {
 
 export function getStoredStaffList(): string[] {
   try {
+    if (localStorage.getItem('lamolienda_staff_list_v1')) {
+      localStorage.removeItem('lamolienda_staff_list_v1');
+      localStorage.removeItem('lamolienda_current_staff_v1');
+      saveStoredStaffList(DEFAULT_STAFF_LIST);
+      return DEFAULT_STAFF_LIST;
+    }
+
     const raw = localStorage.getItem(STORAGE_KEY_STAFF_LIST);
     if (!raw) {
       saveStoredStaffList(DEFAULT_STAFF_LIST);
