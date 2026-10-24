@@ -94,18 +94,83 @@ Desarrollado con **React 19 + TypeScript + Vite + Electron**, conservando la est
 
 ---
 
-## 💻 Ejecución del Proyecto
+## 💻 Comandos de Desarrollo y Compilación
 
 ```bash
 # Instalar dependencias
 npm install
 
-# Iniciar servidor de desarrollo web
+# Iniciar servidor de desarrollo web (Vite)
 npm run dev
 
-# Compilar para producción web
+# Ejecutar aplicación de escritorio en modo desarrollo (Electron + Vite)
+npm run electron:dev
+
+# Validar y compilar código TypeScript & Vite
 npm run build
 
-# Ejecutar como aplicación de escritorio (Electron)
-npm run electron:dev
+# Generar el ejecutable final portátil único (.exe) para Windows
+npm run electron:build
 ```
+
+---
+
+## 📦 Guía de Instalación, Portabilidad & Almacenamiento de Datos
+
+### 1. ¿Cómo funciona el ejecutable (`La Molienda POS.exe`)?
+El comando `npm run electron:build` compila la aplicación en un **archivo ejecutable único y portable** ubicado en `release/La Molienda POS.exe`. 
+- **Sin instaladores pesados**: No requiere asistentes complejos ni deja carpetas sueltas en el escritorio.
+- **Portabilidad total**: Se puede llevar en una memoria USB o descargar directamente en el PC del negocio y ejecutar con doble clic.
+
+### 2. 🗄️ ¿Dónde se guardan los datos del negocio?
+Cuando ejecutas el programa en cualquier computador por primera vez, Windows y Electron crean de forma automática e instantánea un directorio de almacenamiento seguro e independiente:
+
+```text
+C:\Users\<TuUsuario>\AppData\Roaming\la-molienda-pos
+```
+*(Atajo en Windows: Presiona `Win + R`, escribe `%APPDATA%\la-molienda-pos` y presiona Enter).*
+
+### 3. 💾 Persistencia en Tiempo Real
+En esa ubicación se almacena la base de datos local del sistema:
+- **Ventas & Facturación**: Historial completo de ventas, medios de pago (efectivo, tarjeta, transferencias QR, mixto) y propinas.
+- **Mesas & Comandas**: Cuentas activas, pedidos por despachar, ítems servidos y posiciones en el plano visual.
+- **Inventario & Catálogo**: Precios de costo, precios de venta, stock disponible y alertas de inventario bajo.
+- **Cierres de Caja & Arqueos**: Cuadres de turno por empleado y notas de novedades.
+- **Ajustes del Sistema**: Turno y barista responsable activo, modo de color (claro/oscuro) y estado del audio.
+
+> 🔒 **Seguridad ante fallos**: Todos los registros se guardan inmediatamente en disco. Si el sistema se cierra, se va la energía o se reinicia la máquina, **ningún dato se pierde**. Al reabrir el programa, todo continúa en el mismo estado.
+
+### 4. 📊 Archivos y Reportes Exportados
+- **Reportes de Excel (`.xlsx`)**: Al exportar ventas, inventario o arqueos, el sistema los guarda automáticamente en la carpeta de **Descargas (`Downloads`)** del equipo y los abre de inmediato en Microsoft Excel o visor compatible.
+- **Tickets & Comandas en PDF**: Se generan con formato estándar para impresoras térmicas (80mm) con opción de impresión directa (`Ctrl + P`) o guardado en disco.
+
+---
+
+## 🔄 ¿Cómo actualizar el `.exe` en el PC del negocio sin perder información?
+
+Si realizas mejoras en el código (nuevas funciones, ajustes visuales, sonidos o reportes) y generas un nuevo `.exe`, **los datos del negocio nunca se borran**:
+
+### ¿Por qué la información permanece intacta?
+El archivo `.exe` es únicamente el **motor de la aplicación** (código visual e interfaz). Los datos de ventas, mesas y productos **no viven dentro del `.exe`**, sino en la carpeta persistente del sistema operativo (`AppData\Roaming\la-molienda-pos`).
+
+Al colocar una nueva versión del ejecutable, este detecta automáticamente la misma carpeta y carga toda la información histórica existente de forma transparente.
+
+### 📋 Pasos para aplicar una actualización en el PC del negocio:
+1. **Cerrar el sistema**: Asegúrate de que `La Molienda POS.exe` esté completamente cerrado en el computador del negocio.
+2. **Copiar la nueva versión**: Lleva el nuevo archivo `La Molienda POS.exe` generado en una memoria USB o vía red/nube.
+3. **Reemplazar el archivo anterior**: Pega el nuevo `.exe` en la misma ubicación (por ejemplo en el Escritorio) y confirma la opción **"Reemplazar el archivo en el destino"** (o elimina el `.exe` antiguo y deja el nuevo).
+4. **Abrir la nueva versión**: Al iniciar, el sistema mantendrá todas tus mesas, ventas e inventario intactos, con las nuevas mejoras activadas de inmediato.
+
+---
+
+## 🛡️ Copia de Seguridad Manual (Backup)
+
+Aunque los datos están resguardados en el disco duro, es recomendable realizar respaldos periódicos en una memoria USB externa:
+
+1. Cierra el sistema.
+2. Abre el explorador de archivos y ve a:
+   ```text
+   %APPDATA%
+   ```
+3. Copia la carpeta **`la-molienda-pos`** completa en tu memoria USB o almacenamiento en la nube.
+4. Para restaurar los datos en cualquier computador nuevo, simplemente pega esa carpeta en la ruta `%APPDATA%` antes de iniciar el programa.
