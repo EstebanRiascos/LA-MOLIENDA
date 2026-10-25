@@ -41,6 +41,7 @@ import { OpenTableModal } from './components/OpenTableModal';
 import { SplitBillModal } from './components/SplitBillModal';
 import { TableTransferModal } from './components/TableTransferModal';
 import { CashClosingModal } from './components/CashClosingModal';
+import { CashClosingHistoryModal } from './components/CashClosingHistoryModal';
 import { TableFormModal } from './components/TableFormModal';
 import { ReserveTableModal } from './components/ReserveTableModal';
 import { LoginModal } from './components/LoginModal';
@@ -101,6 +102,11 @@ export const App: React.FC = () => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('login') === '1') return true;
     if (params.get('mockAdmin') === '1') return false;
+    const api = (window as any).electronAPI;
+    const isMobile = !api || !api.isElectron;
+    if (isMobile && params.get('view') !== 'admin' && params.get('view') !== 'pos') {
+      return false;
+    }
     return !getStoredSessionUser();
   });
   const [isUserManagementOpen, setIsUserManagementOpen] = useState<boolean>(() => {
@@ -212,6 +218,7 @@ export const App: React.FC = () => {
     const params = new URLSearchParams(window.location.search);
     return params.get('modal') === 'closing';
   });
+  const [isCashClosingHistoryOpen, setIsCashClosingHistoryOpen] = useState(false);
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('modal') === 'about';
@@ -234,8 +241,8 @@ export const App: React.FC = () => {
     return !api || !api.isElectron;
   }, []);
 
-  // Lock background scrolling when any modal is open
-  const isAnyModalOpen = Boolean(
+  // Lock background scrolling when any modal is open (solo en escritorio)
+  const isAnyModalOpen = !isMobileClient && Boolean(
     isTableDetailOpen ||
     isPaymentOpen ||
     isTicketOpen ||
@@ -253,6 +260,12 @@ export const App: React.FC = () => {
   );
 
   useEffect(() => {
+    if (isMobileClient) {
+      document.body.classList.remove('modal-open');
+      document.documentElement.classList.remove('modal-open');
+      return;
+    }
+
     if (isAnyModalOpen) {
       document.body.classList.add('modal-open');
       document.documentElement.classList.add('modal-open');
@@ -274,7 +287,7 @@ export const App: React.FC = () => {
       document.body.classList.remove('modal-open');
       document.documentElement.classList.remove('modal-open');
     }
-  }, [isAnyModalOpen]);
+  }, [isAnyModalOpen, isMobileClient]);
 
   // Sonido al abrir / cerrar ventanas (se ignora el login, que tiene su propio sonido)
   const isSoundModalOpen = isAnyModalOpen && !isLoginOpen;
@@ -1402,9 +1415,11 @@ export const App: React.FC = () => {
     setIsTicketOpen(true);
   };
 
-  const handleConfirmCloseShift = (summary: CashClosingSummary | string) => {
+  const handleConfirmCloseShift = (summary: CashClosingSummary) => {
     setIsCashClosingOpen(false);
-    showNotification('Arqueo de caja y cierre de turno registrados con éxito.');
+    const cajero = summary.cashier || 'Cajero';
+    const total = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(summary.totalSales);
+    showNotification(`✅ Turno cerrado — ${cajero} · ${total} facturados · ${summary.salesCount} venta(s)`);
   };
 
   // --- EXPORT TO EXCEL ---
@@ -1452,6 +1467,8 @@ export const App: React.FC = () => {
         initialTables={tables}
         initialProducts={products}
         initialStaffList={staffList}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
       />
     );
   }
@@ -1586,6 +1603,7 @@ export const App: React.FC = () => {
               sales={sales}
               onViewSaleTicket={handleViewSaleTicket}
               onOpenCashClosing={() => setIsCashClosingOpen(true)}
+              onOpenCashClosingHistory={() => setIsCashClosingHistoryOpen(true)}
               onExportExcel={handleExportExcel}
             />
           </div>
@@ -1708,6 +1726,12 @@ export const App: React.FC = () => {
         currentStaff={currentStaff}
         onClose={() => setIsCashClosingOpen(false)}
         onConfirmCloseShift={handleConfirmCloseShift}
+      />
+
+      {/* 8b. Cash Closing History Modal */}
+      <CashClosingHistoryModal
+        isOpen={isCashClosingHistoryOpen}
+        onClose={() => setIsCashClosingHistoryOpen(false)}
       />
 
       {/* 9. Table / Bar Add & Edit Modal */}

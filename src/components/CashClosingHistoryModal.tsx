@@ -1,7 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { X, History, Printer, Search, Calendar, User, DollarSign, CheckCircle2, AlertTriangle, AlertCircle, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  X,
+  History,
+  Printer,
+  Search,
+  Calendar,
+  User,
+  DollarSign,
+  CheckCircle2,
+  AlertTriangle,
+  AlertCircle,
+  CreditCard,
+  QrCode,
+  Banknote,
+  RotateCcw,
+  Filter,
+} from 'lucide-react';
 import { CashClosingSummary } from '../types';
-import { getCashClosingHistory, saveCashClosingHistory } from '../utils/cashClosing';
+import { getCashClosingHistory } from '../utils/cashClosing';
 import { formatCurrency } from '../utils/storage';
 import { playSound } from '../utils/sounds';
 
@@ -16,6 +32,10 @@ export const CashClosingHistoryModal: React.FC<CashClosingHistoryModalProps> = (
 }) => {
   const [history, setHistory] = useState<CashClosingSummary[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom'>('all');
+  const [customDate, setCustomDate] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'balanced' | 'diff' | 'shortage' | 'surplus'>('all');
+  const [cashierFilter, setCashierFilter] = useState<string>('all');
   const [selectedRecord, setSelectedRecord] = useState<CashClosingSummary | null>(null);
 
   useEffect(() => {
@@ -25,39 +45,146 @@ export const CashClosingHistoryModal: React.FC<CashClosingHistoryModalProps> = (
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  // Extraer lista única de cajeros
+  const uniqueCashiers = useMemo(() => {
+    return Array.from(new Set(history.map((h) => h.cashier).filter(Boolean)));
+  }, [history]);
 
-  const filteredHistory = history.filter((item) => {
-    const q = searchQuery.toLowerCase();
-    const cashierMatch = item.cashier.toLowerCase().includes(q);
-    const dateMatch = new Date(item.closedAt).toLocaleDateString('es-CO').includes(q);
-    const noteMatch = (item.note || '').toLowerCase().includes(q);
-    return cashierMatch || dateMatch || noteMatch;
-  });
-
-  const handleDeleteRecord = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (window.confirm('¿Seguro que deseas eliminar este registro de cierre del historial?')) {
-      const updated = history.filter((h) => h.id !== id);
-      setHistory(updated);
-      saveCashClosingHistory(updated);
-      if (selectedRecord?.id === id) {
-        setSelectedRecord(null);
-      }
-    }
+  const handleResetFilters = () => {
+    setSearchQuery('');
+    setDateFilter('all');
+    setCustomDate('');
+    setStatusFilter('all');
+    setCashierFilter('all');
   };
+
+  const isFilterActive =
+    searchQuery.trim() !== '' ||
+    dateFilter !== 'all' ||
+    customDate !== '' ||
+    statusFilter !== 'all' ||
+    cashierFilter !== 'all';
+
+  const filteredHistory = useMemo(() => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const startOfYesterday = startOfToday - 86400000;
+    const startOfWeek = startOfToday - 7 * 86400000;
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+    return history.filter((item) => {
+      const itemDate = new Date(item.closedAt);
+      const itemTime = itemDate.getTime();
+      const diff = item.cashDifference ?? ((item.actualCashCounted ?? item.totalCash) - item.totalCash);
+      const isBalanced = diff === 0;
+      const isSurplus = diff > 0;
+      const isShortage = diff < 0;
+
+      // 1. Filtro de Fecha
+      if (dateFilter === 'today') {
+        if (itemTime < startOfToday) return false;
+      } else if (dateFilter === 'yesterday') {
+        if (itemTime < startOfYesterday || itemTime >= startOfToday) return false;
+      } else if (dateFilter === 'week') {
+        if (itemTime < startOfWeek) return false;
+      } else if (dateFilter === 'month') {
+        if (itemTime < startOfMonth) return false;
+      } else if (dateFilter === 'custom' && customDate) {
+        const itemYMD = `${itemDate.getFullYear()}-${String(itemDate.getMonth() + 1).padStart(2, '0')}-${String(itemDate.getDate()).padStart(2, '0')}`;
+        if (itemYMD !== customDate) return false;
+      }
+
+      // 2. Filtro de Estado de Cuadre
+      if (statusFilter === 'balanced' && !isBalanced) return false;
+      if (statusFilter === 'diff' && isBalanced) return false;
+      if (statusFilter === 'shortage' && !isShortage) return false;
+      if (statusFilter === 'surplus' && !isSurplus) return false;
+
+      // 3. Filtro por Cajero
+      if (cashierFilter !== 'all' && item.cashier !== cashierFilter) return false;
+
+      // 4. Búsqueda de Texto Multicriterio Inteligente
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const cleanQ = q.replace(/[\$\.,\s]/g, '');
+
+        const cashierMatch = item.cashier.toLowerCase().includes(q);
+        const noteMatch = (item.note || '').toLowerCase().includes(q);
+
+        const dateCo = itemDate.toLocaleDateString('es-CO');
+        const dateHyphen = dateCo.replace(/\//g, '-');
+        const dateIso = itemDate.toISOString().slice(0, 10);
+        const monthLong = itemDate.toLocaleDateString('es-CO', { month: 'long' }).toLowerCase();
+        const monthShort = itemDate.toLocaleDateString('es-CO', { month: 'short' }).toLowerCase();
+        const weekday = itemDate.toLocaleDateString('es-CO', { weekday: 'long' }).toLowerCase();
+        const timeStr = itemDate.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }).toLowerCase();
+
+        const dateMatch =
+          dateCo.includes(q) ||
+          dateHyphen.includes(q) ||
+          dateIso.includes(q) ||
+          monthLong.includes(q) ||
+          monthShort.includes(q) ||
+          weekday.includes(q) ||
+          timeStr.includes(q);
+
+        let statusMatch = false;
+        if (isBalanced && (q.includes('cuadr') || q.includes('ok') || q.includes('exacto') || q.includes('cero'))) {
+          statusMatch = true;
+        }
+        if (!isBalanced && (q.includes('descuadr') || q.includes('diferencia') || q.includes('alerta'))) {
+          statusMatch = true;
+        }
+        if (isShortage && (q.includes('faltan') || q.includes('menos') || q.includes('perdida'))) {
+          statusMatch = true;
+        }
+        if (isSurplus && (q.includes('sobran') || q.includes('mas') || q.includes('exced'))) {
+          statusMatch = true;
+        }
+
+        let amountMatch = false;
+        if (cleanQ.length >= 2 && !isNaN(Number(cleanQ))) {
+          const salesStr = Math.round(item.totalSales).toString();
+          const cashStr = Math.round(item.actualCashCounted ?? item.totalCash).toString();
+          const diffStr = Math.abs(Math.round(diff)).toString();
+          amountMatch = salesStr.includes(cleanQ) || cashStr.includes(cleanQ) || diffStr.includes(cleanQ);
+        }
+
+        if (!cashierMatch && !noteMatch && !dateMatch && !statusMatch && !amountMatch) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [history, searchQuery, dateFilter, customDate, statusFilter, cashierFilter]);
+
+  const totalFilteredSales = useMemo(() => {
+    return filteredHistory.reduce((sum, h) => sum + (h.totalSales || 0), 0);
+  }, [filteredHistory]);
+
+  const balancedCount = useMemo(() => {
+    return filteredHistory.filter((h) => {
+      const diff = h.cashDifference ?? ((h.actualCashCounted ?? h.totalCash) - h.totalCash);
+      return diff === 0;
+    }).length;
+  }, [filteredHistory]);
+
+  const discrepancyCount = filteredHistory.length - balancedCount;
 
   const handlePrint = () => {
     playSound('print');
     window.print();
   };
 
+  if (!isOpen) return null;
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
         className="modal-container cash-history-modal"
         onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: '900px', width: '95%', maxHeight: '90vh' }}
+        style={{ maxWidth: '920px', width: '95%', maxHeight: '90vh' }}
       >
         {/* Header */}
         <div className="modal-header">
@@ -75,34 +202,155 @@ export const CashClosingHistoryModal: React.FC<CashClosingHistoryModalProps> = (
           </button>
         </div>
 
-        {/* Search Bar */}
+        {/* Toolbar de Búsqueda y Filtros Avanzados */}
         <div className="cash-history-toolbar">
-          <div className="sales-search-box" style={{ flex: 1 }}>
-            <Search size={15} className="sales-search-icon" />
-            <input
-              type="text"
-              placeholder="Buscar por cajero, fecha (DD/MM/AAAA) u observación..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="sales-search-input"
-            />
+          <div className="cash-history-filters-main">
+            {/* Input de Búsqueda */}
+            <div className="cash-history-search-box">
+              <Search size={15} className="cash-history-search-icon" />
+              <input
+                type="text"
+                placeholder="Buscar por cajero, fecha, hora, monto u observación..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="cash-history-search-input"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  className="cash-history-search-clear"
+                  onClick={() => setSearchQuery('')}
+                  title="Borrar texto de búsqueda"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            {/* Grupo de Selectores */}
+            <div className="cash-history-select-group">
+              {/* Filtro Período */}
+              <select
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value as any)}
+                className="cash-history-select"
+                title="Filtrar por período"
+              >
+                <option value="all">📅 Todas las fechas</option>
+                <option value="today">Hoy</option>
+                <option value="yesterday">Ayer</option>
+                <option value="week">Últimos 7 días</option>
+                <option value="month">Este mes</option>
+                <option value="custom">Día específico...</option>
+              </select>
+
+              {/* Input de Fecha Específica */}
+              {dateFilter === 'custom' && (
+                <input
+                  type="date"
+                  value={customDate}
+                  onChange={(e) => setCustomDate(e.target.value)}
+                  className="cash-history-date-input"
+                  title="Seleccionar fecha específica"
+                />
+              )}
+
+              {/* Filtro de Estado de Cuadre */}
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as any)}
+                className="cash-history-select"
+                title="Filtrar por estado de cuadre"
+              >
+                <option value="all">⚖️ Todos los estados</option>
+                <option value="balanced">✓ Solo Cuadrados ($0)</option>
+                <option value="diff">⚠️ Con Descuadre</option>
+                <option value="shortage">▼ Solo Faltantes</option>
+                <option value="surplus">▲ Solo Sobrantes</option>
+              </select>
+
+              {/* Filtro por Cajero */}
+              {uniqueCashiers.length > 1 && (
+                <select
+                  value={cashierFilter}
+                  onChange={(e) => setCashierFilter(e.target.value)}
+                  className="cash-history-select"
+                  title="Filtrar por responsable"
+                >
+                  <option value="all">👤 Todos los cajeros</option>
+                  {uniqueCashiers.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {/* Botón Limpiar Filtros */}
+              {isFilterActive && (
+                <button
+                  type="button"
+                  className="btn-cash-history-reset"
+                  onClick={handleResetFilters}
+                  title="Restablecer todos los filtros"
+                >
+                  <RotateCcw size={13} />
+                  <span>Limpiar</span>
+                </button>
+              )}
+            </div>
           </div>
-          <span className="cash-history-count-badge">
-            {filteredHistory.length} {filteredHistory.length === 1 ? 'cierre registrado' : 'cierres registrados'}
-          </span>
+
+          {/* Tira Resumen y Estadísticas de la Búsqueda */}
+          <div className="cash-history-meta-bar">
+            <div className="cash-history-meta-chips">
+              <span className="cash-history-pill">
+                <strong>{filteredHistory.length}</strong> {filteredHistory.length === 1 ? 'cierre' : 'cierres'}
+                {filteredHistory.length !== history.length && ` (de ${history.length})`}
+              </span>
+
+              {filteredHistory.length > 0 && (
+                <>
+                  <span className="cash-history-pill pill-sales">
+                    Total Facturado: <strong>{formatCurrency(totalFilteredSales)}</strong>
+                  </span>
+
+                  {discrepancyCount === 0 ? (
+                    <span className="cash-history-pill pill-balanced">
+                      ✓ Todos Cuadrados
+                    </span>
+                  ) : (
+                    <span className="cash-history-pill pill-alert">
+                      ⚠️ {discrepancyCount} con Descuadre
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Content List */}
-        <div className="cash-history-body" style={{ overflowY: 'auto', maxHeight: 'calc(90vh - 160px)', padding: '1rem' }}>
+        <div className="cash-history-body" style={{ overflowY: 'auto', maxHeight: 'calc(90vh - 200px)', padding: '1rem' }}>
           {filteredHistory.length === 0 ? (
             <div className="cash-history-empty-state">
-              <History size={48} className="empty-icon text-muted" />
-              <h3>No hay registros de cierre de turno</h3>
+              <History size={44} className="empty-icon text-muted" />
+              <h3>No se encontraron registros de cierre</h3>
               <p>
-                {searchQuery
-                  ? 'No se encontraron cierres que coincidan con la búsqueda.'
+                {isFilterActive
+                  ? 'No hay cierres que coincidan con los filtros o el texto de búsqueda ingresado.'
                   : 'Los arqueos y cierres de turno que guardes en la caja aparecerán aquí con su comprobante térmico.'}
               </p>
+              {isFilterActive && (
+                <button
+                  type="button"
+                  className="btn-empty-reset"
+                  onClick={handleResetFilters}
+                >
+                  <RotateCcw size={14} />
+                  <span>Restablecer filtros de búsqueda</span>
+                </button>
+              )}
             </div>
           ) : (
             <div className="cash-history-list">
@@ -112,7 +360,10 @@ export const CashClosingHistoryModal: React.FC<CashClosingHistoryModalProps> = (
                 const isSurplus = diff > 0;
 
                 return (
-                  <div key={item.id} className="cash-history-card">
+                  <div
+                    key={item.id}
+                    className={`cash-history-card ${isBalanced ? 'card-balanced' : 'card-discrepancy'}`}
+                  >
                     <div className="history-card-header">
                       <div className="header-meta">
                         <span className="history-date">
@@ -138,42 +389,42 @@ export const CashClosingHistoryModal: React.FC<CashClosingHistoryModalProps> = (
                           <Printer size={14} />
                           <span>Ver Comprobante</span>
                         </button>
-                        <button
-                          type="button"
-                          className="btn-history-delete"
-                          onClick={(e) => handleDeleteRecord(item.id, e)}
-                          title="Eliminar este arqueo del historial"
-                        >
-                          <Trash2 size={14} />
-                        </button>
                       </div>
                     </div>
 
+                    {/* Grid de Métricas Principales (Total, Efectivo, Tarjetas, QR) */}
                     <div className="history-card-grid">
                       <div className="history-grid-col">
                         <span className="h-lbl">Total Facturado</span>
                         <span className="h-val text-emerald">{formatCurrency(item.totalSales)}</span>
-                        <span className="h-sub">{item.salesCount} transacciones</span>
+                        <span className="h-sub">{item.salesCount} ventas</span>
                       </div>
 
                       <div className="history-grid-col">
-                        <span className="h-lbl">Efectivo Sistema</span>
-                        <span className="h-val">{formatCurrency(item.totalCash)}</span>
-                        <span className="h-sub">Registrado en ventas</span>
+                        <span className="h-lbl">Efectivo en Gaveta</span>
+                        <span className="h-val">{formatCurrency(item.actualCashCounted ?? item.totalCash)}</span>
+                        <span className="h-sub">Sistema: {formatCurrency(item.totalCash)}</span>
                       </div>
 
                       <div className="history-grid-col">
-                        <span className="h-lbl">Efectivo Físico</span>
-                        <span className="h-val">
-                          {formatCurrency(item.actualCashCounted ?? item.totalCash)}
-                        </span>
-                        <span className="h-sub">Contado en gaveta</span>
+                        <span className="h-lbl">Datáfono / Tarjetas</span>
+                        <span className="h-val">{formatCurrency(item.totalCard || 0)}</span>
+                        <span className="h-sub">Vouchers bancarios</span>
                       </div>
 
                       <div className="history-grid-col">
-                        <span className="h-lbl">Estado Arqueo</span>
+                        <span className="h-lbl">QR / Transferencias</span>
+                        <span className="h-val">{formatCurrency(item.totalTransfer || 0)}</span>
+                        <span className="h-sub">Nequi / Daviplata</span>
+                      </div>
+                    </div>
+
+                    {/* Tira de Verificación de Cuadre de TODOS los Medios de Pago */}
+                    <div className="history-methods-strip">
+                      <div className="history-method-chips-left">
+                        {/* Estado Efectivo */}
                         <span
-                          className={`history-diff-badge ${
+                          className={`history-method-chip ${
                             isBalanced
                               ? 'diff-balanced'
                               : isSurplus
@@ -181,14 +432,47 @@ export const CashClosingHistoryModal: React.FC<CashClosingHistoryModalProps> = (
                               : 'diff-shortage'
                           }`}
                         >
-                          {isBalanced && '✓ Caja Cuadrada ($0)'}
-                          {isSurplus && `▲ Sobrante: +${formatCurrency(diff)}`}
-                          {!isBalanced && !isSurplus && `▼ Faltante: ${formatCurrency(diff)}`}
+                          <Banknote size={13} />
+                          {isBalanced && '✓ Efectivo Cuadrado ($0)'}
+                          {isSurplus && `▲ Efectivo Sobrante: +${formatCurrency(diff)}`}
+                          {!isBalanced && !isSurplus && `▼ Efectivo Faltante: ${formatCurrency(diff)}`}
                         </span>
-                        <span className="h-sub">
-                          {isBalanced ? 'Sin descuadre' : isSurplus ? 'Superávit en gaveta' : 'Diferencia a favor'}
+
+                        {/* Estado Datáfono */}
+                        <span className="history-method-chip chip-card">
+                          <CreditCard size={13} />
+                          {(item.totalCard || 0) > 0
+                            ? `✓ Datáfono Cuadrado (${formatCurrency(item.totalCard || 0)})`
+                            : 'Datáfono: $0'}
+                        </span>
+
+                        {/* Estado Transferencias */}
+                        <span className="history-method-chip chip-transfer">
+                          <QrCode size={13} />
+                          {(item.totalTransfer || 0) > 0
+                            ? `✓ QR/Nequi Cuadrado (${formatCurrency(item.totalTransfer || 0)})`
+                            : 'QR/Nequi: $0'}
                         </span>
                       </div>
+
+                      {/* Estado Global de la Jornada */}
+                      <span
+                        className={`history-method-chip chip-global ${
+                          isBalanced ? 'global-balanced' : 'global-alert'
+                        }`}
+                      >
+                        {isBalanced ? (
+                          <>
+                            <CheckCircle2 size={13} />
+                            <span>Jornada 100% Cuadrada</span>
+                          </>
+                        ) : (
+                          <>
+                            <AlertTriangle size={13} />
+                            <span>Descuadre en Efectivo</span>
+                          </>
+                        )}
+                      </span>
                     </div>
 
                     {item.note && (
@@ -346,15 +630,16 @@ export const CashClosingHistoryModal: React.FC<CashClosingHistoryModalProps> = (
               </div>
             </div>
 
-            <div className="ticket-modal-footer no-print">
+            <div className="ticket-modal-actions ticket-modal-single-action no-print">
               <button
                 type="button"
                 className="btn-print-receipt"
                 onClick={handlePrint}
                 title="Imprimir ticket térmico en 80mm"
               >
-                <Printer size={16} />
-                <span>Imprimir Ticket</span>
+                <Printer size={15} />
+                <span>Imprimir</span>
+                <span className="print-format-badge">80mm</span>
               </button>
             </div>
           </div>

@@ -16,10 +16,13 @@ import {
   AlertCircle,
   RotateCcw,
   Layers,
+  Sun,
+  Moon,
+  Users,
 } from 'lucide-react';
 import { Product, Table, TableZone, OrderItem, ProductCategory } from '../types';
 import { CATEGORIES, DEFAULT_TABLES, DEFAULT_PRODUCTS } from '../utils/defaults';
-import { formatCurrency, getStoredTables, getStoredProducts } from '../utils/storage';
+import { formatCurrency, getStoredTables, getStoredProducts, getStoredTheme, saveStoredTheme } from '../utils/storage';
 import { playSound } from '../utils/sounds';
 import laMoliendaLogo from '../assets/la_molienda_logo.png';
 import { OpenTableModal } from './OpenTableModal';
@@ -30,6 +33,8 @@ interface WaiterViewProps {
   initialProducts?: Product[];
   initialStaffList?: string[];
   serverUrl?: string;
+  theme?: 'dark' | 'light';
+  onToggleTheme?: () => void;
 }
 
 export const WaiterView: React.FC<WaiterViewProps> = ({
@@ -37,6 +42,8 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
   initialProducts = [],
   initialStaffList = ['Administrador', 'Mesero 1', 'Mesero 2'],
   serverUrl = '',
+  theme: themeProp,
+  onToggleTheme: onToggleThemeProp,
 }) => {
   // Estado central sincronizado (garantizar mesas iniciales siempre visibles)
   const [tables, setTables] = useState<Table[]>(() => {
@@ -73,6 +80,39 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
   const [ticketTable, setTicketTable] = useState<Table | null>(null);
 
+  // Estado de tema (claro / oscuro) con soporte local y sincronización
+  const [localTheme, setLocalTheme] = useState<'dark' | 'light'>(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('theme') === 'light') return 'light';
+    if (params.get('theme') === 'dark') return 'dark';
+    return getStoredTheme();
+  });
+
+  const effectiveTheme = themeProp !== undefined ? themeProp : localTheme;
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', effectiveTheme);
+    saveStoredTheme(effectiveTheme);
+  }, [effectiveTheme]);
+
+  const handleToggleTheme = () => {
+    playSound('toggle');
+    if (onToggleThemeProp) {
+      onToggleThemeProp();
+    } else {
+      const nextTheme = effectiveTheme === 'dark' ? 'light' : 'dark';
+      setLocalTheme(nextTheme);
+      document.documentElement.setAttribute('data-theme', nextTheme);
+      saveStoredTheme(nextTheme);
+    }
+  };
+
+  // Garantizar que la vista móvil del mesero nunca herede el bloqueo de scroll
+  useEffect(() => {
+    document.body.classList.remove('modal-open');
+    document.documentElement.classList.remove('modal-open');
+  }, []);
+
   // Determinar la URL base de la API
   const apiBase = useMemo(() => {
     if (serverUrl) return serverUrl;
@@ -82,6 +122,18 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
     }
     return window.location.origin;
   }, [serverUrl]);
+
+  // Tiempo transcurrido para mesas ocupadas
+  const getElapsedTime = (openedAt?: string) => {
+    if (!openedAt) return null;
+    const diffMs = Date.now() - new Date(openedAt).getTime();
+    if (isNaN(diffMs) || diffMs < 0) return null;
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    if (diffMinutes < 60) return `${diffMinutes}m`;
+    const hours = Math.floor(diffMinutes / 60);
+    const mins = diffMinutes % 60;
+    return `${hours}h ${mins}m`;
+  };
 
   // Sincronización SSE en tiempo real con el PC del Cajero
   useEffect(() => {
@@ -449,13 +501,24 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
       <header className="mobile-waiter-header">
         <div className="mobile-brand-box">
           <img src={laMoliendaLogo} alt="Logo" className="mobile-logo-img" />
-          <div>
+          <div className="mobile-brand-text-col">
             <h1 className="mobile-brand-name">LA MOLIENDA</h1>
             <span className="mobile-app-label">Comandero Móvil</span>
           </div>
         </div>
 
         <div className="mobile-header-right">
+          {/* Botón Cambiar Tema (Claro / Oscuro) */}
+          <button
+            type="button"
+            className="mobile-theme-toggle-btn"
+            onClick={handleToggleTheme}
+            title={`Cambiar a modo ${effectiveTheme === 'dark' ? 'claro' : 'oscuro'}`}
+            aria-label="Cambiar tema de color"
+          >
+            {effectiveTheme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+          </button>
+
           {/* Conexión Wi-Fi */}
           <button
             type="button"
@@ -465,10 +528,10 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
               playSound('click');
               setReconnectCounter((c) => c + 1);
             }}
-            style={{ cursor: 'pointer', border: 'none', background: 'transparent' }}
+            aria-label={isConnected ? 'En Línea' : 'Desconectado'}
           >
-            {isConnected ? <Wifi size={13} /> : <WifiOff size={13} />}
-            <span>{isConnected ? 'En Línea' : 'Desconectado'}</span>
+            {isConnected ? <Wifi size={14} /> : <WifiOff size={14} />}
+            <span className="mobile-conn-text">{isConnected ? 'En Línea' : 'Desconectado'}</span>
           </button>
 
           {/* Selector de Mesero */}
@@ -535,6 +598,9 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
             </button>
           </div>
 
+          {/* Línea divisoria entre la botonera de zonas y las tarjetas de mesas */}
+          <div className="mobile-zone-tables-divider" />
+
           {/* Grid de Mesas */}
           <div className="mobile-tables-grid">
             {zoneTables.length === 0 ? (
@@ -554,6 +620,7 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
                 const isPrebill = tbl.status === 'por_cobrar';
                 const isFree = tbl.status === 'libre';
                 const totalItemsCount = tbl.items.reduce((s, i) => s + i.quantity, 0);
+                const timeText = getElapsedTime(tbl.openedAt);
 
                 return (
                   <div
@@ -561,6 +628,7 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
                     className={`mobile-table-card status-${tbl.status}`}
                     onClick={() => handleTableCardClick(tbl)}
                   >
+                    {/* 1. Cabecera: Número de Mesa y Estado */}
                     <div className="mobile-tbl-top">
                       <span className="mobile-tbl-num">{tbl.number}</span>
                       <span className={`mobile-status-pill pill-${tbl.status}`}>
@@ -570,43 +638,110 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
                       </span>
                     </div>
 
-                    <div className="mobile-tbl-info">
+                    {/* 2. Subcabecera / Metadatos (Mesero asignado, tiempo o capacidad) */}
+                    <div className="mobile-tbl-meta">
                       {isFree ? (
-                        <span className="free-cap-lbl">Capacidad: {tbl.capacity} pax</span>
+                        <>
+                          <span className="mobile-tbl-meta-item">
+                            <Users size={11} />
+                            <span>{tbl.capacity} pax</span>
+                          </span>
+                          <span className="mobile-tbl-meta-zone">{tbl.zone.toUpperCase()}</span>
+                        </>
                       ) : (
                         <>
-                          <span className="occupied-total">{formatCurrency(tbl.total)}</span>
-                          <span className="occupied-sub">{totalItemsCount} ítems servidos</span>
+                          <span className="mobile-tbl-meta-item waiter-tag" title={`Atendido por: ${tbl.waiter || 'Mesero'}`}>
+                            <User size={11} />
+                            <span>{tbl.waiter || 'Mesero'}</span>
+                          </span>
+                          {timeText && (
+                            <span className="mobile-tbl-meta-item elapsed-tag">
+                              <Clock size={11} />
+                              <span>{timeText}</span>
+                            </span>
+                          )}
                         </>
                       )}
                     </div>
 
-                    {!isFree && tbl.items && tbl.items.length > 0 && (
-                      <button
-                        type="button"
-                        className="mobile-tbl-quick-ticket-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenTicket(tbl);
-                        }}
-                        title="Ver ticket de precuenta"
-                      >
-                        <Receipt size={11} />
-                        <span>Ver Ticket</span>
-                      </button>
-                    )}
+                    {/* 3. Cuerpo principal: Contenedor destacado de consumo o disponibilidad */}
+                    <div className="mobile-tbl-body-box">
+                      {isFree ? (
+                        <div className="mobile-tbl-free-box">
+                          <span className="free-box-icon">☕</span>
+                          <span className="free-box-label">Disponible</span>
+                        </div>
+                      ) : (
+                        <div className="mobile-tbl-order-box">
+                          <span className="mobile-tbl-total">{formatCurrency(tbl.total)}</span>
+                          <span className="mobile-tbl-items-count">
+                            {totalItemsCount} {totalItemsCount === 1 ? 'ítem servido' : 'ítems servidos'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
 
-                    {tbl.waiter && isOccupied && (
-                      <div className="mobile-tbl-waiter-tag">
-                        <User size={10} />
-                        <span>{tbl.waiter}</span>
-                      </div>
-                    )}
+                    {/* 4. Pie de acción interactivo */}
+                    <div className="mobile-tbl-footer-action">
+                      {!isFree && tbl.items && tbl.items.length > 0 ? (
+                        <button
+                          type="button"
+                          className="mobile-tbl-quick-ticket-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenTicket(tbl);
+                          }}
+                          title="Ver ticket de precuenta"
+                        >
+                          <Receipt size={12} />
+                          <span>Ver Ticket</span>
+                        </button>
+                      ) : !isFree ? (
+                        <button
+                          type="button"
+                          className="mobile-tbl-quick-order-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedTable(tbl);
+                            setNewOrderItems([]);
+                          }}
+                          title="Tomar pedido"
+                        >
+                          <Plus size={12} />
+                          <span>Tomar Pedido</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="mobile-tbl-quick-open-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPreSelectedTable(tbl);
+                            setIsOpenTableModalOpen(true);
+                          }}
+                          title="Abrir mesa"
+                        >
+                          <Plus size={12} />
+                          <span>Abrir Mesa</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })
             )}
           </div>
+
+          {/* Footer institucional de autoría técnica */}
+          <footer className="mobile-waiter-footer">
+            <div className="mobile-footer-inner">
+              <p className="mobile-footer-dev">
+                Sistema desarrollado por{' '}
+                <strong className="mobile-footer-engineer">Ing. Juan Esteban Riascos Madarriaga</strong>
+              </p>
+              <span className="mobile-footer-subtitle">Ingeniero de Sistemas &bull; La Molienda Coffee POS</span>
+            </div>
+          </footer>
         </main>
       ) : (
         /* VISTA 2: COMANDAR EN LA MESA SELECCIONADA */

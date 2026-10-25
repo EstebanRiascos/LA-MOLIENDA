@@ -305,6 +305,9 @@ export const TablesView: React.FC<TablesViewProps> = ({
 
           return (
             <div key={table.id} className={`table-card ${cardStatusClass}`}>
+              {/* Barra superior de acento decorativa según estado */}
+              <div className={`table-card-accent-bar bar-${table.status}`} />
+
               {/* Subtle Ambient Zone Watermark */}
               <div className={`table-card-watermark ${zoneInfo.className}`} aria-hidden="true">
                 {zoneInfo.watermarkIcon}

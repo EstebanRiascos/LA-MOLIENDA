@@ -18,7 +18,6 @@ import {
 import { SaleRecord, PaymentMethod } from '../types';
 import { formatCurrency } from '../utils/storage';
 import { ExportReportOptions } from '../utils/excelExporter';
-import { CashClosingHistoryModal } from './CashClosingHistoryModal';
 
 export type DateFilterPreset =
   | 'today'
@@ -33,6 +32,7 @@ interface SalesHistoryViewProps {
   sales: SaleRecord[];
   onViewSaleTicket: (sale: SaleRecord) => void;
   onOpenCashClosing: () => void;
+  onOpenCashClosingHistory: () => void;
   onExportExcel: (filteredSales?: SaleRecord[], options?: ExportReportOptions) => void;
 }
 
@@ -40,6 +40,7 @@ export const SalesHistoryView: React.FC<SalesHistoryViewProps> = ({
   sales,
   onViewSaleTicket,
   onOpenCashClosing,
+  onOpenCashClosingHistory,
   onExportExcel,
 }) => {
   // Timezone-accurate helpers based on browser's local time (Colombia)
@@ -64,7 +65,6 @@ export const SalesHistoryView: React.FC<SalesHistoryViewProps> = ({
   const currentMonthStr = getLocalMonthString();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [dateFilter, setDateFilter] = useState<DateFilterPreset>('today');
   const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthStr);
   const [selectedSingleDate, setSelectedSingleDate] = useState<string>(todayStr);
@@ -287,30 +287,82 @@ export const SalesHistoryView: React.FC<SalesHistoryViewProps> = ({
 
   return (
     <div className="sales-history-view-container">
-      {/* Financial Summary KPIs */}
+      {/* Financial Summary KPIs con decoración visual premium */}
       <div className="sales-kpi-strip">
-        <div className="sales-kpi-card highlight-green">
-          <span className="kpi-mini-lbl">Total Facturado</span>
-          <span className="kpi-mini-val">{formatCurrency(totalAmount)}</span>
-          <span className="kpi-mini-sub">{filteredSales.length} transacciones</span>
+        {/* 1. Total Facturado */}
+        <div className="sales-kpi-card sales-kpi-total highlight-green">
+          <div className="sales-card-accent-bar bar-total" />
+          <div className="sales-kpi-header">
+            <span className="kpi-mini-lbl">Total Facturado</span>
+            <div className="sales-icon-badge total-badge" title="Total consolidado de ventas">
+              <DollarSign size={15} />
+            </div>
+          </div>
+          <span className="kpi-mini-val val-total">{formatCurrency(totalAmount)}</span>
+          <div className="sales-pill-sub-row">
+            <span className="sales-badge-pill pill-total">TOTAL</span>
+            <span className="kpi-mini-sub">{filteredSales.length} transacciones</span>
+          </div>
+          <div className="sales-card-watermark watermark-total">
+            <Receipt size={54} />
+          </div>
         </div>
 
-        <div className="sales-kpi-card">
-          <span className="kpi-mini-lbl">En Efectivo (Caja)</span>
-          <span className="kpi-mini-val">{formatCurrency(totalCash)}</span>
-          <span className="kpi-mini-sub">Dinero en gaveta</span>
+        {/* 2. En Efectivo (Caja) */}
+        <div className="sales-kpi-card sales-kpi-cash highlight-amber">
+          <div className="sales-card-accent-bar bar-cash" />
+          <div className="sales-kpi-header">
+            <span className="kpi-mini-lbl">En Efectivo (Caja)</span>
+            <div className="sales-icon-badge cash-badge" title="Dinero físico en gaveta">
+              <Banknote size={15} />
+            </div>
+          </div>
+          <span className="kpi-mini-val val-cash">{formatCurrency(totalCash)}</span>
+          <div className="sales-pill-sub-row">
+            <span className="sales-badge-pill pill-cash">EN CAJA</span>
+            <span className="kpi-mini-sub">Dinero en gaveta</span>
+          </div>
+          <div className="sales-card-watermark watermark-cash">
+            <Banknote size={54} />
+          </div>
         </div>
 
-        <div className="sales-kpi-card">
-          <span className="kpi-mini-lbl">Datáfono / Tarjetas</span>
-          <span className="kpi-mini-val">{formatCurrency(totalCard)}</span>
-          <span className="kpi-mini-sub">Vouchers bancarios</span>
+        {/* 3. Datáfono / Tarjetas */}
+        <div className="sales-kpi-card sales-kpi-card-pay highlight-blue">
+          <div className="sales-card-accent-bar bar-card" />
+          <div className="sales-kpi-header">
+            <span className="kpi-mini-lbl">Datáfono / Tarjetas</span>
+            <div className="sales-icon-badge card-badge" title="Pagos con tarjeta / datáfono">
+              <CreditCard size={15} />
+            </div>
+          </div>
+          <span className="kpi-mini-val val-card">{formatCurrency(totalCard)}</span>
+          <div className="sales-pill-sub-row">
+            <span className="sales-badge-pill pill-card">VOUCHERS</span>
+            <span className="kpi-mini-sub">Vouchers bancarios</span>
+          </div>
+          <div className="sales-card-watermark watermark-card">
+            <CreditCard size={54} />
+          </div>
         </div>
 
-        <div className="sales-kpi-card">
-          <span className="kpi-mini-lbl">QR / Transferencias</span>
-          <span className="kpi-mini-val">{formatCurrency(totalTransfer)}</span>
-          <span className="kpi-mini-sub">Nequi / Daviplata</span>
+        {/* 4. QR / Transferencias */}
+        <div className="sales-kpi-card sales-kpi-transfer highlight-purple">
+          <div className="sales-card-accent-bar bar-transfer" />
+          <div className="sales-kpi-header">
+            <span className="kpi-mini-lbl">QR / Transferencias</span>
+            <div className="sales-icon-badge transfer-badge" title="Pagos digitales QR / Nequi">
+              <QrCode size={15} />
+            </div>
+          </div>
+          <span className="kpi-mini-val val-transfer">{formatCurrency(totalTransfer)}</span>
+          <div className="sales-pill-sub-row">
+            <span className="sales-badge-pill pill-transfer">DIGITAL</span>
+            <span className="kpi-mini-sub">Nequi / Daviplata</span>
+          </div>
+          <div className="sales-card-watermark watermark-transfer">
+            <QrCode size={54} />
+          </div>
         </div>
       </div>
 
@@ -402,7 +454,7 @@ export const SalesHistoryView: React.FC<SalesHistoryViewProps> = ({
             <button
               type="button"
               className="btn-cash-history-action"
-              onClick={() => setIsHistoryModalOpen(true)}
+              onClick={onOpenCashClosingHistory}
               title="Ver registros anteriores de arqueos y turnos cerrados"
             >
               <History size={15} />
@@ -599,11 +651,7 @@ export const SalesHistoryView: React.FC<SalesHistoryViewProps> = ({
           </tbody>
         </table>
       </div>
-      {/* Historial de Cierres Modal */}
-      <CashClosingHistoryModal
-        isOpen={isHistoryModalOpen}
-        onClose={() => setIsHistoryModalOpen(false)}
-      />
+      {/* Historial de Cierres Modal - ahora renderizado en App.tsx para blur de pantalla completa */}
     </div>
   );
 };

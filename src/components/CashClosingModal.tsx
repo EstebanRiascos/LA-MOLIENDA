@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, CheckCircle, Printer, DollarSign, AlertCircle, AlertTriangle, Lock, Receipt } from 'lucide-react';
+import { X, CheckCircle, Printer, DollarSign, AlertCircle, AlertTriangle, Lock, Receipt, Banknote, CreditCard, QrCode } from 'lucide-react';
 import { SaleRecord, CashClosingSummary, Table } from '../types';
 import { formatCurrency } from '../utils/storage';
 import { getCashClosingHistory, saveCashClosingHistory } from '../utils/cashClosing';
@@ -133,58 +133,136 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
         </div>
 
         <div className="cash-close-body">
-          {/* Warning banner if open tables exist */}
+          {/* Warning banner if open tables exist (Decorado premium) */}
           {openTables.length > 0 && (
             <div className="cash-closing-warning-banner">
-              <AlertTriangle size={20} className="warning-banner-icon" />
+              <div className="warning-card-accent-bar" />
+              <div className="warning-banner-icon-box">
+                <AlertTriangle size={20} className="warning-banner-icon" />
+              </div>
               <div className="warning-banner-text">
-                <span className="warning-banner-title">
-                  Atención: Hay {openTables.length} mesa(s) con órdenes o consumo sin cobrar
-                </span>
-                <span className="warning-banner-details">
-                  Mesas abiertas: <strong>{openTables.map((t) => t.number).join(', ')}</strong>. Se sugiere cobrar o desocupar estas mesas antes del arqueo.
-                </span>
+                <div className="warning-banner-header-row">
+                  <span className="warning-banner-title">
+                    Atención: Hay {openTables.length} mesa(s) con órdenes o consumo sin cobrar
+                  </span>
+                  <span className="warning-badge-pill">PENDIENTE</span>
+                </div>
+                <div className="warning-banner-details">
+                  <div className="warning-tables-chips-list">
+                    <span className="warning-details-intro">Mesas abiertas:</span>
+                    {openTables.map((t) => (
+                      <span key={t.id} className="warning-table-chip">
+                        {t.number}
+                      </span>
+                    ))}
+                  </div>
+                  <span className="warning-details-hint">
+                    Se sugiere cobrar o desocupar estas mesas antes de realizar el arqueo.
+                  </span>
+                </div>
+              </div>
+              <div className="warning-card-watermark">
+                <AlertTriangle size={72} />
               </div>
             </div>
           )}
 
-          {/* Breakdown cards */}
-          <div className="closing-metrics-grid">
-            <div className="closing-metric-card">
-              <span className="c-lbl">Efectivo en Caja (Sistema):</span>
-              <span className="c-val text-emerald">{formatCurrency(totalCash)}</span>
+          {/* Grand Total de la Jornada (Informativo consolidado) */}
+          <div className="closing-grand-banner">
+            <div className="grand-banner-left">
+              <span className="grand-title">TOTAL FACTURADO EN EL DÍA:</span>
+              <span className="grand-subtitle">
+                Consolidado de todas las ventas ({todaySales.length} órdenes)
+              </span>
             </div>
-
-            <div className="closing-metric-card">
-              <span className="c-lbl">Tarjetas / Datáfono:</span>
-              <span className="c-val">{formatCurrency(totalCard)}</span>
-            </div>
-
-            <div className="closing-metric-card">
-              <span className="c-lbl">Transferencias (QR/Nequi):</span>
-              <span className="c-val">{formatCurrency(totalTransfer)}</span>
-            </div>
+            <span className="grand-val">{formatCurrency(grandTotal)}</span>
           </div>
 
-          {/* Grand Total */}
-          <div className="closing-grand-banner">
-            <span>TOTAL FACTURADO EN EL DÍA:</span>
-            <span className="grand-val">{formatCurrency(grandTotal)}</span>
+          {/* Breakdown cards por canal con decoración visual premium */}
+          <div className="closing-metrics-grid">
+            {/* 1. Tarjeta de Efectivo */}
+            <div className="closing-metric-card closing-metric-cash highlight-cash-card">
+              <div className="metric-card-accent-bar bar-cash" />
+              <div className="metric-card-header">
+                <span className="c-lbl">Efectivo en Caja (Sistema):</span>
+                <div className="metric-icon-badge cash-badge" title="Dinero físico en caja">
+                  <Banknote size={15} />
+                </div>
+              </div>
+              <span className="c-val text-cash">{formatCurrency(totalCash)}</span>
+              <div className="card-sub-pill-row">
+                <span className="c-badge-pill pill-cash">A ARQUEAR</span>
+                <span className="c-sub">Billetes en gaveta</span>
+              </div>
+              <div className="metric-card-watermark watermark-cash">
+                <Banknote size={54} />
+              </div>
+            </div>
+
+            {/* 2. Tarjeta de Tarjetas / Datáfono */}
+            <div className="closing-metric-card closing-metric-card-pay">
+              <div className="metric-card-accent-bar bar-card" />
+              <div className="metric-card-header">
+                <span className="c-lbl">Tarjetas / Datáfono:</span>
+                <div className="metric-icon-badge card-badge" title="Pagos con tarjeta / datáfono">
+                  <CreditCard size={15} />
+                </div>
+              </div>
+              <span className="c-val text-card">{formatCurrency(totalCard)}</span>
+              <div className="card-sub-pill-row">
+                <span className="c-badge-pill pill-card">VOUCHERS</span>
+                <span className="c-sub">En cuenta bancaria</span>
+              </div>
+              <div className="metric-card-watermark watermark-card">
+                <CreditCard size={54} />
+              </div>
+            </div>
+
+            {/* 3. Tarjeta de Transferencias (QR/Nequi) */}
+            <div className="closing-metric-card closing-metric-transfer">
+              <div className="metric-card-accent-bar bar-transfer" />
+              <div className="metric-card-header">
+                <span className="c-lbl">Transferencias (QR/Nequi):</span>
+                <div className="metric-icon-badge transfer-badge" title="Transferencias QR / Nequi / Bancolombia">
+                  <QrCode size={15} />
+                </div>
+              </div>
+              <span className="c-val text-transfer">{formatCurrency(totalTransfer)}</span>
+              <div className="card-sub-pill-row">
+                <span className="c-badge-pill pill-transfer">DIGITAL</span>
+                <span className="c-sub">En cuenta bancaria</span>
+              </div>
+              <div className="metric-card-watermark watermark-transfer">
+                <QrCode size={54} />
+              </div>
+            </div>
           </div>
 
           {/* Physical Cash Count and Arqueo */}
           <div className="physical-count-box">
-            <h3 className="section-title">Arqueo Físico de Efectivo</h3>
+            <div className="physical-count-header">
+              <h3 className="section-title">Arqueo Físico de Efectivo en Gaveta</h3>
+              <p className="section-desc">
+                Ingresa únicamente el dinero físico (monedas y billetes) contado en el cajón de la caja.
+              </p>
+            </div>
 
             <div className="form-group">
-              <label className="form-label">
-                Efectivo Contado en Gaveta / Cajón Físico ($) *
-              </label>
-              <div className="price-input-wrapper">
+              <div className="count-label-split">
+                <label className="form-label" style={{ marginBottom: 0 }}>
+                  Efectivo Contado en Gaveta ($) *
+                </label>
+                <div className="target-cash-tag">
+                  Esperado en efectivo: <strong>{formatCurrency(totalCash)}</strong>
+                </div>
+              </div>
+
+              <div className="price-input-wrapper" style={{ marginTop: '0.45rem' }}>
                 <span className="price-prefix">$</span>
                 <input
                   type="number"
                   value={actualCashCounted}
+                  placeholder={`Ej: ${totalCash}`}
                   onChange={(e) => {
                     setValidationError('');
                     setActualCashCounted(
@@ -213,17 +291,26 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
               }`}
             >
               {cashDifference === 0 && (
-                <span>✓ Caja Exactamente Cuadrada ($0 de diferencia)</span>
+                <span>✓ Caja Exactamente Cuadrada ($0 de diferencia en efectivo)</span>
               )}
               {cashDifference > 0 && (
-                <span>▲ Sobrante en caja: +{formatCurrency(cashDifference)}</span>
+                <span>▲ Sobrante en efectivo: +{formatCurrency(cashDifference)}</span>
               )}
               {cashDifference < 0 && (
-                <span>▼ Faltante en caja: {formatCurrency(cashDifference)}</span>
+                <span>▼ Faltante en efectivo: {formatCurrency(cashDifference)}</span>
               )}
             </div>
 
-            <div className="form-group" style={{ marginTop: '0.85rem' }}>
+            {/* Aclaración de pagos electrónicos */}
+            {(totalCard > 0 || totalTransfer > 0) && (
+              <div className="electronic-reassurance-note">
+                <span>
+                  💳 <strong>No contar en gaveta:</strong> Los <strong>{formatCurrency(totalCard)}</strong> de datáfono y <strong>{formatCurrency(totalTransfer)}</strong> de transferencias ya están en el banco y no forman parte del efectivo físico.
+                </span>
+              </div>
+            )}
+
+            <div className="form-group" style={{ marginTop: '0.75rem' }}>
               <label className="form-label">Observaciones del Cierre de Caja:</label>
               <textarea
                 rows={2}
@@ -236,22 +323,24 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
           </div>
         </div>
 
-        <div className="modal-footer">
-          <button type="button" className="btn-cancel" onClick={onClose}>
-            Cancelar
+        <div className="modal-footer cash-closing-footer">
+          <button type="button" className="btn-cancel btn-closing-cancel" onClick={onClose}>
+            <X size={15} />
+            <span>Cancelar</span>
           </button>
           <button
             type="button"
-            className="btn-print-receipt"
+            className="btn-print-receipt btn-closing-print"
             onClick={() => setShowPreview(true)}
             title="Previsualizar comprobante térmico del arqueo antes de imprimir"
           >
             <Printer size={15} />
-            <span>Imprimir Arqueo</span>
+            <span>Imprimir</span>
+            <span className="print-format-badge">80mm</span>
           </button>
           <button
             type="button"
-            className="btn-confirm-payment"
+            className="btn-confirm-payment btn-closing-submit"
             onClick={handleOpenConfirmation}
           >
             <CheckCircle size={16} />
@@ -420,9 +509,10 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
                 type="button"
                 className="btn-print-receipt"
                 onClick={handlePrint}
+                title="Imprimir ticket térmico en 80mm"
               >
                 <Printer size={15} />
-                <span>Imprimir Ticket</span>
+                <span>Imprimir</span>
                 <span className="print-format-badge">80mm</span>
               </button>
             </div>
