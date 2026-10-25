@@ -56,6 +56,9 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
 
   const [actualCashCounted, setActualCashCounted] = useState<number | ''>(totalCash);
   const [closingNote, setClosingNote] = useState('');
+  const [validationError, setValidationError] = useState('');
+  const [showWarningOpenTablesModal, setShowWarningOpenTablesModal] = useState(false);
+  const [showStandardConfirmModal, setShowStandardConfirmModal] = useState(false);
 
   const numCounted = Number(actualCashCounted) || 0;
   const cashDifference = numCounted - totalCash;
@@ -65,26 +68,23 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
     window.print();
   };
 
-  const handleCloseShift = () => {
-    // Validate counted cash
-    if (isNaN(numCounted)) {
-      alert('El efectivo contado debe ser un número válido.');
+  const handleOpenConfirmation = () => {
+    if (actualCashCounted === '' || isNaN(Number(actualCashCounted))) {
+      setValidationError('Por favor ingresa un monto numérico válido para el efectivo contado.');
       return;
     }
+    setValidationError('');
 
-    // Check for open tables and warn user
     if (openTables.length > 0) {
-      const openNames = openTables.map((t) => t.number).join(', ');
-      const confirmOpen = window.confirm(
-        `⚠️ ATENCIÓN: Hay ${openTables.length} mesa(s) con órdenes pendientes de pago:\n(${openNames})\n\n¿Estás seguro de que deseas cerrar el turno de todas formas dejando estas mesas abiertas?`
-      );
-      if (!confirmOpen) return;
+      setShowWarningOpenTablesModal(true);
     } else {
-      // Standard confirmation
-      if (!window.confirm('¿Confirmar el cierre del turno y registrar el arqueo de caja de la jornada?')) {
-        return;
-      }
+      setShowStandardConfirmModal(true);
     }
+  };
+
+  const executeShiftClose = () => {
+    setShowWarningOpenTablesModal(false);
+    setShowStandardConfirmModal(false);
 
     // Build comprehensive summary object
     const summary: CashClosingSummary = {
@@ -185,14 +185,21 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
                 <input
                   type="number"
                   value={actualCashCounted}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    setValidationError('');
                     setActualCashCounted(
                       e.target.value === '' ? '' : parseFloat(e.target.value)
-                    )
-                  }
+                    );
+                  }}
                   className="form-input price-input-highlight"
                 />
               </div>
+              {validationError && (
+                <div className="cash-input-error-msg">
+                  <AlertCircle size={14} />
+                  <span>{validationError}</span>
+                </div>
+              )}
             </div>
 
             {/* Difference indicator */}
@@ -245,7 +252,7 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
           <button
             type="button"
             className="btn-confirm-payment"
-            onClick={handleCloseShift}
+            onClick={handleOpenConfirmation}
           >
             <CheckCircle size={16} />
             <span>Guardar & Cerrar Turno</span>
@@ -417,6 +424,190 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
                 <Printer size={15} />
                 <span>Imprimir Ticket</span>
                 <span className="print-format-badge">80mm</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* MODAL PERSONALIZADO: ADVERTENCIA DE MESAS ABIERTAS */}
+      {showWarningOpenTablesModal && (
+        <div
+          className="modal-backdrop custom-closing-confirm-backdrop"
+          onClick={() => setShowWarningOpenTablesModal(false)}
+          style={{ zIndex: 1200 }}
+        >
+          <div
+            className="modal-container custom-closing-confirm-card"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Cabecera del aviso */}
+            <div className="custom-closing-confirm-header">
+              <div className="warning-shield-glow">
+                <AlertTriangle size={30} className="glow-warning-icon" />
+              </div>
+              <div className="header-titles">
+                <h3 className="confirm-main-title">Mesas con Consumo Pendiente</h3>
+                <span className="confirm-main-subtitle">
+                  Se detectaron <strong>{openTables.length} mesas</strong> con órdenes abiertas sin facturar
+                </span>
+              </div>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setShowWarningOpenTablesModal(false)}
+                title="Cerrar aviso"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Cuerpo del aviso */}
+            <div className="custom-closing-confirm-body">
+              <p className="confirm-intro-text">
+                Si cierras el turno ahora, estas mesas permanecerán abiertas en el salón para el siguiente turno, pero su dinero <strong>no ingresará al arqueo actual</strong> de caja:
+              </p>
+
+              {/* Lista interactiva de mesas abiertas con sus montos */}
+              <div className="open-tables-visual-grid">
+                {openTables.map((table) => {
+                  const tableTotal =
+                    table.total ||
+                    (table.items || []).reduce(
+                      (acc, it) => acc + it.unitPrice * it.quantity,
+                      0
+                    );
+                  return (
+                    <div key={table.id} className="open-table-badge-item">
+                      <div className="table-badge-left">
+                        <span className="table-badge-num">{table.number}</span>
+                        <span className="table-badge-zone">{table.zone.toUpperCase()}</span>
+                      </div>
+                      <div className="table-badge-right">
+                        <span className="table-badge-items">
+                          {(table.items || []).length} ítems
+                        </span>
+                        <span className="table-badge-total">
+                          {formatCurrency(tableTotal)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="confirm-recommendation-banner">
+                <AlertCircle size={16} className="recom-icon" />
+                <span>
+                  <strong>Recomendación:</strong> Se aconseja regresar, solicitar la cuenta a los clientes y facturar todas las mesas antes de cerrar la jornada.
+                </span>
+              </div>
+            </div>
+
+            {/* Botones de acción mejorados */}
+            <div className="custom-closing-confirm-footer">
+              <button
+                type="button"
+                className="btn-confirm-return-tables"
+                onClick={() => setShowWarningOpenTablesModal(false)}
+              >
+                <span>Volver y Cobrar Mesas</span>
+              </button>
+
+              <button
+                type="button"
+                className="btn-confirm-force-close"
+                onClick={executeShiftClose}
+                title="Cerrar el turno dejando las mesas abiertas para la siguiente jornada"
+              >
+                <CheckCircle size={16} />
+                <span>Forzar Cierre de Turno</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL PERSONALIZADO: CONFIRMACIÓN ESTÁNDAR CUANDO TODO ESTÁ AL DÍA */}
+      {showStandardConfirmModal && (
+        <div
+          className="modal-backdrop custom-closing-confirm-backdrop"
+          onClick={() => setShowStandardConfirmModal(false)}
+          style={{ zIndex: 1200 }}
+        >
+          <div
+            className="modal-container custom-closing-confirm-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '480px' }}
+          >
+            <div className="custom-closing-confirm-header">
+              <div className="success-shield-glow">
+                <CheckCircle size={28} className="glow-success-icon" />
+              </div>
+              <div className="header-titles">
+                <h3 className="confirm-main-title">Confirmar Cierre de Turno</h3>
+                <span className="confirm-main-subtitle">
+                  Todas las mesas están al día. Revisa los datos finales:
+                </span>
+              </div>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setShowStandardConfirmModal(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="custom-closing-confirm-body">
+              <div className="standard-confirm-summary-list">
+                <div className="summary-row">
+                  <span>Cajero Responsable:</span>
+                  <strong>{currentStaff}</strong>
+                </div>
+                <div className="summary-row">
+                  <span>Total Facturado:</span>
+                  <strong className="text-emerald">{formatCurrency(grandTotal)}</strong>
+                </div>
+                <div className="summary-row">
+                  <span>Efectivo Físico Contado:</span>
+                  <strong>{formatCurrency(numCounted)}</strong>
+                </div>
+                <div className="summary-row">
+                  <span>Estado del Arqueo:</span>
+                  <strong
+                    className={
+                      cashDifference === 0
+                        ? 'text-emerald'
+                        : cashDifference > 0
+                        ? 'text-amber'
+                        : 'text-rose'
+                    }
+                  >
+                    {cashDifference === 0
+                      ? '✓ Caja Cuadrada ($0)'
+                      : cashDifference > 0
+                      ? `▲ Sobrante: +${formatCurrency(cashDifference)}`
+                      : `▼ Faltante: ${formatCurrency(cashDifference)}`}
+                  </strong>
+                </div>
+              </div>
+            </div>
+
+            <div className="custom-closing-confirm-footer">
+              <button
+                type="button"
+                className="btn-confirm-return-tables"
+                onClick={() => setShowStandardConfirmModal(false)}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn-confirm-save-shift"
+                onClick={executeShiftClose}
+              >
+                <CheckCircle size={16} />
+                <span>Confirmar y Guardar Turno</span>
               </button>
             </div>
           </div>
