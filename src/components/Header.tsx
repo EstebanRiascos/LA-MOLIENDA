@@ -14,6 +14,7 @@ import {
   Users,
   Volume2,
   VolumeX,
+  Smartphone,
 } from 'lucide-react';
 import laMoliendaLogo from '../assets/la_molienda_logo.png';
 import { isSoundEnabled, setSoundEnabled } from '../utils/sounds';
@@ -37,6 +38,8 @@ interface HeaderProps {
   onChangeStaff: (staff: string) => void;
   currentUser?: SystemUser | null;
   onOpenUserManagement?: () => void;
+  onOpenMobileSync?: () => void;
+  connectedClientsCount?: number;
   onLogout?: () => void;
 }
 
@@ -56,6 +59,8 @@ export const Header: React.FC<HeaderProps> = ({
   onChangeStaff,
   currentUser,
   onOpenUserManagement,
+  onOpenMobileSync,
+  connectedClientsCount = 0,
   onLogout,
 }) => {
   const [soundOn, setSoundOn] = React.useState<boolean>(() => isSoundEnabled());
@@ -217,6 +222,30 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Users size={15} />
               <span className="btn-text-desktop">Usuarios</span>
+            </button>
+          )}
+
+          {/* Comandero Móvil por Wi-Fi (Sincronización Celulares Meseros) */}
+          {onOpenMobileSync && (
+            <button
+              type="button"
+              className={`btn-header-action btn-header-compact btn-header-mobile-sync ${
+                connectedClientsCount > 0 ? 'has-active-clients' : ''
+              }`}
+              onClick={onOpenMobileSync}
+              title={
+                connectedClientsCount > 0
+                  ? `Comandero Móvil Wi-Fi: ${connectedClientsCount} mesero(s) conectado(s)`
+                  : 'Vincular Celulares de Meseros por Wi-Fi (Código QR)'
+              }
+            >
+              <Smartphone size={15} />
+              <span className="btn-text-desktop">Meseros</span>
+              {connectedClientsCount > 0 && (
+                <span className="mobile-clients-badge" title={`${connectedClientsCount} celulares activos`}>
+                  {connectedClientsCount}
+                </span>
+              )}
             </button>
           )}
 

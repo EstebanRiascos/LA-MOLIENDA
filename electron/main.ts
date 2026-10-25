@@ -62,7 +62,18 @@ function createWindow() {
   }
 }
 
+import {
+  startLocalServer,
+  stopLocalServer,
+  updateServerState,
+  getLocalIpAddress,
+  getConnectedClientsCount,
+} from './server';
+
+let serverInfo = { port: 4545, ip: '127.0.0.1', url: 'http://127.0.0.1:4545' };
+
 app.on('window-all-closed', () => {
+  stopLocalServer();
   if (process.platform !== 'darwin') {
     app.quit();
   }
@@ -79,6 +90,21 @@ app.whenReady().then(() => {
   ipcMain.on('app:confirm-close', () => {
     isQuitConfirmed = true;
     app.quit();
+  });
+
+  // SERVIDOR LOCAL WI-FI PARA CELULARES DE MESEROS
+  ipcMain.handle('server:getInfo', () => {
+    const ip = getLocalIpAddress();
+    return {
+      ip,
+      port: serverInfo.port || 4545,
+      url: `http://${ip}:${serverInfo.port || 4545}`,
+      clientsCount: getConnectedClientsCount(),
+    };
+  });
+
+  ipcMain.on('server:broadcastState', (_event, state) => {
+    updateServerState(state);
   });
 
   // Guardar y abrir reporte de Excel inmediatamente en la computadora
@@ -170,4 +196,13 @@ app.whenReady().then(() => {
   });
 
   createWindow();
+
+  // Iniciar servidor local Wi-Fi
+  startLocalServer(win, 4545)
+    .then((info) => {
+      serverInfo = info;
+    })
+    .catch((err) => {
+      console.error('Error al iniciar servidor local Wi-Fi:', err);
+    });
 });

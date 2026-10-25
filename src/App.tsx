@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Product, Table, TableZone, SaleRecord, OrderItem, SystemStats, SystemUser } from './types';
 import {
   getStoredProducts,
@@ -47,6 +47,8 @@ import { LoginModal } from './components/LoginModal';
 import { UserManagementModal } from './components/UserManagementModal';
 import { AboutModal } from './components/AboutModal';
 import { ExitConfirmModal } from './components/ExitConfirmModal';
+import { MobileSyncModal } from './components/MobileSyncModal';
+import { WaiterView } from './components/WaiterView';
 import { Info } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -218,6 +220,19 @@ export const App: React.FC = () => {
   const [isTableFormOpen, setIsTableFormOpen] = useState(false);
   const [editingTable, setEditingTable] = useState<Table | null>(null);
 
+  // Mobile Sync (Comandero Móvil por Wi-Fi) states
+  const [isMobileSyncOpen, setIsMobileSyncOpen] = useState(false);
+  const [connectedClientsCount, setConnectedClientsCount] = useState<number>(0);
+
+  // Determinar si quien carga es un celular de mesero o la ventana de Electron
+  const isMobileClient = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('view') === 'waiter') return true;
+    if (params.get('view') === 'pos' || params.get('view') === 'admin') return false;
+    const api = (window as any).electronAPI;
+    return !api || !api.isElectron;
+  }, []);
+
   // Lock background scrolling when any modal is open
   const isAnyModalOpen = Boolean(
     isTableDetailOpen ||
@@ -232,7 +247,8 @@ export const App: React.FC = () => {
     isTableFormOpen ||
     isLoginOpen ||
     isUserManagementOpen ||
-    isAboutModalOpen
+    isAboutModalOpen ||
+    isMobileSyncOpen
   );
 
   useEffect(() => {
@@ -591,6 +607,284 @@ export const App: React.FC = () => {
     saveStoredTables(updated);
     setActiveTableDetail(updatedTable);
   };
+
+  // Referencia a las mesas actuales para lecturas asíncronas sin romper efectos
+  const tablesRef = useRef<Table[]>(tables);
+  useEffect(() => {
+    tablesRef.current = tables;
+  }, [tables]);
+
+  // Registro de órdenes ya procesadas para evitar duplicación entre IPC y SSE
+  const processedOrderIdsRef = useRef<Set<string>>(new Set());
+
+  const handleApplyMobileOrder = (
+    tableId: string,
+    itemsToAdd: OrderItem[],
+    waiterName?: string,
+    orderId?: string
+  ) => {
+    if (orderId) {
+      if (processedOrderIdsRef.current.has(orderId)) return;
+      processedOrderIdsRef.current.add(orderId);
+    }
+
+    setTables((prevTables) => {
+      const target = prevTables.find(
+        (t) =>
+          t.id === tableId ||
+          (t.number && tableId && t.number.toLowerCase() === tableId.toLowerCase())
+      );
+      if (!target) return prevTables;
+
+      let merged = [...(target.items || [])];
+      itemsToAdd.forEach((newItem) => {
+        const existingIdx = merged.findIndex(
+          (i) => i.productId === newItem.productId && (i.notes || '') === (newItem.notes || '')
+        );
+        if (existingIdx >= 0) {
+          merged[existingIdx] = {
+            ...merged[existingIdx],
+            quantity: merged[existingIdx].quantity + (newItem.quantity || 1),
+          };
+        } else {
+          merged.push({
+            ...newItem,
+            id: newItem.id || `item-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+            status: newItem.status || 'pending',
+          });
+        }
+      });
+
+      const subtotal = merged.reduce((acc, i) => acc + (i.unitPrice || 0) * (i.quantity || 1), 0);
+      const tipAmount = target.tipPercentage
+        ? Math.round((subtotal * target.tipPercentage) / 100)
+        : 0;
+      const total = subtotal + tipAmount;
+
+      const updatedTable: Table = {
+        ...target,
+        status: 'ocupada',
+        openedAt: target.openedAt || new Date().toISOString(),
+        waiter: waiterName || target.waiter || currentStaff || 'Mesero',
+        items: merged,
+        subtotal,
+        tipAmount,
+        total,
+      };
+
+      const updatedAll = prevTables.map((t) => (t.id === target.id ? updatedTable : t));
+      saveStoredTables(updatedAll);
+
+      // Si la mesa está abierta en detalle en el PC del cajero, sincronizarla en vivo
+      setActiveTableDetail((curr) => (curr && (curr.id === target.id || curr.number === target.number) ? updatedTable : curr));
+
+      return updatedAll;
+    });
+  };
+
+  // Transmitir cualquier cambio de mesas, productos o personal a los celulares conectados
+  useEffect(() => {
+    const payload = {
+      tables,
+      products: synchronizedProducts,
+      staffList,
+    };
+    const api = (window as any).electronAPI;
+    if (api && typeof api.broadcastState === 'function') {
+      api.broadcastState(payload);
+    }
+    // Sincronización HTTP directa con el servidor local (funciona en Electron y navegador)
+    fetch('http://localhost:4545/api/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).catch(() => {});
+  }, [tables, synchronizedProducts, staffList]);
+
+  // Escuchar eventos en tiempo real desde el Servidor Wi-Fi (Celulares de Meseros)
+  useEffect(() => {
+    // 1. Vía IPC en Electron
+    const api = (window as any).electronAPI;
+    let unsubClients: any;
+    let unsubOrder: any;
+    let unsubOpen: any;
+    let unsubBill: any;
+
+    if (api && api.isElectron) {
+      unsubClients = api.onMobileClientsChanged?.((count: number) => {
+        setConnectedClientsCount(count);
+      });
+
+      unsubOrder = api.onMobileOrder?.((orderData: {
+        orderId?: string;
+        tableId: string;
+        tableName?: string;
+        items: OrderItem[];
+        waiter?: string;
+        notes?: string;
+      }) => {
+        handleApplyMobileOrder(orderData.tableId, orderData.items, orderData.waiter, orderData.orderId);
+        playSound('dispatch');
+        const currentTables = tablesRef.current;
+        const targetTable = currentTables.find(
+          (t: Table) =>
+            t.id === orderData.tableId ||
+            (t.number && orderData.tableId && t.number.toLowerCase() === orderData.tableId.toLowerCase())
+        );
+        const tableName = orderData.tableName || (targetTable ? targetTable.number : 'Mesa');
+        const totalCount = (orderData.items || []).reduce((s, i) => s + (i.quantity || 1), 0);
+        showNotification(
+          `🛎️ ¡Nueva Comanda Móvil! ${orderData.waiter || 'Mesero'} envió ${totalCount} producto(s) a ${tableName}.`
+        );
+      });
+
+      unsubOpen = api.onMobileOpenTable?.((data: {
+        tableId: string;
+        waiter: string;
+        patronName?: string;
+        diners?: number;
+      }) => {
+        setTables((prevTables) => {
+          const updated = prevTables.map((t) => {
+            if (t.id === data.tableId || (t.number && t.number.toLowerCase() === data.tableId.toLowerCase())) {
+              return {
+                ...t,
+                status: 'ocupada' as const,
+                openedAt: new Date().toISOString(),
+                patronName: data.patronName || 'Cliente',
+                waiter: data.waiter || 'Mesero',
+                capacity: data.diners || t.capacity,
+                items: [],
+                subtotal: 0,
+                tipPercentage: 0,
+                tipAmount: 0,
+                total: 0,
+              };
+            }
+            return t;
+          });
+          saveStoredTables(updated);
+          return updated;
+        });
+        playSound('click');
+        const currentTables = tablesRef.current;
+        const targetTable = currentTables.find(
+          (t: Table) => t.id === data.tableId || (t.number && t.number.toLowerCase() === data.tableId.toLowerCase())
+        );
+        const tableName = targetTable ? targetTable.number : 'Mesa';
+        showNotification(`📱 ${tableName} abierta por ${data.waiter || 'Mesero'} desde celular.`);
+      });
+
+      unsubBill = api.onMobileRequestBill?.((data: {
+        tableId: string;
+        tableName: string;
+        waiter: string;
+      }) => {
+        setTables((prevTables) => {
+          const updated = prevTables.map((t) => {
+            if (
+              (t.id === data.tableId || (t.number && t.number.toLowerCase() === data.tableId.toLowerCase())) &&
+              t.items.length > 0
+            ) {
+              return { ...t, status: 'por_cobrar' as const };
+            }
+            return t;
+          });
+          saveStoredTables(updated);
+          return updated;
+        });
+        playSound('cash');
+        showNotification(`🧾 Mesero ${data.waiter} solicita la precuenta / cobro de ${data.tableName}.`);
+      });
+    }
+
+    // 2. Vía Server-Sent Events (SSE) hacia el servidor local (funciona en Electron y en navegador)
+    let sse: EventSource | null = null;
+    try {
+      const serverPort = window.location.port === '5173' ? '4545' : (window.location.port || '4545');
+      const sseUrl = `http://${window.location.hostname || 'localhost'}:${serverPort}/api/stream`;
+      sse = new EventSource(sseUrl);
+
+      sse.addEventListener('state-update', (e: any) => {
+        try {
+          const state = JSON.parse(e.data);
+          if (state.tables && Array.isArray(state.tables) && state.tables.length > 0) {
+            setTables((prevTables) => {
+              let hasChanges = false;
+              const merged = prevTables.map((localT) => {
+                const incoming = state.tables.find(
+                  (st: any) => st.id === localT.id || (st.number && st.number.toLowerCase() === localT.number.toLowerCase())
+                );
+                if (!incoming) return localT;
+                if (incoming.status !== 'libre' || (incoming.items && incoming.items.length > 0)) {
+                  if (
+                    incoming.status !== localT.status ||
+                    (incoming.items && incoming.items.length !== localT.items.length) ||
+                    incoming.total !== localT.total
+                  ) {
+                    hasChanges = true;
+                    return {
+                      ...localT,
+                      status: incoming.status,
+                      items: incoming.items || [],
+                      subtotal: incoming.subtotal || 0,
+                      tipPercentage: incoming.tipPercentage || 0,
+                      tipAmount: incoming.tipAmount || 0,
+                      total: incoming.total || 0,
+                      waiter: incoming.waiter || localT.waiter,
+                      patronName: incoming.patronName || localT.patronName,
+                      openedAt: incoming.openedAt || localT.openedAt,
+                    };
+                  }
+                }
+                return localT;
+              });
+
+              if (!hasChanges) return prevTables;
+              saveStoredTables(merged);
+              setActiveTableDetail((curr) =>
+                curr ? merged.find((t: Table) => t.id === curr.id || t.number === curr.number) || curr : null
+              );
+              return merged;
+            });
+          }
+        } catch (err) {
+          console.error('Error parseando SSE state-update en caja:', err);
+        }
+      });
+
+      sse.addEventListener('new-order-broadcast', (e: any) => {
+        try {
+          const orderData = JSON.parse(e.data);
+          playSound('dispatch');
+          if (orderData.tableId && orderData.items) {
+            handleApplyMobileOrder(orderData.tableId, orderData.items, orderData.waiter, orderData.orderId);
+          }
+          const currentTables = tablesRef.current;
+          const targetTable = currentTables.find(
+            (t: Table) =>
+              t.id === orderData.tableId ||
+              (t.number && orderData.tableId && t.number.toLowerCase() === orderData.tableId.toLowerCase())
+          );
+          const tableName = orderData.tableName || (targetTable ? targetTable.number : 'Mesa');
+          const totalCount = (orderData.items || []).reduce((s: number, i: any) => s + (i.quantity || 1), 0);
+          showNotification(
+            `🛎️ ¡Nueva Comanda Móvil! ${orderData.waiter || 'Mesero'} envió ${totalCount} producto(s) a ${tableName}.`
+          );
+        } catch (err) {
+          console.error('Error procesando new-order-broadcast SSE:', err);
+        }
+      });
+    } catch {}
+
+    return () => {
+      if (typeof unsubClients === 'function') unsubClients();
+      if (typeof unsubOrder === 'function') unsubOrder();
+      if (typeof unsubOpen === 'function') unsubOpen();
+      if (typeof unsubBill === 'function') unsubBill();
+      sse?.close();
+    };
+  }, []);
 
   const handleTransferTable = (table: Table) => {
     setTransferOriginTable(table);
@@ -1048,6 +1342,17 @@ export const App: React.FC = () => {
     saveStoredCurrentStaff(updatedUser.name);
   };
 
+  // Si quien carga es un celular de mesero (o modo ?view=waiter), mostrar directamente el comandero móvil
+  if (isMobileClient) {
+    return (
+      <WaiterView
+        initialTables={tables}
+        initialProducts={products}
+        initialStaffList={staffList}
+      />
+    );
+  }
+
   return (
     <div className="app-container">
       {/* Multi-logo ambient background canvas across the entire system */}
@@ -1070,6 +1375,8 @@ export const App: React.FC = () => {
         onChangeStaff={handleChangeStaff}
         currentUser={currentUser}
         onOpenUserManagement={() => setIsUserManagementOpen(true)}
+        onOpenMobileSync={() => setIsMobileSyncOpen(true)}
+        connectedClientsCount={connectedClientsCount}
         onLogout={handleLogout}
       />
 
@@ -1345,6 +1652,12 @@ export const App: React.FC = () => {
         isOpen={isExitConfirmOpen}
         onCancel={() => setIsExitConfirmOpen(false)}
         onConfirm={handleConfirmExit}
+      />
+
+      {/* 14. Mobile Sync (Meseros Wi-Fi) Modal */}
+      <MobileSyncModal
+        isOpen={isMobileSyncOpen}
+        onClose={() => setIsMobileSyncOpen(false)}
       />
     </div>
   );

@@ -19,6 +19,30 @@ const api = {
     return () => ipcRenderer.removeListener('app:close-requested', listener);
   },
   confirmClose: () => ipcRenderer.send('app:confirm-close'),
+
+  // Wi-Fi Local Server & Comandero Móvil API
+  getServerInfo: () => ipcRenderer.invoke('server:getInfo'),
+  broadcastState: (state) => ipcRenderer.send('server:broadcastState', state),
+  onMobileOrder: (callback) => {
+    const listener = (_event, order) => callback(order);
+    ipcRenderer.on('mobile:new-order', listener);
+    return () => ipcRenderer.removeListener('mobile:new-order', listener);
+  },
+  onMobileOpenTable: (callback) => {
+    const listener = (_event, data) => callback(data);
+    ipcRenderer.on('mobile:open-table', listener);
+    return () => ipcRenderer.removeListener('mobile:open-table', listener);
+  },
+  onMobileRequestBill: (callback) => {
+    const listener = (_event, data) => callback(data);
+    ipcRenderer.on('mobile:request-bill', listener);
+    return () => ipcRenderer.removeListener('mobile:request-bill', listener);
+  },
+  onMobileClientsChanged: (callback) => {
+    const listener = (_event, count) => callback(count);
+    ipcRenderer.on('server:clients-changed', listener);
+    return () => ipcRenderer.removeListener('server:clients-changed', listener);
+  },
   isElectron: true,
 };
 
