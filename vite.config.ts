@@ -56,6 +56,8 @@ export default defineConfig({
         '**/dist/**',
         '**/dist-electron/**',
         '**/.git/**',
+        '**/.edge*/**',
+        '**/.tmp_edge*/**',
       ],
     },
   },

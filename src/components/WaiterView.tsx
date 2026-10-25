@@ -19,10 +19,19 @@ import {
   Sun,
   Moon,
   Users,
+  ShieldCheck,
+  Lock,
+  Eye,
+  EyeOff,
+  KeyRound,
+  Delete,
+  LogOut,
+  CheckCircle2,
 } from 'lucide-react';
-import { Product, Table, TableZone, OrderItem, ProductCategory } from '../types';
+import { Product, Table, TableZone, OrderItem, ProductCategory, SystemUser } from '../types';
 import { CATEGORIES, DEFAULT_TABLES, DEFAULT_PRODUCTS } from '../utils/defaults';
 import { formatCurrency, getStoredTables, getStoredProducts, getStoredTheme, saveStoredTheme } from '../utils/storage';
+import { getStoredUsers, saveStoredUsers } from '../utils/authStorage';
 import { playSound } from '../utils/sounds';
 import laMoliendaLogo from '../assets/la_molienda_logo.png';
 import { OpenTableModal } from './OpenTableModal';
@@ -60,10 +69,67 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [activeZone, setActiveZone] = useState<TableZone>('salon');
 
-  // Mesero activo
+  // Sesión del usuario autenticado en el comandero móvil
+  const [currentUser, setCurrentUser] = useState<SystemUser | null>(() => {
+    try {
+      const raw = localStorage.getItem('lamolienda_mobile_session_user');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  // Lista de usuarios del sistema sincronizados
+  const [systemUsers, setSystemUsers] = useState<SystemUser[]>(() => {
+    const stored = getStoredUsers();
+    return stored && stored.length > 0
+      ? stored
+      : [
+          {
+            id: 'user_admin_01',
+            username: 'admin',
+            name: 'Administrador',
+            role: 'admin',
+            password: 'admin',
+            pin: '1234',
+            active: true,
+            createdAt: '2026-01-01T00:00:00.000Z',
+          },
+        ];
+  });
+
+  // Mesero activo enlazado a la sesión
   const [currentWaiter, setCurrentWaiter] = useState<string>(() => {
+    try {
+      const raw = localStorage.getItem('lamolienda_mobile_session_user');
+      if (raw) {
+        const u = JSON.parse(raw);
+        if (u && u.name) return u.name;
+      }
+    } catch {}
     return localStorage.getItem('lamolienda_waiter_name') || 'Mesero 1';
   });
+
+  // Mantener currentWaiter en sintonía con el usuario activo
+  useEffect(() => {
+    if (currentUser && currentUser.name) {
+      setCurrentWaiter(currentUser.name);
+      localStorage.setItem('lamolienda_waiter_name', currentUser.name);
+    }
+  }, [currentUser]);
+
+  // Estados para el formulario de login y perfil
+  const [authMode, setAuthMode] = useState<'pin' | 'admin'>('pin');
+  const [selectedUserForPin, setSelectedUserForPin] = useState<SystemUser | null>(null);
+  const [loginPin, setLoginPin] = useState('');
+  const [loginUsername, setLoginUsername] = useState('admin');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [isLoginSuccess, setIsLoginSuccess] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loginShake, setLoginShake] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   // Mesa seleccionada para comandar
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
@@ -75,7 +141,10 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
   const [isSending, setIsSending] = useState(false);
   const [orderSuccessMsg, setOrderSuccessMsg] = useState<string | null>(null);
   const [reconnectCounter, setReconnectCounter] = useState(0);
-  const [isOpenTableModalOpen, setIsOpenTableModalOpen] = useState(false);
+  const [isOpenTableModalOpen, setIsOpenTableModalOpen] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('modal') === 'opentable';
+  });
   const [preSelectedTable, setPreSelectedTable] = useState<Table | null>(null);
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
   const [ticketTable, setTicketTable] = useState<Table | null>(null);
@@ -107,10 +176,16 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
     }
   };
 
-  // Garantizar que la vista móvil del mesero nunca herede el bloqueo de scroll
+  // Garantizar que la vista móvil del mesero nunca herede el bloqueo de scroll y soporte sticky
   useEffect(() => {
     document.body.classList.remove('modal-open');
     document.documentElement.classList.remove('modal-open');
+    document.body.classList.add('mobile-waiter-active');
+    document.documentElement.classList.add('mobile-waiter-active');
+    return () => {
+      document.body.classList.remove('mobile-waiter-active');
+      document.documentElement.classList.remove('mobile-waiter-active');
+    };
   }, []);
 
   // Determinar la URL base de la API
@@ -172,6 +247,10 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
             if (state.staffList && Array.isArray(state.staffList) && state.staffList.length > 0) {
               setStaffList(state.staffList);
             }
+            if (state.systemUsers && Array.isArray(state.systemUsers) && state.systemUsers.length > 0) {
+              setSystemUsers(state.systemUsers);
+              saveStoredUsers(state.systemUsers);
+            }
           } catch (err) {
             console.error('Error parseando init SSE:', err);
           }
@@ -189,6 +268,10 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
             }
             if (state.staffList && Array.isArray(state.staffList) && state.staffList.length > 0) {
               setStaffList(state.staffList);
+            }
+            if (state.systemUsers && Array.isArray(state.systemUsers) && state.systemUsers.length > 0) {
+              setSystemUsers(state.systemUsers);
+              saveStoredUsers(state.systemUsers);
             }
           } catch (err) {
             console.error('Error parseando state-update SSE:', err);
@@ -241,7 +324,190 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
     };
   }, [apiBase, reconnectCounter]);
 
-  // Actualizar mesero activo en localStorage
+  // Carga inicial directa de estado desde la API HTTP
+  useEffect(() => {
+    fetch(`${apiBase}/api/state`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.data) {
+          if (data.data.tables && Array.isArray(data.data.tables) && data.data.tables.length > 0) {
+            setTables(data.data.tables);
+          }
+          if (data.data.products && Array.isArray(data.data.products) && data.data.products.length > 0) {
+            setProducts(data.data.products);
+          }
+          if (data.data.staffList && Array.isArray(data.data.staffList) && data.data.staffList.length > 0) {
+            setStaffList(data.data.staffList);
+          }
+          if (data.data.systemUsers && Array.isArray(data.data.systemUsers) && data.data.systemUsers.length > 0) {
+            setSystemUsers(data.data.systemUsers);
+            saveStoredUsers(data.data.systemUsers);
+          }
+        }
+      })
+      .catch(() => {});
+  }, [apiBase]);
+
+  // Manejo de errores y animaciones de login
+  const triggerLoginError = (msg: string) => {
+    playSound('error');
+    setLoginError(msg);
+    setLoginShake(true);
+    setTimeout(() => setLoginShake(false), 500);
+    setLoginPin('');
+  };
+
+  // Ejecución de login (servidor local primero, fallback local en caso de red)
+  const handleExecuteLogin = async (credentials: { pin?: string; username?: string; password?: string }) => {
+    setIsLoggingIn(true);
+    setLoginError(null);
+    try {
+      const resp = await fetch(`${apiBase}/api/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credentials),
+      });
+      const data = await resp.json();
+      if (data.success && data.user) {
+        setIsLoginSuccess(true);
+        playSound('success');
+        setTimeout(() => {
+          setCurrentUser(data.user);
+          setCurrentWaiter(data.user.name);
+          localStorage.setItem('lamolienda_mobile_session_user', JSON.stringify(data.user));
+          localStorage.setItem('lamolienda_waiter_name', data.user.name);
+          setIsLoginSuccess(false);
+          setLoginPin('');
+          setLoginPassword('');
+          setSelectedUserForPin(null);
+        }, 400);
+        return;
+      } else {
+        triggerLoginError(data.error || 'Credenciales o PIN inválidos.');
+        return;
+      }
+    } catch {
+      // Si la red no respondió o está fuera de línea, autenticar localmente
+      const users = systemUsers && systemUsers.length > 0 ? systemUsers : getStoredUsers();
+      let matched: SystemUser | undefined;
+
+      if (credentials.pin) {
+        const p = credentials.pin.trim();
+        if (selectedUserForPin) {
+          if (selectedUserForPin.pin === p && selectedUserForPin.active) {
+            matched = selectedUserForPin;
+          }
+        } else {
+          matched = users.find((u) => u.pin === p && u.active);
+        }
+      } else if (credentials.username && credentials.password) {
+        const u = credentials.username.trim().toLowerCase();
+        matched = users.find(
+          (user) => user.username.toLowerCase() === u && user.password === credentials.password && user.active
+        );
+      }
+
+      if (matched) {
+        const safe = {
+          id: matched.id,
+          name: matched.name,
+          username: matched.username,
+          role: matched.role,
+          active: matched.active,
+          createdAt: matched.createdAt,
+        };
+        setIsLoginSuccess(true);
+        playSound('success');
+        setTimeout(() => {
+          setCurrentUser(safe as any);
+          setCurrentWaiter(safe.name);
+          localStorage.setItem('lamolienda_mobile_session_user', JSON.stringify(safe));
+          localStorage.setItem('lamolienda_waiter_name', safe.name);
+          setIsLoginSuccess(false);
+          setLoginPin('');
+          setLoginPassword('');
+          setSelectedUserForPin(null);
+        }, 400);
+      } else {
+        triggerLoginError('PIN o contraseña no válidos.');
+      }
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  // Teclado numérico táctil PIN
+  const handleMobilePinDigit = (digit: string) => {
+    if (loginPin.length >= 4 || isLoggingIn || isLoginSuccess) return;
+    playSound('click');
+    const newPin = loginPin + digit;
+    setLoginPin(newPin);
+    setLoginError(null);
+
+    if (newPin.length === 4) {
+      setTimeout(() => {
+        handleExecuteLogin({ pin: newPin });
+      }, 100);
+    }
+  };
+
+  const handleMobilePinBackspace = () => {
+    playSound('click');
+    setLoginPin((prev) => prev.slice(0, -1));
+    setLoginError(null);
+  };
+
+  const handleMobilePinClear = () => {
+    playSound('click');
+    setLoginPin('');
+    setLoginError(null);
+  };
+
+  const handleAdminFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loginUsername.trim()) {
+      triggerLoginError('Ingresa el nombre de usuario.');
+      return;
+    }
+    if (!loginPassword) {
+      triggerLoginError('Ingresa la contraseña.');
+      return;
+    }
+    handleExecuteLogin({ username: loginUsername, password: loginPassword });
+  };
+
+  // Cerrar sesión del mesero y retornar al login
+  const handleLogoutWaiter = () => {
+    playSound('click');
+    localStorage.removeItem('lamolienda_mobile_session_user');
+    setCurrentUser(null);
+    setIsProfileModalOpen(false);
+    setLoginPin('');
+    setLoginPassword('');
+    setLoginError(null);
+    setSelectedUserForPin(null);
+  };
+
+  // Soporte para teclado físico al digitar PIN
+  useEffect(() => {
+    if (currentUser || authMode !== 'pin' || isLoginSuccess) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault();
+        handleMobilePinDigit(e.key);
+      } else if (e.key === 'Backspace') {
+        e.preventDefault();
+        handleMobilePinBackspace();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        handleMobilePinClear();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentUser, authMode, loginPin, isLoginSuccess, isLoggingIn]);
+
+  // Actualizar mesero activo en localStorage (si se cambia manualmente)
   const handleWaiterChange = (name: string) => {
     setCurrentWaiter(name);
     localStorage.setItem('lamolienda_waiter_name', name);
@@ -344,7 +610,7 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
           orderId: `ord-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
           tableId: selectedTable.id,
           tableName: selectedTable.number,
-          waiter: currentWaiter,
+          waiter: currentUser ? currentUser.name : currentWaiter,
           items: newOrderItems,
           timestamp: new Date().toISOString(),
         }),
@@ -396,7 +662,7 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
         body: JSON.stringify({
           tableId: target.id,
           tableName: target.number,
-          waiter: currentWaiter,
+          waiter: currentUser ? currentUser.name : currentWaiter,
         }),
       });
       playSound('success');
@@ -425,13 +691,14 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
     waiter: string,
     pax: number
   ) => {
+    const waiterToUse = waiter || (currentUser ? currentUser.name : currentWaiter);
     try {
       await fetch(`${apiBase}/api/table/open`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tableId,
-          waiter,
+          waiter: waiterToUse,
           patronName,
           diners: pax,
         }),
@@ -449,7 +716,7 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
             status: 'ocupada' as const,
             openedAt: new Date().toISOString(),
             patronName,
-            waiter,
+            waiter: waiterToUse,
             capacity: pax,
             items: [],
             subtotal: 0,
@@ -534,26 +801,263 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
             <span className="mobile-conn-text">{isConnected ? 'En Línea' : 'Desconectado'}</span>
           </button>
 
-          {/* Selector de Mesero */}
-          <div className="mobile-waiter-selector-wrap">
-            <User size={13} className="waiter-icon" />
-            <select
-              value={currentWaiter}
-              onChange={(e) => handleWaiterChange(e.target.value)}
-              className="mobile-waiter-select"
+          {/* Perfil del Mesero Autenticado */}
+          {currentUser ? (
+            <button
+              type="button"
+              className="mobile-waiter-profile-badge"
+              onClick={() => {
+                playSound('click');
+                setIsProfileModalOpen(true);
+              }}
+              title="Toca para ver perfil o cambiar de mesero"
             >
-              {staffList.map((st) => (
-                <option key={st} value={st}>
-                  {st}
-                </option>
-              ))}
-            </select>
-          </div>
+              <span className="mobile-waiter-badge-avatar">
+                <User size={13} />
+              </span>
+              <div className="mobile-waiter-badge-text">
+                <span className="mobile-waiter-badge-name">{currentUser.name}</span>
+                <span className="mobile-waiter-badge-role">
+                  {currentUser.role === 'admin' ? 'Admin' : currentUser.role === 'cajero' ? 'Caja' : 'Mesero'}
+                </span>
+              </div>
+              <LogOut size={12} className="mobile-waiter-badge-logout-icon" />
+            </button>
+          ) : (
+            <div className="mobile-waiter-login-hint">
+              <KeyRound size={13} />
+              <span>Acceso</span>
+            </div>
+          )}
         </div>
       </header>
 
       {/* Main Content Area */}
-      {!selectedTable ? (
+      {!currentUser ? (
+        /* VISTA 0: LOGIN SI NO HAY USUARIO AUTENTICADO */
+        <div className="mobile-login-view">
+          <div className={`mobile-login-card ${loginShake ? 'shake' : ''}`}>
+            {/* Header del Login */}
+            <div className="mobile-login-card-header">
+              <div className="mobile-login-logo-wrap">
+                <img src={laMoliendaLogo} alt="La Molienda" className="mobile-login-logo" />
+              </div>
+              <h2 className="mobile-login-title">Acceso de Personal</h2>
+              <p className="mobile-login-subtitle">
+                Ingresa con tu PIN de mesero para gestionar pedidos y mesas
+              </p>
+            </div>
+
+            {/* Selector de Modo (PIN / Admin) */}
+            <div className="mobile-login-tabs">
+              <button
+                type="button"
+                className={`mobile-login-tab ${authMode === 'pin' ? 'active' : ''}`}
+                onClick={() => {
+                  playSound('click');
+                  setAuthMode('pin');
+                  setLoginError(null);
+                  setLoginPin('');
+                }}
+              >
+                <KeyRound size={15} />
+                <span>PIN Rápido</span>
+              </button>
+              <button
+                type="button"
+                className={`mobile-login-tab ${authMode === 'admin' ? 'active' : ''}`}
+                onClick={() => {
+                  playSound('click');
+                  setAuthMode('admin');
+                  setLoginError(null);
+                }}
+              >
+                <ShieldCheck size={15} />
+                <span>Administrador</span>
+              </button>
+            </div>
+
+            {/* Mensajes de Alerta */}
+            {loginError && (
+              <div className="mobile-login-alert error" role="alert">
+                <AlertCircle size={16} />
+                <span>{loginError}</span>
+              </div>
+            )}
+            {isLoginSuccess && (
+              <div className="mobile-login-alert success">
+                <CheckCircle2 size={16} />
+                <span>¡Acceso concedido! Entrando al comandero...</span>
+              </div>
+            )}
+
+            {/* MODO PIN */}
+            {authMode === 'pin' && (
+              <div className="mobile-pin-section">
+                {/* Opcional: Chips de usuarios para selección rápida */}
+                {systemUsers.length > 1 && (
+                  <div className="mobile-users-chips-wrap">
+                    <span className="mobile-users-chips-label">Selecciona tu usuario (o digita tu PIN):</span>
+                    <div className="mobile-users-chips-list">
+                      {systemUsers
+                        .filter((u) => u.active)
+                        .map((u) => {
+                          const isSel = selectedUserForPin?.id === u.id;
+                          return (
+                            <button
+                              key={u.id}
+                              type="button"
+                              className={`mobile-user-chip ${isSel ? 'selected' : ''}`}
+                              onClick={() => {
+                                playSound('click');
+                                setSelectedUserForPin(isSel ? null : u);
+                                setLoginPin('');
+                                setLoginError(null);
+                              }}
+                            >
+                              <User size={12} />
+                              <span>{u.name}</span>
+                            </button>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Visualización de los 4 Dígitos */}
+                <div className="mobile-pin-dots-display">
+                  {[0, 1, 2, 3].map((idx) => {
+                    const filled = loginPin.length > idx;
+                    return (
+                      <div
+                        key={idx}
+                        className={`mobile-pin-dot ${filled ? 'filled' : ''} ${isLoginSuccess ? 'success' : ''}`}
+                      >
+                        {filled && <span className="mobile-pin-dot-glow" />}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <p className="mobile-pin-hint">
+                  {selectedUserForPin
+                    ? `Mesero: ${selectedUserForPin.name} (${selectedUserForPin.role})`
+                    : 'Digita tu PIN de 4 dígitos'}
+                </p>
+
+                {/* Teclado Táctil 3x4 */}
+                <div className="mobile-keypad-grid">
+                  {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
+                    <button
+                      key={digit}
+                      type="button"
+                      className="mobile-keypad-btn"
+                      onClick={() => handleMobilePinDigit(digit)}
+                      disabled={isLoggingIn || isLoginSuccess || loginPin.length >= 4}
+                    >
+                      <span className="mobile-keypad-num">{digit}</span>
+                    </button>
+                  ))}
+
+                  <button
+                    type="button"
+                    className="mobile-keypad-btn action-btn clear"
+                    onClick={handleMobilePinClear}
+                    disabled={isLoggingIn || isLoginSuccess || loginPin.length === 0}
+                    title="Limpiar"
+                  >
+                    <span>C</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="mobile-keypad-btn"
+                    onClick={() => handleMobilePinDigit('0')}
+                    disabled={isLoggingIn || isLoginSuccess || loginPin.length >= 4}
+                  >
+                    <span className="mobile-keypad-num">0</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="mobile-keypad-btn action-btn backspace"
+                    onClick={handleMobilePinBackspace}
+                    disabled={isLoggingIn || isLoginSuccess || loginPin.length === 0}
+                    title="Borrar dígito"
+                  >
+                    <Delete size={20} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* MODO ADMIN (USUARIO Y CONTRASEÑA) */}
+            {authMode === 'admin' && (
+              <form onSubmit={handleAdminFormSubmit} className="mobile-admin-login-form">
+                <div className="mobile-input-group">
+                  <label className="mobile-input-label">Usuario</label>
+                  <div className="mobile-input-wrap">
+                    <User size={16} className="mobile-input-icon" />
+                    <input
+                      type="text"
+                      className="mobile-login-input"
+                      value={loginUsername}
+                      onChange={(e) => setLoginUsername(e.target.value)}
+                      placeholder="admin"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      disabled={isLoggingIn || isLoginSuccess}
+                    />
+                  </div>
+                </div>
+
+                <div className="mobile-input-group">
+                  <label className="mobile-input-label">Contraseña</label>
+                  <div className="mobile-input-wrap">
+                    <Lock size={16} className="mobile-input-icon" />
+                    <input
+                      type={showLoginPassword ? 'text' : 'password'}
+                      className="mobile-login-input"
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      placeholder="••••••••"
+                      disabled={isLoggingIn || isLoginSuccess}
+                    />
+                    <button
+                      type="button"
+                      className="mobile-eye-btn"
+                      onClick={() => setShowLoginPassword(!showLoginPassword)}
+                      tabIndex={-1}
+                    >
+                      {showLoginPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="mobile-login-submit-btn"
+                  disabled={isLoggingIn || isLoginSuccess}
+                >
+                  <ShieldCheck size={18} />
+                  <span>{isLoggingIn ? 'Verificando...' : 'Iniciar Sesión'}</span>
+                </button>
+              </form>
+            )}
+          </div>
+
+          {/* Footer institucional de autoría técnica */}
+          <footer className="mobile-waiter-footer">
+            <div className="mobile-footer-inner">
+              <p className="mobile-footer-dev">
+                Sistema desarrollado por{' '}
+                <strong className="mobile-footer-engineer">Juan Esteban Riascos Madarriaga</strong>
+              </p>
+              <span className="mobile-footer-subtitle">Ingeniero de Sistemas &bull; La Molienda POS</span>
+            </div>
+          </footer>
+        </div>
+      ) : !selectedTable ? (
         /* VISTA 1: PLANO / SELECCIÓN DE MESAS */
         <main className="mobile-tables-view">
           {/* Zone Tabs & Abrir Mesa Shortcut */}
@@ -737,9 +1241,9 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
             <div className="mobile-footer-inner">
               <p className="mobile-footer-dev">
                 Sistema desarrollado por{' '}
-                <strong className="mobile-footer-engineer">Ing. Juan Esteban Riascos Madarriaga</strong>
+                <strong className="mobile-footer-engineer">Juan Esteban Riascos Madarriaga</strong>
               </p>
-              <span className="mobile-footer-subtitle">Ingeniero de Sistemas &bull; La Molienda Coffee POS</span>
+              <span className="mobile-footer-subtitle">Ingeniero de Sistemas &bull; La Molienda POS</span>
             </div>
           </footer>
         </main>
@@ -968,7 +1472,7 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
         tables={tables}
         preSelectedTable={preSelectedTable}
         staffList={staffList}
-        currentStaff={currentWaiter}
+        currentStaff={currentUser ? currentUser.name : currentWaiter}
         onClose={() => {
           setIsOpenTableModalOpen(false);
           setPreSelectedTable(null);
@@ -987,6 +1491,59 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
         onRequestBill={handleConfirmRequestBillFromTicket}
         isMobileWaiter={true}
       />
+
+      {/* Modal / Sheet de Perfil de Mesero y Cambio de Turno */}
+      {isProfileModalOpen && currentUser && (
+        <div className="mobile-profile-modal-overlay" onClick={() => setIsProfileModalOpen(false)}>
+          <div className="mobile-profile-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="mobile-profile-modal-header">
+              <div className="mobile-profile-avatar-large">
+                <User size={28} />
+              </div>
+              <h3 className="mobile-profile-user-name">{currentUser.name}</h3>
+              <div className="mobile-profile-badges-row">
+                <span className={`mobile-role-tag role-${currentUser.role}`}>
+                  {currentUser.role.toUpperCase()}
+                </span>
+                <span className="mobile-active-tag">● Sesión Activa</span>
+              </div>
+            </div>
+
+            <div className="mobile-profile-info-body">
+              <div className="mobile-profile-stat-box">
+                <span className="stat-label">Mesas Activas con tu Nombre</span>
+                <span className="stat-val">
+                  {tables.filter((t) => t.status !== 'libre' && t.waiter === currentUser.name).length}
+                </span>
+              </div>
+
+              <div className="mobile-profile-notice">
+                <p>
+                  Todas las comandas y aperturas de mesas que realices se registrarán automáticamente con tu nombre (<strong>{currentUser.name}</strong>).
+                </p>
+              </div>
+            </div>
+
+            <div className="mobile-profile-modal-actions">
+              <button
+                type="button"
+                className="btn-mobile-change-waiter"
+                onClick={handleLogoutWaiter}
+              >
+                <LogOut size={16} />
+                <span>Cerrar Sesión / Cambiar Mesero</span>
+              </button>
+              <button
+                type="button"
+                className="btn-mobile-continue"
+                onClick={() => setIsProfileModalOpen(false)}
+              >
+                Continuar Comandando
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -359,8 +359,8 @@ export const ReserveTableModal: React.FC<ReserveTableModalProps> = ({
 
               {/* Selector de Comensales */}
               <div className="form-group" style={{ marginTop: '0.65rem' }}>
-                <label className="form-label">Número de Comensales (Pax)</label>
-                <div className="pax-control-grid">
+                <div className="pax-control-header-row">
+                  <label className="form-label">Número de Comensales (Pax)</label>
                   <div className="pax-stepper">
                     <button
                       type="button"
@@ -384,19 +384,19 @@ export const ReserveTableModal: React.FC<ReserveTableModalProps> = ({
                       <Plus size={14} />
                     </button>
                   </div>
+                </div>
 
-                  <div className="pax-quick-selector">
-                    {[1, 2, 3, 4, 5, 6, 8, 10].map((p) => (
-                      <button
-                        type="button"
-                        key={p}
-                        className={`btn-cap-pill ${pax === p ? 'active' : ''}`}
-                        onClick={() => setPax(p)}
-                      >
-                        {p} pax
-                      </button>
-                    ))}
-                  </div>
+                <div className="pax-quick-selector">
+                  {[1, 2, 3, 4, 5, 6, 8].map((p) => (
+                    <button
+                      type="button"
+                      key={p}
+                      className={`btn-cap-pill ${pax === p ? 'active' : ''}`}
+                      onClick={() => setPax(p)}
+                    >
+                      {p}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>

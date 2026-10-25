@@ -28,6 +28,18 @@ const DEFAULT_SERVER_TABLES = [
   { id: 'tbl-barra-3', number: 'Barra Cocineta', zone: 'barra', capacity: 3, status: 'libre', items: [], subtotal: 0, tipPercentage: 0, tipAmount: 0, total: 0 },
 ];
 
+const DEFAULT_SYSTEM_USERS = [
+  {
+    id: 'user_admin_01',
+    username: 'admin',
+    name: 'Administrador',
+    role: 'admin',
+    password: 'admin',
+    pin: '1234',
+    active: true,
+  },
+];
+
 let server: http.Server | null = null;
 let sseClients: http.ServerResponse[] = [];
 let heartbeatInterval: NodeJS.Timeout | null = null;
@@ -35,6 +47,7 @@ let currentState: ServerState = {
   tables: DEFAULT_SERVER_TABLES,
   products: [],
   staffList: ['Administrador', 'Mesero 1', 'Mesero 2'],
+  systemUsers: DEFAULT_SYSTEM_USERS,
   updatedAt: new Date().toISOString(),
 };
 
@@ -427,6 +440,55 @@ export function startLocalServer(win: BrowserWindow | null, port: number = 4545)
             }
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ success: true }));
+          } catch (err: any) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, error: err.message }));
+          }
+        });
+        return;
+      }
+
+      // 6.5. ENDPOINT: Autenticación / Login desde celular
+      if (pathname === '/api/login' && req.method === 'POST') {
+        let body = '';
+        req.on('data', (chunk) => {
+          body += chunk;
+        });
+        req.on('end', () => {
+          try {
+            const data = JSON.parse(body);
+            const users =
+              currentState.systemUsers && currentState.systemUsers.length > 0
+                ? currentState.systemUsers
+                : DEFAULT_SYSTEM_USERS;
+            let authenticatedUser: any = null;
+
+            if (data.pin) {
+              const cleanPin = String(data.pin).trim();
+              authenticatedUser = users.find((u: any) => String(u.pin).trim() === cleanPin && u.active);
+            } else if (data.username && data.password) {
+              const cleanUsername = String(data.username).trim().toLowerCase();
+              authenticatedUser = users.find(
+                (u: any) =>
+                  u.username.toLowerCase() === cleanUsername &&
+                  u.password === data.password &&
+                  u.active
+              );
+            }
+
+            if (authenticatedUser) {
+              const safeUser = {
+                id: authenticatedUser.id,
+                name: authenticatedUser.name,
+                username: authenticatedUser.username,
+                role: authenticatedUser.role,
+              };
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ success: true, user: safeUser }));
+            } else {
+              res.writeHead(401, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ success: false, error: 'PIN o credenciales no válidas.' }));
+            }
           } catch (err: any) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ success: false, error: err.message }));

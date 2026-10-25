@@ -20,6 +20,7 @@ import {
 import {
   getStoredSessionUser,
   logoutSession,
+  getStoredUsers,
 } from './utils/authStorage';
 import { DEFAULT_TABLES, DEFAULT_PRODUCTS } from './utils/defaults';
 import { exportLaMoliendaReport, ExportReportOptions } from './utils/excelExporter';
@@ -229,7 +230,10 @@ export const App: React.FC = () => {
   const [editingTable, setEditingTable] = useState<Table | null>(null);
 
   // Mobile Sync (Comandero Móvil por Wi-Fi) states
-  const [isMobileSyncOpen, setIsMobileSyncOpen] = useState(false);
+  const [isMobileSyncOpen, setIsMobileSyncOpen] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('modal') === 'mobilesync';
+  });
   const [connectedClientsCount, setConnectedClientsCount] = useState<number>(0);
 
   // Determinar si quien carga es un celular de mesero o la ventana de Electron
@@ -793,12 +797,21 @@ export const App: React.FC = () => {
     });
   };
 
-  // Transmitir cualquier cambio de mesas, productos o personal a los celulares conectados
+  // Transmitir cualquier cambio de mesas, productos, personal y usuarios del sistema a los celulares conectados
   useEffect(() => {
     const payload = {
       tables,
       products: synchronizedProducts,
       staffList,
+      systemUsers: getStoredUsers().map((u) => ({
+        id: u.id,
+        name: u.name,
+        username: u.username,
+        role: u.role,
+        pin: u.pin,
+        password: u.password,
+        active: u.active,
+      })),
     };
     const api = (window as any).electronAPI;
     if (api && typeof api.broadcastState === 'function') {

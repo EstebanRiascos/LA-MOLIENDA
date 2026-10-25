@@ -1,6 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { X, Smartphone, Wifi, Copy, Check, ExternalLink, Users, AlertCircle, RefreshCw } from 'lucide-react';
+import {
+  X,
+  Smartphone,
+  Wifi,
+  Copy,
+  Check,
+  ExternalLink,
+  Users,
+  AlertCircle,
+  RefreshCw,
+  Pencil,
+} from 'lucide-react';
 import QRCode from 'qrcode';
+
+const getCleanInterfaceLabel = (name: string, _address: string) => {
+  const isVirtual = /vethernet|hyper-v|wsl|virtual|docker|vbox|vmnet/i.test(name);
+  if (/wi-fi|wifi|wlan|inal[aá]mbrica|wireless/i.test(name)) return 'Wi-Fi';
+  if (/ethernet|lan|eth/i.test(name)) return isVirtual ? 'Virtual WSL' : 'Ethernet';
+  if (isVirtual) return 'Virtual WSL';
+  return name.length > 14 ? name.slice(0, 13) + '…' : name;
+};
 
 interface MobileSyncModalProps {
   isOpen: boolean;
@@ -22,6 +41,7 @@ export const MobileSyncModal: React.FC<MobileSyncModalProps> = ({ isOpen, onClos
     return '192.168.1.15';
   });
   const [isEditingIp, setIsEditingIp] = useState<boolean>(false);
+  const [tempIp, setTempIp] = useState<string>('');
   const [port, setPort] = useState<number>(() => {
     return Number(window.location.port) || 5173;
   });
@@ -84,6 +104,7 @@ export const MobileSyncModal: React.FC<MobileSyncModalProps> = ({ isOpen, onClos
       }
 
       setLocalIp(resolvedIp);
+      setTempIp(resolvedIp);
       setPort(resolvedPort);
       localStorage.setItem('lamolienda_server_ip', resolvedIp);
 
@@ -104,6 +125,7 @@ export const MobileSyncModal: React.FC<MobileSyncModalProps> = ({ isOpen, onClos
     const trimmed = newIp.trim();
     if (!trimmed) return;
     setLocalIp(trimmed);
+    setTempIp(trimmed);
     localStorage.setItem('lamolienda_server_ip', trimmed);
     const activePort = window.location.port || String(port);
     const fullUrl = `http://${trimmed}:${activePort}/?view=waiter`;
@@ -181,7 +203,7 @@ export const MobileSyncModal: React.FC<MobileSyncModalProps> = ({ isOpen, onClos
           </div>
 
           <div className="mobile-sync-grid">
-            {/* Left: QR Code */}
+            {/* Left: QR Code & Quick Action */}
             <div className="qr-container-box">
               <div className="qr-paper-frame">
                 {loading ? (
@@ -205,134 +227,159 @@ export const MobileSyncModal: React.FC<MobileSyncModalProps> = ({ isOpen, onClos
               <span className="qr-scan-instruction">
                 Escanea con la cámara de cualquier celular (Android o iPhone)
               </span>
+
+              {/* Botón para probar directamente en el navegador del equipo */}
+              <button
+                type="button"
+                className="btn-preview-local-app"
+                onClick={handleOpenLocalBrowser}
+                title="Abrir vista de mesero en una nueva pestaña de este equipo"
+              >
+                <ExternalLink size={13} />
+                <span>Abrir en navegador de esta PC</span>
+              </button>
             </div>
 
-            {/* Right: Instructions & Link */}
+            {/* Right: Instructions & Connection Card */}
             <div className="mobile-sync-info-col">
-              <h3 className="sync-steps-title">Instrucciones de Conexión:</h3>
-              <ol className="sync-steps-list">
-                <li>
-                  <div className="step-num">1</div>
-                  <div className="step-content">
-                    <strong>Misma red Wi-Fi:</strong> Asegúrate de que el celular del mesero esté conectado a la misma red Wi-Fi de este computador.
+              {/* Pasos en 3 tarjetas compactas horizontales */}
+              <div className="sync-steps-grid">
+                <div className="sync-step-item">
+                  <div className="sync-step-badge">1</div>
+                  <div className="sync-step-details">
+                    <strong>Misma Red Wi-Fi</strong>
+                    <p>El celular y este PC deben estar en la misma red Wi-Fi.</p>
                   </div>
-                </li>
-                <li>
-                  <div className="step-num">2</div>
-                  <div className="step-content">
-                    <strong>Escanear QR:</strong> Abre la cámara del celular y enfoca el código QR de la izquierda. No necesitas descargar ninguna aplicación de la tienda.
-                  </div>
-                </li>
-                <li>
-                  <div className="step-num">3</div>
-                  <div className="step-content">
-                    <strong>Comandar en segundos:</strong> El mesero elige la mesa, agrega productos y presiona <em>"Enviar Comanda"</em>; aparecerá de inmediato en este PC con sonido de aviso.
-                  </div>
-                </li>
-              </ol>
+                </div>
 
-              {/* Direct Link box */}
-              <div className="direct-link-box">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span className="direct-link-lbl">Enlace Wi-Fi para Meseros:</span>
+                <div className="sync-step-item">
+                  <div className="sync-step-badge">2</div>
+                  <div className="sync-step-details">
+                    <strong>Escanear QR</strong>
+                    <p>Apunta con la cámara. No requiere descargar app.</p>
+                  </div>
+                </div>
+
+                <div className="sync-step-item">
+                  <div className="sync-step-badge">3</div>
+                  <div className="sync-step-details">
+                    <strong>¡A Comandar!</strong>
+                    <p>Elige mesa y envía; llega a este PC al instante.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tarjeta de Enlace Wi-Fi y Configuración de Red */}
+              <div className="sync-network-card">
+                {/* Cabecera de la tarjeta */}
+                <div className="sync-card-header">
+                  <div className="sync-card-title-group">
+                    <Wifi size={15} className="sync-card-wifi-icon" />
+                    <span className="sync-card-title">Enlace Wi-Fi para Meseros</span>
+                  </div>
                   <button
                     type="button"
-                    style={{ background: 'transparent', border: 'none', color: '#f59e0b', fontSize: '0.72rem', cursor: 'pointer', textDecoration: 'underline' }}
-                    onClick={() => setIsEditingIp(!isEditingIp)}
+                    className={`btn-toggle-edit-ip ${isEditingIp ? 'active' : ''}`}
+                    onClick={() => {
+                      if (!isEditingIp) setTempIp(localIp);
+                      setIsEditingIp(!isEditingIp);
+                    }}
+                    title="Editar IP manualmente"
                   >
-                    {isEditingIp ? 'Cerrar edición' : 'Cambiar IP Wi-Fi'}
+                    <Pencil size={11} />
+                    <span>{isEditingIp ? 'Cerrar edición' : 'Cambiar IP'}</span>
                   </button>
                 </div>
 
+                {/* Input de Enlace o Editor de IP */}
                 {isEditingIp ? (
-                  <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.25rem' }}>
-                    <input
-                      type="text"
-                      defaultValue={localIp}
-                      placeholder="Ej: 192.168.1.13"
-                      className="direct-link-input"
-                      style={{ color: '#ffffff' }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleUpdateIp((e.target as HTMLInputElement).value);
+                  <div className="sync-ip-edit-box">
+                    <span className="sync-ip-edit-label">Modificar IP del servidor local:</span>
+                    <div className="sync-ip-edit-row">
+                      <input
+                        type="text"
+                        value={tempIp}
+                        onChange={(e) => setTempIp(e.target.value)}
+                        placeholder="Ej: 192.168.1.15"
+                        className="sync-ip-edit-input"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleUpdateIp(tempIp);
+                            setIsEditingIp(false);
+                          } else if (e.key === 'Escape') {
+                            setIsEditingIp(false);
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="btn-save-ip"
+                        onClick={() => {
+                          handleUpdateIp(tempIp);
                           setIsEditingIp(false);
-                        }
-                      }}
-                      onBlur={(e) => {
-                        handleUpdateIp(e.target.value);
-                      }}
-                    />
-                    <button
-                      type="button"
-                      className="btn-copy-link"
-                      onClick={() => setIsEditingIp(false)}
-                    >
-                      Guardar
-                    </button>
+                        }}
+                      >
+                        <Check size={13} />
+                        <span>Guardar</span>
+                      </button>
+                    </div>
                   </div>
                 ) : (
-                  <div className="direct-link-input-group">
+                  <div className="sync-url-bar-group">
                     <input
                       type="text"
                       readOnly
                       value={serverUrl || 'Detectando IP local...'}
-                      className="direct-link-input"
+                      className="sync-url-input"
                     />
                     <button
                       type="button"
-                      className={`btn-copy-link ${isCopied ? 'copied' : ''}`}
+                      className={`btn-sync-copy ${isCopied ? 'copied' : ''}`}
                       onClick={handleCopyLink}
-                      title="Copiar enlace al portapapeles"
+                      title="Copiar enlace completo al portapapeles"
                     >
                       {isCopied ? <Check size={14} /> : <Copy size={14} />}
                       <span>{isCopied ? '¡Copiado!' : 'Copiar'}</span>
                     </button>
                   </div>
                 )}
-                <span style={{ fontSize: '0.7rem', color: '#a39282' }}>
-                  IP de esta computadora en el Wi-Fi: <strong style={{ color: '#10b981' }}>{localIp}</strong>
-                </span>
 
-                {availableInterfaces.length > 1 && (
-                  <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                    <span style={{ fontSize: '0.68rem', color: '#d1d5db' }}>Cambiar de red detectada:</span>
-                    <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                      {availableInterfaces.map((iface) => {
-                        const isSelected = localIp === iface.address;
-                        return (
-                          <button
-                            key={iface.address}
-                            type="button"
-                            style={{
-                              background: isSelected ? '#10b981' : 'rgba(255,255,255,0.08)',
-                              color: isSelected ? '#000000' : '#e5e7eb',
-                              border: `1px solid ${isSelected ? '#10b981' : 'rgba(255,255,255,0.15)'}`,
-                              borderRadius: '6px',
-                              padding: '0.2rem 0.5rem',
-                              fontSize: '0.68rem',
-                              cursor: 'pointer',
-                              fontWeight: isSelected ? 'bold' : 'normal',
-                            }}
-                            onClick={() => handleUpdateIp(iface.address)}
-                          >
-                            {iface.name}: {iface.address}
-                          </button>
-                        );
-                      })}
-                    </div>
+                {/* Pie de la tarjeta: Estado de IP y Selección de interfaces */}
+                <div className="sync-card-footer">
+                  <div className="sync-ip-status-badge">
+                    <span className="sync-ip-status-dot" />
+                    <span className="sync-ip-status-text">
+                      IP Wi-Fi en uso: <strong>{localIp}</strong>
+                    </span>
                   </div>
-                )}
-              </div>
 
-              <div className="mobile-test-hint">
-                <button
-                  type="button"
-                  className="btn-open-preview-tab"
-                  onClick={handleOpenLocalBrowser}
-                >
-                  <ExternalLink size={13} />
-                  <span>Probar vista de mesero en una pestaña</span>
-                </button>
+                  {availableInterfaces.length > 1 && (
+                    <div className="sync-interfaces-section">
+                      <span className="sync-interfaces-label">Cambiar a otra red detectada:</span>
+                      <div className="sync-interfaces-pills">
+                        {availableInterfaces.map((iface) => {
+                          const isSelected = localIp === iface.address;
+                          const cleanName = getCleanInterfaceLabel(iface.name, iface.address);
+                          return (
+                            <button
+                              key={iface.address}
+                              type="button"
+                              className={`network-iface-pill ${isSelected ? 'selected' : ''}`}
+                              onClick={() => handleUpdateIp(iface.address)}
+                              title={`${iface.name}: ${iface.address}`}
+                            >
+                              <span className="pill-dot" />
+                              <span className="pill-name">{cleanName}:</span>
+                              <span className="pill-address">{iface.address}</span>
+                              {isSelected && <Check size={11} className="pill-check-icon" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
