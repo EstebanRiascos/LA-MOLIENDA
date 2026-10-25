@@ -4,6 +4,7 @@ import {
   Receipt,
   FileSpreadsheet,
   Lock,
+  History,
   Calendar,
   CreditCard,
   Banknote,
@@ -17,6 +18,7 @@ import {
 import { SaleRecord, PaymentMethod } from '../types';
 import { formatCurrency } from '../utils/storage';
 import { ExportReportOptions } from '../utils/excelExporter';
+import { CashClosingHistoryModal } from './CashClosingHistoryModal';
 
 export type DateFilterPreset =
   | 'today'
@@ -62,6 +64,7 @@ export const SalesHistoryView: React.FC<SalesHistoryViewProps> = ({
   const currentMonthStr = getLocalMonthString();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [dateFilter, setDateFilter] = useState<DateFilterPreset>('today');
   const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthStr);
   const [selectedSingleDate, setSelectedSingleDate] = useState<string>(todayStr);
@@ -395,6 +398,17 @@ export const SalesHistoryView: React.FC<SalesHistoryViewProps> = ({
           </div>
 
           <div className="toolbar-right">
+            {/* Historial de Cierres Button */}
+            <button
+              type="button"
+              className="btn-cash-history-action"
+              onClick={() => setIsHistoryModalOpen(true)}
+              title="Ver registros anteriores de arqueos y turnos cerrados"
+            >
+              <History size={15} />
+              <span>Historial Cierres</span>
+            </button>
+
             {/* Cierre de Caja Button */}
             <button
               type="button"
@@ -585,6 +599,11 @@ export const SalesHistoryView: React.FC<SalesHistoryViewProps> = ({
           </tbody>
         </table>
       </div>
+      {/* Historial de Cierres Modal */}
+      <CashClosingHistoryModal
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
+      />
     </div>
   );
 };

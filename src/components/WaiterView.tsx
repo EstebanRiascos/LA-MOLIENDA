@@ -22,6 +22,8 @@ import { CATEGORIES, DEFAULT_TABLES, DEFAULT_PRODUCTS } from '../utils/defaults'
 import { formatCurrency, getStoredTables, getStoredProducts } from '../utils/storage';
 import { playSound } from '../utils/sounds';
 import laMoliendaLogo from '../assets/la_molienda_logo.png';
+import { OpenTableModal } from './OpenTableModal';
+import { TicketModal } from './TicketModal';
 
 interface WaiterViewProps {
   initialTables?: Table[];
@@ -66,6 +68,10 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
   const [isSending, setIsSending] = useState(false);
   const [orderSuccessMsg, setOrderSuccessMsg] = useState<string | null>(null);
   const [reconnectCounter, setReconnectCounter] = useState(0);
+  const [isOpenTableModalOpen, setIsOpenTableModalOpen] = useState(false);
+  const [preSelectedTable, setPreSelectedTable] = useState<Table | null>(null);
+  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+  const [ticketTable, setTicketTable] = useState<Table | null>(null);
 
   // Determinar la URL base de la API
   const apiBase = useMemo(() => {
@@ -313,35 +319,127 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
     }
   };
 
-  // PEDIR CUENTA (MARCAR COMO POR COBRAR)
-  const handleRequestBill = async () => {
-    if (!selectedTable) return;
-    if (selectedTable.items.length === 0 && newOrderItems.length === 0) {
-      alert('La mesa no tiene consumos registrados.');
+  // ABRIR TICKET DE PRECUENTA DETALLADO
+  const handleOpenTicket = (tbl?: Table | null) => {
+    const target = tbl || selectedTable;
+    if (!target) return;
+    if ((!target.items || target.items.length === 0) && newOrderItems.length === 0) {
+      alert('La mesa no tiene consumos registrados para generar precuenta.');
       return;
     }
+    playSound('click');
+    setTicketTable(target);
+    setIsTicketModalOpen(true);
+  };
 
-    if (
-      !window.confirm(
-        `¿Solicitar la cuenta para ${selectedTable.number}? Se marcará en la pantalla del cajero.`
-      )
-    ) {
-      return;
-    }
+  // SOLICITAR CUENTA A CAJA DIRECTAMENTE (DESDE EL TICKET O ACCIÓN RÁPIDA)
+  const handleConfirmRequestBillFromTicket = async () => {
+    const target = ticketTable || selectedTable;
+    if (!target) return;
 
     try {
       await fetch(`${apiBase}/api/table/request-bill`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tableId: selectedTable.id,
+          tableId: target.id,
+          tableName: target.number,
           waiter: currentWaiter,
         }),
       });
       playSound('success');
-      alert(`🧾 Cuenta solicitada para ${selectedTable.number}`);
+
+      // Actualizar estado local para feedback visual inmediato
+      setTables((prev) =>
+        prev.map((t) => (t.id === target.id ? { ...t, status: 'por_cobrar' } : t))
+      );
+      if (selectedTable && selectedTable.id === target.id) {
+        setSelectedTable((prev) => (prev ? { ...prev, status: 'por_cobrar' } : null));
+      }
+      if (ticketTable && ticketTable.id === target.id) {
+        setTicketTable((prev) => (prev ? { ...prev, status: 'por_cobrar' } : null));
+      }
+      alert(`🧾 ¡Cuenta solicitada a caja para ${target.number}! La alerta ha sido enviada al cajero.`);
     } catch (err) {
-      alert('Error al comunicar con la caja');
+      console.error('Error solicitando cuenta a caja:', err);
+      alert('Error al comunicar con la caja. Verifica la conexión Wi-Fi.');
+    }
+  };
+
+  // Abrir comanda / mesa desde el comandero móvil
+  const handleConfirmOpenTable = async (
+    tableId: string,
+    patronName: string,
+    waiter: string,
+    pax: number
+  ) => {
+    try {
+      await fetch(`${apiBase}/api/table/open`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tableId,
+          waiter,
+          patronName,
+          diners: pax,
+        }),
+      });
+    } catch (err) {
+      console.error('Error notificando apertura de mesa:', err);
+    }
+
+    let openedTable: Table | null = null;
+    setTables((prev) => {
+      const updated = prev.map((t) => {
+        if (t.id === tableId || (t.number && t.number.toLowerCase() === tableId.toLowerCase())) {
+          const opened: Table = {
+            ...t,
+            status: 'ocupada' as const,
+            openedAt: new Date().toISOString(),
+            patronName,
+            waiter,
+            capacity: pax,
+            items: [],
+            subtotal: 0,
+            tipPercentage: 0,
+            tipAmount: 0,
+            total: 0,
+          };
+          openedTable = opened;
+          return opened;
+        }
+        return t;
+      });
+      return updated;
+    });
+
+    setIsOpenTableModalOpen(false);
+    setPreSelectedTable(null);
+    playSound('success');
+
+    // Entrar directamente a tomar el pedido de la mesa recién abierta
+    const target = openedTable || tables.find((t) => t.id === tableId);
+    if (target) {
+      setSelectedTable({
+        ...target,
+        status: 'ocupada',
+        patronName,
+        waiter,
+        capacity: pax,
+        items: target.items || [],
+      });
+      setNewOrderItems([]);
+    }
+  };
+
+  const handleTableCardClick = (tbl: Table) => {
+    playSound('click');
+    if (tbl.status === 'libre') {
+      setPreSelectedTable(tbl);
+      setIsOpenTableModalOpen(true);
+    } else {
+      setSelectedTable(tbl);
+      setNewOrderItems([]);
     }
   };
 
@@ -395,28 +493,45 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
       {!selectedTable ? (
         /* VISTA 1: PLANO / SELECCIÓN DE MESAS */
         <main className="mobile-tables-view">
-          {/* Zone Tabs */}
-          <div className="mobile-zone-tabs">
+          {/* Zone Tabs & Abrir Mesa Shortcut */}
+          <div className="mobile-tables-header-row">
+            <div className="mobile-zone-tabs">
+              <button
+                type="button"
+                className={`mobile-zone-tab ${activeZone === 'salon' ? 'active' : ''}`}
+                onClick={() => setActiveZone('salon')}
+              >
+                Salón
+              </button>
+              <button
+                type="button"
+                className={`mobile-zone-tab ${activeZone === 'terraza' ? 'active' : ''}`}
+                onClick={() => setActiveZone('terraza')}
+              >
+                Terraza
+              </button>
+              <button
+                type="button"
+                className={`mobile-zone-tab ${activeZone === 'barra' ? 'active' : ''}`}
+                onClick={() => setActiveZone('barra')}
+              >
+                Barra
+              </button>
+            </div>
+
             <button
               type="button"
-              className={`mobile-zone-tab ${activeZone === 'salon' ? 'active' : ''}`}
-              onClick={() => setActiveZone('salon')}
+              className="btn-mobile-open-table-shortcut"
+              onClick={() => {
+                playSound('click');
+                const firstFree = zoneTables.find((t) => t.status === 'libre') || tables.find((t) => t.status === 'libre');
+                setPreSelectedTable(firstFree || null);
+                setIsOpenTableModalOpen(true);
+              }}
+              title="Abrir nueva mesa o asignar comanda"
             >
-              Salón
-            </button>
-            <button
-              type="button"
-              className={`mobile-zone-tab ${activeZone === 'terraza' ? 'active' : ''}`}
-              onClick={() => setActiveZone('terraza')}
-            >
-              Terraza
-            </button>
-            <button
-              type="button"
-              className={`mobile-zone-tab ${activeZone === 'barra' ? 'active' : ''}`}
-              onClick={() => setActiveZone('barra')}
-            >
-              Barra
+              <Plus size={14} />
+              <span>Abrir Mesa</span>
             </button>
           </div>
 
@@ -444,11 +559,7 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
                   <div
                     key={tbl.id}
                     className={`mobile-table-card status-${tbl.status}`}
-                    onClick={() => {
-                      setSelectedTable(tbl);
-                      setNewOrderItems([]);
-                      playSound('click');
-                    }}
+                    onClick={() => handleTableCardClick(tbl)}
                   >
                     <div className="mobile-tbl-top">
                       <span className="mobile-tbl-num">{tbl.number}</span>
@@ -469,6 +580,21 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
                         </>
                       )}
                     </div>
+
+                    {!isFree && tbl.items && tbl.items.length > 0 && (
+                      <button
+                        type="button"
+                        className="mobile-tbl-quick-ticket-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenTicket(tbl);
+                        }}
+                        title="Ver ticket de precuenta"
+                      >
+                        <Receipt size={11} />
+                        <span>Ver Ticket</span>
+                      </button>
+                    )}
 
                     {tbl.waiter && isOccupied && (
                       <div className="mobile-tbl-waiter-tag">
@@ -509,15 +635,15 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
               </span>
             </div>
 
-            {selectedTable.status === 'ocupada' && (
+            {(selectedTable.status === 'ocupada' || selectedTable.status === 'por_cobrar') && (
               <button
                 type="button"
-                className="btn-req-prebill"
-                onClick={handleRequestBill}
-                title="Pedir la cuenta al cajero"
+                className={`btn-req-prebill ${selectedTable.status === 'por_cobrar' ? 'is-requested' : ''}`}
+                onClick={() => handleOpenTicket(selectedTable)}
+                title="Ver ticket de precuenta detallado"
               >
                 <Receipt size={14} />
-                <span>Precuenta</span>
+                <span>{selectedTable.status === 'por_cobrar' ? 'Ver Precuenta' : 'Precuenta'}</span>
               </button>
             )}
           </div>
@@ -532,7 +658,14 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
 
           {/* Consumos ya existentes en la mesa */}
           {selectedTable.items.length > 0 && (
-            <div className="mobile-existing-bill-card">
+            <div
+              className="mobile-existing-bill-card"
+              onClick={() => handleOpenTicket(selectedTable)}
+              title="Toca para ver el ticket de precuenta completo"
+              role="button"
+              tabIndex={0}
+              style={{ cursor: 'pointer' }}
+            >
               <div className="existing-bill-head">
                 <span>Consumo acumulado en mesa ({selectedTable.items.length} refs):</span>
                 <strong className="existing-total">{formatCurrency(selectedTable.total)}</strong>
@@ -543,6 +676,13 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
                     {it.quantity}x {it.productName}
                   </span>
                 ))}
+              </div>
+              <div className="existing-bill-action-bar">
+                <span className="existing-bill-hint">
+                  <Receipt size={12} />
+                  <span>Ver ticket de precuenta</span>
+                </span>
+                <span className="existing-bill-touch-cta">Toca para abrir 🧾</span>
               </div>
             </div>
           )}
@@ -686,6 +826,32 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
           )}
         </main>
       )}
+
+      {/* Modal de Abrir Mesa / Asignar Comanda */}
+      <OpenTableModal
+        isOpen={isOpenTableModalOpen}
+        tables={tables}
+        preSelectedTable={preSelectedTable}
+        staffList={staffList}
+        currentStaff={currentWaiter}
+        onClose={() => {
+          setIsOpenTableModalOpen(false);
+          setPreSelectedTable(null);
+        }}
+        onConfirmOpen={handleConfirmOpenTable}
+      />
+
+      {/* Modal de Ticket de Precuenta Térmico */}
+      <TicketModal
+        isOpen={isTicketModalOpen}
+        onClose={() => {
+          setIsTicketModalOpen(false);
+          setTicketTable(null);
+        }}
+        table={ticketTable || selectedTable}
+        onRequestBill={handleConfirmRequestBillFromTicket}
+        isMobileWaiter={true}
+      />
     </div>
   );
 };

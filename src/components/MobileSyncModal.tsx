@@ -12,8 +12,14 @@ export const MobileSyncModal: React.FC<MobileSyncModalProps> = ({ isOpen, onClos
 
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [serverUrl, setServerUrl] = useState<string>('');
+  const [availableInterfaces, setAvailableInterfaces] = useState<Array<{ name: string; address: string; isWifi?: boolean }>>([]);
   const [localIp, setLocalIp] = useState<string>(() => {
-    return localStorage.getItem('lamolienda_server_ip') || '192.168.1.13';
+    const saved = localStorage.getItem('lamolienda_server_ip');
+    // Si se guardó una IP virtual de WSL o Docker (172.16-31.x.x), descartarla
+    if (saved && !/^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(saved)) {
+      return saved;
+    }
+    return '192.168.1.15';
   });
   const [isEditingIp, setIsEditingIp] = useState<boolean>(false);
   const [port, setPort] = useState<number>(() => {
@@ -54,6 +60,9 @@ export const MobileSyncModal: React.FC<MobileSyncModalProps> = ({ isOpen, onClos
         if (info.port) {
           resolvedPort = info.port;
         }
+        if (Array.isArray(info.availableInterfaces)) {
+          setAvailableInterfaces(info.availableInterfaces);
+        }
         setConnectedClients(info.clientsCount || 0);
       } else {
         // En navegador web directo, intentar consultar el backend en puerto 4545
@@ -63,11 +72,14 @@ export const MobileSyncModal: React.FC<MobileSyncModalProps> = ({ isOpen, onClos
           if (data.localIp && data.localIp !== '127.0.0.1') {
             resolvedIp = data.localIp;
           }
+          if (Array.isArray(data.availableInterfaces)) {
+            setAvailableInterfaces(data.availableInterfaces);
+          }
           if (data.connectedClients !== undefined) {
             setConnectedClients(data.connectedClients);
           }
         } catch {
-          // Si no responde el backend en 4545, usar la IP Wi-Fi guardada o 192.168.1.13
+          // Si no responde el backend en 4545, usar la IP Wi-Fi detectada o 192.168.1.15
         }
       }
 
@@ -90,6 +102,7 @@ export const MobileSyncModal: React.FC<MobileSyncModalProps> = ({ isOpen, onClos
 
   const handleUpdateIp = (newIp: string) => {
     const trimmed = newIp.trim();
+    if (!trimmed) return;
     setLocalIp(trimmed);
     localStorage.setItem('lamolienda_server_ip', trimmed);
     const activePort = window.location.port || String(port);
@@ -279,6 +292,36 @@ export const MobileSyncModal: React.FC<MobileSyncModalProps> = ({ isOpen, onClos
                 <span style={{ fontSize: '0.7rem', color: '#a39282' }}>
                   IP de esta computadora en el Wi-Fi: <strong style={{ color: '#10b981' }}>{localIp}</strong>
                 </span>
+
+                {availableInterfaces.length > 1 && (
+                  <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <span style={{ fontSize: '0.68rem', color: '#d1d5db' }}>Cambiar de red detectada:</span>
+                    <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                      {availableInterfaces.map((iface) => {
+                        const isSelected = localIp === iface.address;
+                        return (
+                          <button
+                            key={iface.address}
+                            type="button"
+                            style={{
+                              background: isSelected ? '#10b981' : 'rgba(255,255,255,0.08)',
+                              color: isSelected ? '#000000' : '#e5e7eb',
+                              border: `1px solid ${isSelected ? '#10b981' : 'rgba(255,255,255,0.15)'}`,
+                              borderRadius: '6px',
+                              padding: '0.2rem 0.5rem',
+                              fontSize: '0.68rem',
+                              cursor: 'pointer',
+                              fontWeight: isSelected ? 'bold' : 'normal',
+                            }}
+                            onClick={() => handleUpdateIp(iface.address)}
+                          >
+                            {iface.name}: {iface.address}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="mobile-test-hint">

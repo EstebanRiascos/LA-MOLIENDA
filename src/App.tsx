@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Product, Table, TableZone, SaleRecord, OrderItem, SystemStats, SystemUser } from './types';
+import { Product, Table, TableZone, SaleRecord, OrderItem, SystemStats, SystemUser, AppNotification, NotificationType, CashClosingSummary } from './types';
 import {
   getStoredProducts,
   saveStoredProducts,
@@ -48,6 +48,7 @@ import { UserManagementModal } from './components/UserManagementModal';
 import { AboutModal } from './components/AboutModal';
 import { ExitConfirmModal } from './components/ExitConfirmModal';
 import { MobileSyncModal } from './components/MobileSyncModal';
+import { NotificationsPanel } from './components/NotificationsPanel';
 import { WaiterView } from './components/WaiterView';
 import { Info } from 'lucide-react';
 
@@ -344,12 +345,109 @@ export const App: React.FC = () => {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
-  const showNotification = (msg: string) => {
+  // Historial y Centro de Notificaciones
+  const [notifications, setNotifications] = useState<AppNotification[]>(() => {
+    try {
+      const saved = localStorage.getItem('lamolienda_notifications_history');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+
+  const unreadNotificationsCount = useMemo(() => {
+    return notifications.filter((n) => !n.read).length;
+  }, [notifications]);
+
+  const showNotification = (msg: string, explicitType?: NotificationType) => {
     playSound(soundForNotification(msg));
     setNotification(msg);
     setTimeout(() => {
       setNotification((curr) => (curr === msg ? null : curr));
-    }, 3800);
+    }, 4200);
+
+    let notifType: NotificationType = explicitType || 'system';
+    if (!explicitType) {
+      const lower = msg.toLowerCase();
+      if (lower.includes('precuenta') || lower.includes('cobro')) notifType = 'prebill';
+      else if (lower.includes('comanda') || lower.includes('pedido')) notifType = 'order';
+      else if (lower.includes('mesa') || lower.includes('abierta') || lower.includes('espacio')) notifType = 'table';
+      else if (lower.includes('inventario') || lower.includes('stock') || lower.includes('producto')) notifType = 'inventory';
+    }
+
+    const newNotif: AppNotification = {
+      id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      message: msg,
+      type: notifType,
+      timestamp: new Date().toISOString(),
+      read: false,
+    };
+
+    setNotifications((prev) => {
+      const updated = [newNotif, ...prev.slice(0, 99)];
+      try {
+        localStorage.setItem('lamolienda_notifications_history', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const handleMarkAsRead = (id: string) => {
+    setNotifications((prev) => {
+      const updated = prev.map((n) => (n.id === id ? { ...n, read: true } : n));
+      try {
+        localStorage.setItem('lamolienda_notifications_history', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const handleMarkAllAsRead = () => {
+    playSound('click');
+    setNotifications((prev) => {
+      const updated = prev.map((n) => ({ ...n, read: true }));
+      try {
+        localStorage.setItem('lamolienda_notifications_history', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const handleClearAllNotifications = () => {
+    if (notifications.length === 0) return;
+    if (window.confirm('¿Deseas vaciar todo el historial de notificaciones?')) {
+      playSound('delete');
+      setNotifications([]);
+      try {
+        localStorage.removeItem('lamolienda_notifications_history');
+      } catch {}
+    }
+  };
+
+  const handleDeleteNotification = (id: string) => {
+    setNotifications((prev) => {
+      const updated = prev.filter((n) => n.id !== id);
+      try {
+        localStorage.setItem('lamolienda_notifications_history', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const handleSelectTableFromNotification = (tableNameOrId: string) => {
+    const found = tables.find(
+      (t) =>
+        t.id === tableNameOrId ||
+        (t.number && t.number.toLowerCase() === tableNameOrId.toLowerCase()) ||
+        tableNameOrId.toLowerCase().includes(t.number.toLowerCase())
+    );
+    if (found) {
+      setActiveSection('mesas');
+      setActiveTableDetail(found);
+      setIsTableDetailOpen(true);
+      playSound('click');
+    }
   };
 
   // Staff switch
@@ -794,7 +892,12 @@ export const App: React.FC = () => {
           return updated;
         });
         playSound('cash');
-        showNotification(`🧾 Mesero ${data.waiter} solicita la precuenta / cobro de ${data.tableName}.`);
+        const currentTables = tablesRef.current;
+        const targetTable = currentTables.find(
+          (t: Table) => t.id === data.tableId || (t.number && t.number.toLowerCase() === data.tableId?.toLowerCase())
+        );
+        const resolvedTableName = data.tableName || (targetTable ? targetTable.number : 'la mesa');
+        showNotification(`🧾 Mesero ${data.waiter || 'Mesero'} solicita la precuenta / cobro de ${resolvedTableName}.`, 'prebill');
       });
     }
 
@@ -1299,7 +1402,7 @@ export const App: React.FC = () => {
     setIsTicketOpen(true);
   };
 
-  const handleConfirmCloseShift = (summaryNote: string) => {
+  const handleConfirmCloseShift = (summary: CashClosingSummary | string) => {
     setIsCashClosingOpen(false);
     showNotification('Arqueo de caja y cierre de turno registrados con éxito.');
   };
@@ -1377,6 +1480,11 @@ export const App: React.FC = () => {
         onOpenUserManagement={() => setIsUserManagementOpen(true)}
         onOpenMobileSync={() => setIsMobileSyncOpen(true)}
         connectedClientsCount={connectedClientsCount}
+        unreadNotificationsCount={unreadNotificationsCount}
+        onOpenNotifications={() => {
+          playSound('click');
+          setIsNotificationsOpen((prev) => !prev);
+        }}
         onLogout={handleLogout}
       />
 
@@ -1596,6 +1704,7 @@ export const App: React.FC = () => {
       <CashClosingModal
         isOpen={isCashClosingOpen}
         sales={sales}
+        tables={tables}
         currentStaff={currentStaff}
         onClose={() => setIsCashClosingOpen(false)}
         onConfirmCloseShift={handleConfirmCloseShift}
@@ -1658,6 +1767,18 @@ export const App: React.FC = () => {
       <MobileSyncModal
         isOpen={isMobileSyncOpen}
         onClose={() => setIsMobileSyncOpen(false)}
+      />
+
+      {/* 15. Centro y Drawer de Notificaciones */}
+      <NotificationsPanel
+        isOpen={isNotificationsOpen}
+        onClose={() => setIsNotificationsOpen(false)}
+        notifications={notifications}
+        onMarkAsRead={handleMarkAsRead}
+        onMarkAllAsRead={handleMarkAllAsRead}
+        onClearAll={handleClearAllNotifications}
+        onDeleteNotification={handleDeleteNotification}
+        onSelectTable={handleSelectTableFromNotification}
       />
     </div>
   );

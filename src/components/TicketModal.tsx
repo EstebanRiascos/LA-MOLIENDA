@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Printer, Check, Coffee, Sparkles } from 'lucide-react';
+import { X, Printer, Check, Coffee, Sparkles, Receipt, Send } from 'lucide-react';
 import { SaleRecord, Table } from '../types';
 import { formatCurrency } from '../utils/storage';
 import { playSound } from '../utils/sounds';
@@ -10,6 +10,8 @@ interface TicketModalProps {
   onClose: () => void;
   saleRecord?: SaleRecord | null;
   table?: Table | null;
+  onRequestBill?: () => void;
+  isMobileWaiter?: boolean;
 }
 
 export const TicketModal: React.FC<TicketModalProps> = ({
@@ -17,6 +19,8 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   onClose,
   saleRecord,
   table,
+  onRequestBill,
+  isMobileWaiter,
 }) => {
   if (!isOpen || (!saleRecord && !table)) return null;
 
@@ -213,15 +217,36 @@ export const TicketModal: React.FC<TicketModalProps> = ({
         </div>
 
         {/* Modal Actions */}
-        <div className="ticket-modal-actions no-print">
+        <div className={`ticket-modal-actions no-print ${isMobileWaiter ? 'mobile-waiter-actions' : ''}`}>
           <button type="button" className="btn-modal-cancel" onClick={onClose}>
             Cerrar
           </button>
-          <button type="button" className="btn-print-receipt" onClick={handlePrint}>
-            <Printer size={15} />
-            <span>Imprimir Ticket</span>
-            <span className="print-format-badge">80mm</span>
-          </button>
+
+          <div style={{ display: 'flex', gap: '0.45rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: isMobileWaiter ? 'center' : 'flex-end', flex: isMobileWaiter ? 1 : 'unset' }}>
+            {onRequestBill && table && (
+              <button
+                type="button"
+                className="btn-modal-request-bill"
+                onClick={onRequestBill}
+                title="Notificar a la pantalla del cajero para cobrar"
+              >
+                <Receipt size={15} />
+                <span>
+                  {table.status === 'por_cobrar'
+                    ? 'Cuenta ya pedida (Reenviar)'
+                    : 'Solicitar Cuenta a Caja'}
+                </span>
+              </button>
+            )}
+
+            {!isMobileWaiter && (
+              <button type="button" className="btn-print-receipt" onClick={handlePrint}>
+                <Printer size={15} />
+                <span>Imprimir</span>
+                <span className="print-format-badge">80mm</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -5,7 +5,6 @@ import {
   ShoppingBag,
   Package,
   Receipt,
-  FileSpreadsheet,
   Sun,
   Moon,
   UserCheck,
@@ -15,6 +14,7 @@ import {
   Volume2,
   VolumeX,
   Smartphone,
+  Bell,
 } from 'lucide-react';
 import laMoliendaLogo from '../assets/la_molienda_logo.png';
 import { isSoundEnabled, setSoundEnabled } from '../utils/sounds';
@@ -29,7 +29,7 @@ interface HeaderProps {
   onChangeSection: (section: ActiveSection) => void;
   onOpenNewTable?: () => void;
   onOpenNewProduct?: () => void;
-  onExportExcel: () => void;
+  onExportExcel?: () => void;
   activeTablesCount: number;
   lowStockCount: number;
   todaySalesCount: number;
@@ -40,6 +40,8 @@ interface HeaderProps {
   onOpenUserManagement?: () => void;
   onOpenMobileSync?: () => void;
   connectedClientsCount?: number;
+  unreadNotificationsCount?: number;
+  onOpenNotifications?: () => void;
   onLogout?: () => void;
 }
 
@@ -61,6 +63,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenUserManagement,
   onOpenMobileSync,
   connectedClientsCount = 0,
+  unreadNotificationsCount = 0,
+  onOpenNotifications,
   onLogout,
 }) => {
   const [soundOn, setSoundOn] = React.useState<boolean>(() => isSoundEnabled());
@@ -249,16 +253,24 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {/* Export to Excel (Visible para Admin y Cajero) */}
-          {currentUser?.role !== 'mesero' && (
+
+
+          {/* Notificaciones (Precuentas, Comandas y Avisos) */}
+          {onOpenNotifications && (
             <button
               type="button"
-              className="btn-header-action btn-header-compact"
-              onClick={onExportExcel}
-              title="Exportar Reporte Completo a Excel (.xlsx)"
+              className={`btn-icon-circle btn-notifications-bell ${
+                unreadNotificationsCount > 0 ? 'has-unread' : ''
+              }`}
+              onClick={onOpenNotifications}
+              title={`Historial de Notificaciones (${unreadNotificationsCount} sin leer)`}
             >
-              <FileSpreadsheet size={15} color="#10b981" />
-              <span className="btn-text-desktop">Excel</span>
+              <Bell size={17} />
+              {unreadNotificationsCount > 0 && (
+                <span className="notifications-bell-badge">
+                  {unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount}
+                </span>
+              )}
             </button>
           )}
 

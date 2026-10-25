@@ -67,6 +67,7 @@ import {
   stopLocalServer,
   updateServerState,
   getLocalIpAddress,
+  getAvailableNetworkInterfaces,
   getConnectedClientsCount,
 } from './server';
 
@@ -95,11 +96,13 @@ app.whenReady().then(() => {
   // SERVIDOR LOCAL WI-FI PARA CELULARES DE MESEROS
   ipcMain.handle('server:getInfo', () => {
     const ip = getLocalIpAddress();
+    const availableInterfaces = getAvailableNetworkInterfaces();
     return {
       ip,
       port: serverInfo.port || 4545,
       url: `http://${ip}:${serverInfo.port || 4545}`,
       clientsCount: getConnectedClientsCount(),
+      availableInterfaces,
     };
   });
 

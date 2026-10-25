@@ -114,14 +114,19 @@ export interface SystemStats {
 }
 
 export interface CashClosingSummary {
+  id: string;
   closedAt: string;
   cashier: string;
   totalCash: number;
   totalCard: number;
   totalTransfer: number;
+  totalMixed?: number;
   totalTips: number;
   totalSales: number;
   salesCount: number;
+  actualCashCounted: number;
+  cashDifference: number;
+  note?: string;
 }
 
 export type UserRole = 'admin' | 'cajero' | 'mesero';
@@ -136,5 +141,17 @@ export interface SystemUser {
   active: boolean;
   createdAt: string;
   lastLoginAt?: string;
+}
+
+export type NotificationType = 'prebill' | 'order' | 'table' | 'inventory' | 'system';
+
+export interface AppNotification {
+  id: string;
+  message: string;
+  type: NotificationType;
+  timestamp: string;
+  read: boolean;
+  tableName?: string;
+  tableId?: string;
 }
 

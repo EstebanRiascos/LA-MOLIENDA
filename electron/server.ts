@@ -38,19 +38,68 @@ let currentState: ServerState = {
   updatedAt: new Date().toISOString(),
 };
 
+export interface AvailableNetworkInterface {
+  name: string;
+  address: string;
+  isWifi: boolean;
+  isVirtual: boolean;
+}
+
 /**
- * Obtiene la dirección IP local v4 de la máquina en la red Wi-Fi o Ethernet
+ * Detecta y clasifica todas las interfaces de red IPv4 activas,
+ * filtrando adaptadores virtuales (WSL, Hyper-V, Docker, VMware, etc.)
  */
-export function getLocalIpAddress(): string {
+export function getAvailableNetworkInterfaces(): AvailableNetworkInterface[] {
   const interfaces = os.networkInterfaces();
-  for (const devName of Object.keys(interfaces)) {
-    const iface = interfaces[devName];
-    if (!iface) continue;
-    for (const alias of iface) {
-      if (alias.family === 'IPv4' && !alias.internal && alias.address !== '127.0.0.1') {
-        return alias.address;
+  const virtualRegex = /vethernet|hyper-v|wsl|virtual|vbox|vmnet|vmware|docker|tailscale|zerotier|tap|tun|loopback|bluetooth|teredo/i;
+  const wifiRegex = /wi-fi|wifi|wlan|inal[aá]mbrica|wireless/i;
+  const ethRegex = /ethernet|eth[0-9]|en[0-9]|lan/i;
+
+  const candidates: (AvailableNetworkInterface & { score: number })[] = [];
+
+  for (const [name, list] of Object.entries(interfaces)) {
+    if (!list) continue;
+    for (const info of list) {
+      if (info.family === 'IPv4' && !info.internal && info.address !== '127.0.0.1') {
+        const isVirtual = virtualRegex.test(name);
+        const isWifi = wifiRegex.test(name);
+        const isEth = ethRegex.test(name);
+        const is192 = info.address.startsWith('192.168.');
+        const is10 = info.address.startsWith('10.');
+
+        let score = 0;
+        // Priorizar fuertemente interfaces físicas reales sobre adaptadores virtuales (WSL/Hyper-V/Docker)
+        if (!isVirtual) score += 100;
+        // Priorizar Wi-Fi porque los meseros se conectan por la red Wi-Fi
+        if (isWifi) score += 50;
+        else if (isEth) score += 30;
+        // Priorizar rangos típicos de routers Wi-Fi (192.168.x.x y 10.x.x.x)
+        if (is192) score += 20;
+        else if (is10) score += 10;
+
+        candidates.push({
+          name,
+          address: info.address,
+          isWifi,
+          isVirtual,
+          score,
+        });
       }
     }
+  }
+
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates;
+}
+
+/**
+ * Obtiene la dirección IP local v4 óptima de la máquina en la red Wi-Fi o Ethernet real,
+ * descartando adaptadores virtuales como WSL/Hyper-V (172.31.x.x).
+ */
+export function getLocalIpAddress(): string {
+  const list = getAvailableNetworkInterfaces();
+  if (list.length > 0) {
+    return list[0].address;
   }
   return '127.0.0.1';
 }
@@ -140,6 +189,7 @@ export function startLocalServer(win: BrowserWindow | null, port: number = 4545)
       // 1. ENDPOINT: Información del servidor local
       if (pathname === '/api/info' && req.method === 'GET') {
         const ip = getLocalIpAddress();
+        const availableInterfaces = getAvailableNetworkInterfaces();
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(
           JSON.stringify({
@@ -148,6 +198,7 @@ export function startLocalServer(win: BrowserWindow | null, port: number = 4545)
             port,
             url: `http://${ip}:${port}`,
             connectedClients: sseClients.length,
+            availableInterfaces,
             updatedAt: currentState.updatedAt,
           })
         );
@@ -310,7 +361,11 @@ export function startLocalServer(win: BrowserWindow | null, port: number = 4545)
           try {
             const data = JSON.parse(body);
             if (currentState.tables && Array.isArray(currentState.tables)) {
-              const targetIdx = currentState.tables.findIndex((t: any) => t.id === data.tableId);
+              const targetIdx = currentState.tables.findIndex(
+                (t: any) =>
+                  t.id === data.tableId ||
+                  (t.number && data.tableId && t.number.toLowerCase() === data.tableId.toLowerCase())
+              );
               if (targetIdx >= 0) {
                 const target = currentState.tables[targetIdx];
                 currentState.tables[targetIdx] = {
@@ -352,11 +407,19 @@ export function startLocalServer(win: BrowserWindow | null, port: number = 4545)
           try {
             const data = JSON.parse(body);
             if (currentState.tables && Array.isArray(currentState.tables)) {
-              const targetIdx = currentState.tables.findIndex((t: any) => t.id === data.tableId);
-              if (targetIdx >= 0 && currentState.tables[targetIdx].items.length > 0) {
-                currentState.tables[targetIdx].status = 'por_cobrar';
-                currentState.updatedAt = new Date().toISOString();
-                broadcastToMobileClients('state-update', currentState);
+              const targetIdx = currentState.tables.findIndex(
+                (t: any) =>
+                  t.id === data.tableId ||
+                  (t.number && data.tableId && t.number.toLowerCase() === data.tableId.toLowerCase())
+              );
+              if (targetIdx >= 0) {
+                const target = currentState.tables[targetIdx];
+                data.tableName = data.tableName || target.number;
+                if (target.items.length > 0) {
+                  currentState.tables[targetIdx].status = 'por_cobrar';
+                  currentState.updatedAt = new Date().toISOString();
+                  broadcastToMobileClients('state-update', currentState);
+                }
               }
             }
             if (win && !win.isDestroyed()) {

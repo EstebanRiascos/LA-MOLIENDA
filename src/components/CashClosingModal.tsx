@@ -1,20 +1,23 @@
 import React, { useState } from 'react';
-import { X, CheckCircle, Printer, DollarSign, AlertCircle, Lock, Receipt } from 'lucide-react';
-import { SaleRecord } from '../types';
+import { X, CheckCircle, Printer, DollarSign, AlertCircle, AlertTriangle, Lock, Receipt } from 'lucide-react';
+import { SaleRecord, CashClosingSummary, Table } from '../types';
 import { formatCurrency } from '../utils/storage';
+import { getCashClosingHistory, saveCashClosingHistory } from '../utils/cashClosing';
 import { playSound } from '../utils/sounds';
 
 interface CashClosingModalProps {
   isOpen: boolean;
   sales: SaleRecord[];
+  tables?: Table[];
   currentStaff: string;
   onClose: () => void;
-  onConfirmCloseShift: (summaryNote: string) => void;
+  onConfirmCloseShift: (summary: CashClosingSummary) => void;
 }
 
 export const CashClosingModal: React.FC<CashClosingModalProps> = ({
   isOpen,
   sales,
+  tables = [],
   currentStaff,
   onClose,
   onConfirmCloseShift,
@@ -22,6 +25,11 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
   if (!isOpen) return null;
 
   const [showPreview, setShowPreview] = useState(false);
+
+  // Detect open tables with active orders
+  const openTables = tables.filter(
+    (t) => t.status === 'ocupada' || t.status === 'por_cobrar' || (t.items && t.items.length > 0)
+  );
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const todaySales = sales.filter(
@@ -58,13 +66,49 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
   };
 
   const handleCloseShift = () => {
-    if (
-      window.confirm(
-        '¿Confirmar el cierre del turno y registrar el arqueo de caja de la jornada?'
-      )
-    ) {
-      onConfirmCloseShift(closingNote);
+    // Validate counted cash
+    if (isNaN(numCounted)) {
+      alert('El efectivo contado debe ser un número válido.');
+      return;
     }
+
+    // Check for open tables and warn user
+    if (openTables.length > 0) {
+      const openNames = openTables.map((t) => t.number).join(', ');
+      const confirmOpen = window.confirm(
+        `⚠️ ATENCIÓN: Hay ${openTables.length} mesa(s) con órdenes pendientes de pago:\n(${openNames})\n\n¿Estás seguro de que deseas cerrar el turno de todas formas dejando estas mesas abiertas?`
+      );
+      if (!confirmOpen) return;
+    } else {
+      // Standard confirmation
+      if (!window.confirm('¿Confirmar el cierre del turno y registrar el arqueo de caja de la jornada?')) {
+        return;
+      }
+    }
+
+    // Build comprehensive summary object
+    const summary: CashClosingSummary = {
+      id: `close-${Date.now()}`,
+      closedAt: new Date().toISOString(),
+      cashier: currentStaff,
+      totalCash,
+      totalCard,
+      totalTransfer,
+      totalMixed,
+      totalTips: 0,
+      totalSales: grandTotal,
+      salesCount: todaySales.length,
+      actualCashCounted: numCounted,
+      cashDifference,
+      note: closingNote.trim(),
+    };
+
+    // Persist summary in local storage (newest first)
+    const history = getCashClosingHistory();
+    saveCashClosingHistory([summary, ...history]);
+
+    // Notify parent
+    onConfirmCloseShift(summary);
   };
 
   return (
@@ -89,6 +133,21 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
         </div>
 
         <div className="cash-close-body">
+          {/* Warning banner if open tables exist */}
+          {openTables.length > 0 && (
+            <div className="cash-closing-warning-banner">
+              <AlertTriangle size={20} className="warning-banner-icon" />
+              <div className="warning-banner-text">
+                <span className="warning-banner-title">
+                  Atención: Hay {openTables.length} mesa(s) con órdenes o consumo sin cobrar
+                </span>
+                <span className="warning-banner-details">
+                  Mesas abiertas: <strong>{openTables.map((t) => t.number).join(', ')}</strong>. Se sugiere cobrar o desocupar estas mesas antes del arqueo.
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Breakdown cards */}
           <div className="closing-metrics-grid">
             <div className="closing-metric-card">
