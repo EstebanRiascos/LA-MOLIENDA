@@ -7,6 +7,12 @@ export type ProductCategory =
   | 'cold_drinks'
   | 'snacks';
 
+export interface RecipeIngredient {
+  productId: string;
+  productName?: string;
+  quantity: number; // Cantidad del insumo a descontar (ej: 1 unidad de Coronita)
+}
+
 export interface Product {
   id: string;
   code: string;
@@ -22,6 +28,8 @@ export interface Product {
   unit: 'unidad' | 'copa' | 'botella' | 'porción' | 'trago';
   image: string; // URL o base64
   available: boolean;
+  isComposite?: boolean; // true si es un producto preparado/receta (descuenta stock de sus insumos)
+  recipe?: RecipeIngredient[]; // Insumos que se descuentan al venderse
   createdAt?: string;
   updatedAt?: string;
 }
@@ -58,6 +66,7 @@ export interface Table {
   tipAmount?: number;
   total: number;
   // Campos de Reserva de Mesa
+  reservationGroupId?: string; // Identificador compartido cuando varias mesas se reservan en conjunto
   reservationName?: string;
   reservationPhone?: string;
   reservationDate?: string; // YYYY-MM-DD

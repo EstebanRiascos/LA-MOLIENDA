@@ -424,6 +424,25 @@ export const TablesView: React.FC<TablesViewProps> = ({
                         <span>"{table.reservationNotes}"</span>
                       </div>
                     )}
+
+                    {table.reservationGroupId &&
+                      (() => {
+                        const linked = tables.filter(
+                          (t) =>
+                            t.id !== table.id &&
+                            t.reservationGroupId === table.reservationGroupId
+                        );
+                        if (linked.length === 0) return null;
+                        return (
+                          <div
+                            className="reserved-linked-row"
+                            title="Mesas reservadas en conjunto"
+                          >
+                            <LayoutGrid size={12} />
+                            <span>Unida con: {linked.map((t) => t.number).join(', ')}</span>
+                          </div>
+                        );
+                      })()}
                   </div>
                 ) : isOccupied || isPreBill ? (
                   <div className="table-active-order-summary">
@@ -501,11 +520,16 @@ export const TablesView: React.FC<TablesViewProps> = ({
                       {onCancelReservation && (
                         <button
                           type="button"
-                          className="btn-icon-subtle cancel-reserve"
+                          className="btn-icon-subtle cancel-reserve btn-quit-reserve-labeled"
                           onClick={() => onCancelReservation(table)}
-                          title="Cancelar y liberar reserva"
+                          title={
+                            table.reservationGroupId
+                              ? 'Quitar la reserva solo de esta mesa'
+                              : 'Quitar reserva y liberar la mesa'
+                          }
                         >
-                          <Trash2 size={15} />
+                          <Trash2 size={14} />
+                          <span>Quitar</span>
                         </button>
                       )}
                     </div>

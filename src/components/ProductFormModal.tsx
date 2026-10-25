@@ -1,6 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { X, Image as ImageIcon, Check, CheckCircle, DollarSign, Upload, Link2, PackagePlus, Edit2, RotateCcw } from 'lucide-react';
-import { Product, ProductCategory } from '../types';
+import {
+  X,
+  Image as ImageIcon,
+  Check,
+  CheckCircle,
+  DollarSign,
+  Upload,
+  Link2,
+  PackagePlus,
+  Edit2,
+  RotateCcw,
+  Layers,
+  Link as LinkIcon,
+} from 'lucide-react';
+import { Product, ProductCategory, RecipeIngredient } from '../types';
 import { CATEGORIES } from '../utils/defaults';
 import { formatCurrency } from '../utils/storage';
 import laMoliendaLogo from '../assets/la_molienda_logo.png';
@@ -10,6 +23,7 @@ interface ProductFormModalProps {
   onClose: () => void;
   onSave: (product: Product) => void;
   initialData?: Product | null;
+  availableProducts?: Product[];
 }
 
 export const ProductFormModal: React.FC<ProductFormModalProps> = ({
@@ -17,6 +31,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   onClose,
   onSave,
   initialData,
+  availableProducts = [],
 }) => {
   if (!isOpen) return null;
 
@@ -32,6 +47,10 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [image, setImage] = useState('');
   const [imageTab, setImageTab] = useState<'upload' | 'url'>('upload');
 
+  // Receta fija / Producto compuesto (ej: Michelada descuenta cerveza Coronita)
+  const [isComposite, setIsComposite] = useState<boolean>(false);
+  const [recipe, setRecipe] = useState<RecipeIngredient[]>([]);
+
   useEffect(() => {
     if (initialData) {
       setCode(initialData.code);
@@ -44,6 +63,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setMinStock(initialData.minStock);
       setUnit(initialData.unit);
       setImage(initialData.image || '');
+      setIsComposite(!!initialData.isComposite);
+      setRecipe(initialData.recipe || []);
     } else {
       setCode(`PRD-${Math.floor(100 + Math.random() * 900)}`);
       setName('');
@@ -55,6 +76,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setMinStock(8);
       setUnit('copa');
       setImage('');
+      setIsComposite(false);
+      setRecipe([]);
     }
   }, [initialData, isOpen]);
 
@@ -62,6 +85,32 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const numCost = Number(cost) || 0;
   const profitMargin = numPrice > 0 ? ((numPrice - numCost) / numPrice) * 100 : 0;
   const unitProfit = numPrice - numCost;
+
+  // Insumo principal vinculado
+  const mainIngredientId = recipe[0]?.productId || '';
+  const mainIngredientQty = recipe[0]?.quantity || 1;
+  const linkedIngredientProduct = availableProducts.find((p) => p.id === mainIngredientId);
+
+  const effectiveStockCalculated = linkedIngredientProduct
+    ? Math.floor(linkedIngredientProduct.stock / mainIngredientQty)
+    : 0;
+
+  const handleToggleComposite = (checked: boolean) => {
+    setIsComposite(checked);
+    if (checked && recipe.length === 0) {
+      // Intentar sugerir Coronita o la primera cerveza disponible
+      const coronitaProd = availableProducts.find(
+        (p) => p.id !== initialData?.id && p.name.toLowerCase().includes('coron')
+      );
+      const beerProd = availableProducts.find(
+        (p) => p.id !== initialData?.id && p.category === 'beers'
+      );
+      const candidate = coronitaProd || beerProd || availableProducts.find((p) => p.id !== initialData?.id);
+      if (candidate) {
+        setRecipe([{ productId: candidate.id, productName: candidate.name, quantity: 1 }]);
+      }
+    }
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -83,6 +132,13 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       return;
     }
 
+    if (isComposite && (!recipe[0]?.productId || recipe[0].productId === '')) {
+      alert('Por favor selecciona la cerveza o insumo que compone este producto preparado.');
+      return;
+    }
+
+    const finalStock = isComposite ? effectiveStockCalculated : (Number(stock) || 0);
+
     const savedProduct: Product = {
       id: initialData?.id || `prod-${Date.now()}`,
       code: code.trim() || `PRD-${Date.now().toString().slice(-4)}`,
@@ -91,11 +147,13 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       description: description.trim(),
       price: Number(price) || 0,
       cost: Number(cost) || 0,
-      stock: Number(stock) || 0,
+      stock: finalStock,
       minStock: Number(minStock) || 0,
       unit,
       image: image.trim() || laMoliendaLogo,
       available: true,
+      isComposite,
+      recipe: isComposite && recipe.length > 0 && recipe[0].productId ? recipe : undefined,
       updatedAt: new Date().toISOString(),
     };
 
@@ -257,21 +315,124 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 </div>
               </div>
 
+              {/* PRODUCTO PREPARADO / RECETA DE INSUMOS */}
+              <div className={`composite-recipe-card ${isComposite ? 'active' : ''}`}>
+                <label className="composite-toggle-header">
+                  <input
+                    type="checkbox"
+                    checked={isComposite}
+                    onChange={(e) => handleToggleComposite(e.target.checked)}
+                    className="composite-checkbox"
+                  />
+                  <div className="composite-toggle-text">
+                    <span className="composite-title">
+                      <Layers size={15} />
+                      <span>Producto Preparado (Descontar de receta / insumo)</span>
+                    </span>
+                    <span className="composite-subtitle">
+                      La venta de este producto descuenta automáticamente del stock de la cerveza con la que fue preparado.
+                    </span>
+                  </div>
+                </label>
+
+                {isComposite && (
+                  <div className="composite-config-box">
+                    <div className="form-group" style={{ marginBottom: '0.45rem' }}>
+                      <label className="form-label" style={{ fontSize: '0.76rem' }}>
+                        Insumo / Cerveza Base a Descontar: *
+                      </label>
+                      <div className="composite-ingredient-selector">
+                        <select
+                          value={mainIngredientId}
+                          onChange={(e) => {
+                            const selectedId = e.target.value;
+                            const found = availableProducts.find((p) => p.id === selectedId);
+                            setRecipe([{
+                              productId: selectedId,
+                              productName: found?.name,
+                              quantity: mainIngredientQty,
+                            }]);
+                          }}
+                          className="form-select flex-1"
+                          required={isComposite}
+                        >
+                          <option value="">-- Selecciona la cerveza / insumo del inventario --</option>
+                          {availableProducts
+                            .filter((p) => p.id !== initialData?.id && !p.isComposite)
+                            .map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name} (Stock en bodega: {p.stock} {p.unit}s)
+                              </option>
+                            ))}
+                        </select>
+
+                        <div className="composite-qty-wrapper">
+                          <span className="c-qty-lbl">Cant:</span>
+                          <input
+                            type="number"
+                            min="1"
+                            value={mainIngredientQty}
+                            onChange={(e) => {
+                              const q = Math.max(1, parseInt(e.target.value, 10) || 1);
+                              setRecipe([{
+                                productId: mainIngredientId,
+                                productName: linkedIngredientProduct?.name,
+                                quantity: q,
+                              }]);
+                            }}
+                            className="form-input composite-qty-field"
+                            title="Cantidad de unidades a descontar por cada michelada vendida"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {linkedIngredientProduct ? (
+                      <div className="composite-status-pill">
+                        <LinkIcon size={13} className="text-emerald" />
+                        <span>
+                          Conectado con <strong>{linkedIngredientProduct.name}</strong>: quedan{' '}
+                          <strong>{linkedIngredientProduct.stock}</strong> en bodega. Stock resultante:{' '}
+                          <strong className="text-emerald">{effectiveStockCalculated}</strong> micheladas disponibles.
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="composite-status-pill pill-warning">
+                        <span>⚠️ Selecciona la cerveza o insumo con el que se prepara este producto.</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* INVENTORY & STOCK */}
               <div className="inventory-levels-row">
                 <div className="form-group flex-1">
-                  <label className="form-label">Stock Actual *</label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    value={stock}
-                    onChange={(e) =>
-                      setStock(e.target.value === '' ? '' : parseInt(e.target.value, 10))
-                    }
-                    className="form-input"
-                    placeholder="0"
-                  />
+                  <label className="form-label">
+                    Stock Actual {isComposite ? '(Calculado de insumo)' : '*'}
+                  </label>
+                  <div className="stock-input-wrapper">
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      disabled={isComposite}
+                      value={isComposite ? effectiveStockCalculated : stock}
+                      onChange={(e) =>
+                        setStock(e.target.value === '' ? '' : parseInt(e.target.value, 10))
+                      }
+                      className={`form-input ${isComposite ? 'input-auto-linked' : ''}`}
+                      placeholder="0"
+                      title={
+                        isComposite
+                          ? 'Stock calculado automáticamente por las existencias de la cerveza vinculada'
+                          : undefined
+                      }
+                    />
+                    {isComposite && (
+                      <span className="input-auto-badge">🔗 Vinculado</span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="form-group flex-1">

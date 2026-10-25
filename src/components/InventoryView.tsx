@@ -595,6 +595,20 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                         <span className="code-badge">{product.code}</span>
                         <span className="unit-badge">{product.unit}</span>
                       </div>
+                      {product.isComposite && product.recipe && product.recipe.length > 0 && (
+                        <div
+                          className="composite-recipe-pill"
+                          title={`Receta fija: descuenta ${product.recipe[0].quantity}x de ${
+                            products.find((p) => p.id === product.recipe![0].productId)?.name || 'insumo'
+                          }`}
+                        >
+                          <Layers size={11} />
+                          <span>
+                            Receta: {product.recipe[0].quantity}x{' '}
+                            {products.find((p) => p.id === product.recipe![0].productId)?.name || 'Insumo'}
+                          </span>
+                        </div>
+                      )}
                     </td>
 
                     {/* Category */}
@@ -773,25 +787,34 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     {/* Quick Adjust buttons (Solo Admin) */}
                     {isAdmin && (
                       <td className="td-adjust">
-                        <div className="quick-adjust-group">
-                          <button
-                            type="button"
-                            className="btn-adjust minus"
-                            onClick={() => onQuickAdjustStock(product.id, -1)}
-                            disabled={product.stock <= 0}
-                            title="Restar 1 al stock"
+                        {product.isComposite ? (
+                          <span
+                            className="adjust-disabled-tag"
+                            title="El stock se controla automáticamente por la cerveza o insumo asignado a la receta"
                           >
-                            -1
-                          </button>
-                          <button
-                            type="button"
-                            className="btn-adjust plus"
-                            onClick={() => onQuickAdjustStock(product.id, +1)}
-                            title="Sumar 1 al stock"
-                          >
-                            +1
-                          </button>
-                        </div>
+                            Auto 🔗
+                          </span>
+                        ) : (
+                          <div className="quick-adjust-group">
+                            <button
+                              type="button"
+                              className="btn-adjust minus"
+                              onClick={() => onQuickAdjustStock(product.id, -1)}
+                              disabled={product.stock <= 0}
+                              title="Restar 1 al stock"
+                            >
+                              -1
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-adjust plus"
+                              onClick={() => onQuickAdjustStock(product.id, +1)}
+                              title="Sumar 1 al stock"
+                            >
+                              +1
+                            </button>
+                          </div>
+                        )}
                       </td>
                     )}
 

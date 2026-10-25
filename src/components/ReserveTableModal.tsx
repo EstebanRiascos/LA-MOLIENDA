@@ -12,6 +12,8 @@ import {
   Plus,
   FileText,
   AlertCircle,
+  Check,
+  Trash2,
 } from 'lucide-react';
 import { Table } from '../types';
 
@@ -20,8 +22,9 @@ interface ReserveTableModalProps {
   tables: Table[];
   preSelectedTable?: Table | null;
   onClose: () => void;
+  onCancelReservation?: (table: Table) => void;
   onConfirmReserve: (
-    tableId: string,
+    tableIds: string[],
     reservationData: {
       name: string;
       phone?: string;
@@ -38,16 +41,26 @@ export const ReserveTableModal: React.FC<ReserveTableModalProps> = ({
   tables,
   preSelectedTable,
   onClose,
+  onCancelReservation,
   onConfirmReserve,
 }) => {
   if (!isOpen) return null;
 
-  // Filtrar mesas elegibles: Libres (o la mesa actualmente preseleccionada si ya estaba reservada y se está editando)
+  // Mesas del mismo grupo de reserva (si se está editando una reserva conjunta)
+  const groupTableIds = preSelectedTable?.reservationGroupId
+    ? tables
+        .filter((t) => t.reservationGroupId === preSelectedTable.reservationGroupId)
+        .map((t) => t.id)
+    : preSelectedTable
+    ? [preSelectedTable.id]
+    : [];
+
+  // Filtrar mesas elegibles: Libres (o las mesas de la reserva que se está editando)
   const eligibleTables = tables.filter(
-    (t) => t.status === 'libre' || t.id === preSelectedTable?.id
+    (t) => t.status === 'libre' || groupTableIds.includes(t.id)
   );
 
-  const [selectedTableId, setSelectedTableId] = useState<string>('');
+  const [selectedTableIds, setSelectedTableIds] = useState<string[]>([]);
   const [customerName, setCustomerName] = useState<string>('');
   const [customerPhone, setCustomerPhone] = useState<string>('');
   const [reservationDate, setReservationDate] = useState<string>('');
@@ -71,7 +84,9 @@ export const ReserveTableModal: React.FC<ReserveTableModalProps> = ({
     const defaultTimeStr = `${String(nextHour).padStart(2, '0')}:00`;
 
     if (preSelectedTable) {
-      setSelectedTableId(preSelectedTable.id);
+      setSelectedTableIds(
+        preSelectedTable.status === 'reservada' ? groupTableIds : [preSelectedTable.id]
+      );
       setPax(preSelectedTable.reservationPax || preSelectedTable.capacity || 2);
       setCustomerName(preSelectedTable.reservationName || '');
       setCustomerPhone(preSelectedTable.reservationPhone || '');
@@ -80,7 +95,7 @@ export const ReserveTableModal: React.FC<ReserveTableModalProps> = ({
       setNotes(preSelectedTable.reservationNotes || '');
     } else {
       const firstFree = eligibleTables[0];
-      setSelectedTableId(firstFree?.id || '');
+      setSelectedTableIds(firstFree ? [firstFree.id] : []);
       setPax(firstFree?.capacity || 2);
       setCustomerName('');
       setCustomerPhone('');
@@ -91,12 +106,26 @@ export const ReserveTableModal: React.FC<ReserveTableModalProps> = ({
     setError('');
   }, [preSelectedTable, isOpen]);
 
-  const selectedTable = tables.find((t) => t.id === selectedTableId);
+  const selectedTables = eligibleTables.filter((t) => selectedTableIds.includes(t.id));
+  const totalCapacity = selectedTables.reduce((sum, t) => sum + (t.capacity || 0), 0);
+
+  const toggleTable = (id: string) => {
+    const next = selectedTableIds.includes(id)
+      ? selectedTableIds.filter((x) => x !== id)
+      : [...selectedTableIds, id];
+    setSelectedTableIds(next);
+    // Sugerir comensales = capacidad total de las mesas elegidas
+    const cap = eligibleTables
+      .filter((t) => next.includes(t.id))
+      .reduce((sum, t) => sum + (t.capacity || 0), 0);
+    if (cap > 0) setPax(Math.min(30, cap));
+    setError('');
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedTableId) {
-      setError('Por favor selecciona una mesa o espacio.');
+    if (selectedTableIds.length === 0) {
+      setError('Por favor selecciona al menos una mesa o espacio.');
       return;
     }
     if (!customerName.trim()) {
@@ -112,7 +141,7 @@ export const ReserveTableModal: React.FC<ReserveTableModalProps> = ({
       return;
     }
 
-    onConfirmReserve(selectedTableId, {
+    onConfirmReserve(selectedTableIds, {
       name: customerName.trim(),
       phone: customerPhone.trim() || undefined,
       date: reservationDate,
@@ -178,41 +207,43 @@ export const ReserveTableModal: React.FC<ReserveTableModalProps> = ({
               <div className="section-card-header">
                 <div className="section-card-title">
                   <LayoutGrid size={14} />
-                  <span>1. Mesa o Espacio a Reservar</span>
+                  <span>1. Mesa(s) o Espacio a Reservar</span>
                 </div>
-                {selectedTable && (
+                {selectedTables.length > 0 && (
                   <span className="table-zone-pill">
-                    {selectedTable.zone.toUpperCase()} • Cap: {selectedTable.capacity}p
+                    {selectedTables.length} {selectedTables.length === 1 ? 'mesa' : 'mesas'} • Cap: {totalCapacity}p
                   </span>
                 )}
               </div>
 
               <div className="form-group">
-                <label className="form-label">Mesa o Barra *</label>
-                <div className="input-with-icon">
-                  <LayoutGrid size={15} className="input-inner-icon" />
-                  <select
-                    value={selectedTableId}
-                    onChange={(e) => {
-                      const newId = e.target.value;
-                      setSelectedTableId(newId);
-                      const found = tables.find((t) => t.id === newId);
-                      if (found) setPax(found.capacity);
-                    }}
-                    className="form-select input-with-padding select-table-highlight"
-                    required
-                  >
-                    {eligibleTables.length === 0 ? (
-                      <option value="">No hay mesas libres disponibles</option>
-                    ) : (
-                      eligibleTables.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.number} ({t.zone.toUpperCase()}) — Capacidad: {t.capacity} comensales
-                        </option>
-                      ))
-                    )}
-                  </select>
-                </div>
+                <label className="form-label">
+                  Selecciona una o varias mesas para unirlas en la misma reserva *
+                </label>
+                {eligibleTables.length === 0 ? (
+                  <div className="reserve-tables-empty">No hay mesas libres disponibles</div>
+                ) : (
+                  <div className="reserve-tables-multi-grid">
+                    {eligibleTables.map((t) => {
+                      const isSel = selectedTableIds.includes(t.id);
+                      return (
+                        <button
+                          type="button"
+                          key={t.id}
+                          className={`reserve-table-chip ${isSel ? 'selected' : ''}`}
+                          onClick={() => toggleTable(t.id)}
+                          title={`${t.number} (${t.zone.toUpperCase()}) — Capacidad: ${t.capacity}`}
+                        >
+                          <span className="rtc-check">{isSel && <Check size={12} />}</span>
+                          <span className="rtc-name">{t.number}</span>
+                          <span className="rtc-meta">
+                            {t.zone.toUpperCase()} · {t.capacity}p
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -390,19 +421,34 @@ export const ReserveTableModal: React.FC<ReserveTableModalProps> = ({
           </div>
 
           {/* Footer de Acciones con diseño edge-to-edge y botones centrados */}
-          <div className="modal-footer" style={{ justifyContent: 'center' }}>
+          <div className="modal-footer" style={{ justifyContent: 'center', flexWrap: 'wrap' }}>
+            {preSelectedTable?.status === 'reservada' && onCancelReservation && (
+              <button
+                type="button"
+                className="btn-remove-reservation"
+                onClick={() => onCancelReservation(preSelectedTable)}
+                title="Quitar la reserva y dejar la mesa libre"
+              >
+                <Trash2 size={15} />
+                <span>
+                  {groupTableIds.length > 1 ? 'Quitar reserva (todas)' : 'Quitar reserva'}
+                </span>
+              </button>
+            )}
             <button type="button" className="btn-cancel" onClick={onClose}>
               Cancelar
             </button>
             <button
               type="submit"
               className="btn-confirm-reserve"
-              disabled={!selectedTableId || !customerName.trim()}
+              disabled={selectedTableIds.length === 0 || !customerName.trim()}
             >
               <BookmarkCheck size={16} />
               <span>
                 {preSelectedTable?.status === 'reservada'
                   ? 'Guardar Cambios de Reserva'
+                  : selectedTableIds.length > 1
+                  ? `Confirmar Reserva de ${selectedTableIds.length} Mesas`
                   : 'Confirmar Reserva de Mesa'}
               </span>
             </button>

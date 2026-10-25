@@ -1,4 +1,4 @@
-import { Product, Table, SaleRecord, SystemStats } from '../types';
+import { Product, Table, SaleRecord, SystemStats, OrderItem } from '../types';
 import { DEFAULT_PRODUCTS, DEFAULT_TABLES, DEFAULT_SALES } from './defaults';
 
 const STORAGE_KEY_PRODUCTS = 'lamolienda_products_clean_v1';
@@ -30,7 +30,85 @@ export function resetAllDataToProduction(): void {
   }
 }
 
-// --- PRODUCTS & PRICES ---
+// --- PRODUCTS & RECIPES & INVENTORY ---
+
+/**
+ * Calcula el stock disponible para un producto.
+ * Si es compuesto (receta), el stock se calcula en base al menor número de porciones
+ * que se pueden preparar según las existencias de sus insumos.
+ */
+export function calculateEffectiveStock(product: Product, allProducts: Product[]): number {
+  if (product.isComposite && product.recipe && product.recipe.length > 0) {
+    let minBatches = Infinity;
+    for (const ing of product.recipe) {
+      const ingProd = allProducts.find((p) => p.id === ing.productId);
+      if (!ingProd) return 0;
+      const qtyNeeded = ing.quantity > 0 ? ing.quantity : 1;
+      const batches = Math.floor(ingProd.stock / qtyNeeded);
+      if (batches < minBatches) {
+        minBatches = batches;
+      }
+    }
+    return minBatches === Infinity ? 0 : Math.max(0, minBatches);
+  }
+  return product.stock;
+}
+
+/**
+ * Re-sincroniza el stock de todos los productos compuestos para que reflejen
+ * en tiempo real las existencias actuales de sus insumos vinculados.
+ */
+export function syncCompositeProductsStock(productsList: Product[]): Product[] {
+  return productsList.map((prod) => {
+    if (prod.isComposite && prod.recipe && prod.recipe.length > 0) {
+      return {
+        ...prod,
+        stock: calculateEffectiveStock(prod, productsList),
+      };
+    }
+    return prod;
+  });
+}
+
+/**
+ * Descuenta el inventario tras una venta (comanda completa o cobro parcial).
+ * Si un ítem vendido es compuesto (ej: Michelada), descuenta sus ingredientes (ej: Coronita);
+ * si es directo, descuenta su stock normal.
+ */
+export function deductInventoryForSale(currentProducts: Product[], soldItems: OrderItem[]): Product[] {
+  let updatedList = currentProducts.map((p) => ({ ...p }));
+
+  soldItems.forEach((soldItem) => {
+    const prod = updatedList.find((p) => p.id === soldItem.productId);
+    if (!prod) return;
+
+    if (prod.isComposite && prod.recipe && prod.recipe.length > 0) {
+      // Producto compuesto: descuenta los insumos asignados
+      prod.recipe.forEach((ingredient) => {
+        const ingIndex = updatedList.findIndex((p) => p.id === ingredient.productId);
+        if (ingIndex !== -1) {
+          const qtyNeeded = (ingredient.quantity > 0 ? ingredient.quantity : 1) * soldItem.quantity;
+          updatedList[ingIndex] = {
+            ...updatedList[ingIndex],
+            stock: Math.max(0, updatedList[ingIndex].stock - qtyNeeded),
+          };
+        }
+      });
+    } else {
+      // Producto simple directo
+      const prodIndex = updatedList.findIndex((p) => p.id === prod.id);
+      if (prodIndex !== -1) {
+        updatedList[prodIndex] = {
+          ...updatedList[prodIndex],
+          stock: Math.max(0, updatedList[prodIndex].stock - soldItem.quantity),
+        };
+      }
+    }
+  });
+
+  return syncCompositeProductsStock(updatedList);
+}
+
 export function getStoredProducts(): Product[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_PRODUCTS);
@@ -43,7 +121,7 @@ export function getStoredProducts(): Product[] {
       saveStoredProducts(DEFAULT_PRODUCTS);
       return DEFAULT_PRODUCTS;
     }
-    return parsed;
+    return syncCompositeProductsStock(parsed);
   } catch (err) {
     console.error('Error loading products from storage:', err);
     return DEFAULT_PRODUCTS;
@@ -52,7 +130,8 @@ export function getStoredProducts(): Product[] {
 
 export function saveStoredProducts(products: Product[]): void {
   try {
-    localStorage.setItem(STORAGE_KEY_PRODUCTS, JSON.stringify(products));
+    const synced = syncCompositeProductsStock(products);
+    localStorage.setItem(STORAGE_KEY_PRODUCTS, JSON.stringify(synced));
   } catch (err) {
     console.error('Error saving products:', err);
   }

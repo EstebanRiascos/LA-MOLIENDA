@@ -518,7 +518,6 @@ export const SalesHistoryView: React.FC<SalesHistoryViewProps> = ({
               <th>Cliente</th>
               <th>Productos Vendidos</th>
               <th>Método de Pago</th>
-              <th>Propina</th>
               <th>Total Pagado</th>
               <th>Ticket</th>
             </tr>
@@ -526,7 +525,7 @@ export const SalesHistoryView: React.FC<SalesHistoryViewProps> = ({
           <tbody>
             {filteredSales.length === 0 ? (
               <tr>
-                <td colSpan={10} className="sales-empty-cell">
+                <td colSpan={9} className="sales-empty-cell">
                   No se registran ventas para los filtros seleccionados.
                 </td>
               </tr>
@@ -566,9 +565,6 @@ export const SalesHistoryView: React.FC<SalesHistoryViewProps> = ({
                       </span>
                     </td>
                     <td className="td-method">{getPaymentBadge(sale.paymentMethod)}</td>
-                    <td className="td-tip">
-                      {formatCurrency(sale.tipAmount)}
-                    </td>
                     <td className="td-total-paid">
                       <span className="paid-val">{formatCurrency(sale.total)}</span>
                     </td>

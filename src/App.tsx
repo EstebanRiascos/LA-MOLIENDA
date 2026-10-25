@@ -13,6 +13,9 @@ import {
   saveStoredCurrentStaff,
   getStoredStaffList,
   calculateSystemStats,
+  formatCurrency,
+  deductInventoryForSale,
+  syncCompositeProductsStock,
 } from './utils/storage';
 import {
   getStoredSessionUser,
@@ -425,8 +428,18 @@ export const App: React.FC = () => {
     setIsReserveModalOpen(true);
   };
 
+  const clearedReservationFields = {
+    reservationGroupId: undefined,
+    reservationName: undefined,
+    reservationPhone: undefined,
+    reservationDate: undefined,
+    reservationTime: undefined,
+    reservationPax: undefined,
+    reservationNotes: undefined,
+  };
+
   const handleConfirmReserveTable = (
-    tableId: string,
+    tableIds: string[],
     reservationData: {
       name: string;
       phone?: string;
@@ -436,51 +449,88 @@ export const App: React.FC = () => {
       notes?: string;
     }
   ) => {
-    const updated = tables.map((t) =>
-      t.id === tableId
-        ? {
-            ...t,
-            status: 'reservada' as const,
-            reservationName: reservationData.name,
-            reservationPhone: reservationData.phone,
-            reservationDate: reservationData.date,
-            reservationTime: reservationData.time,
-            reservationPax: reservationData.pax,
-            reservationNotes: reservationData.notes,
-          }
-        : t
-    );
+    // Si se edita una reserva conjunta existente, se conserva su groupId
+    const previousGroupId = preSelectedReserveTable?.reservationGroupId;
+    const groupId =
+      tableIds.length > 1 ? previousGroupId || `rsv-${Date.now()}` : undefined;
+
+    const updated = tables.map((t) => {
+      if (tableIds.includes(t.id)) {
+        return {
+          ...t,
+          status: 'reservada' as const,
+          reservationGroupId: groupId,
+          reservationName: reservationData.name,
+          reservationPhone: reservationData.phone,
+          reservationDate: reservationData.date,
+          reservationTime: reservationData.time,
+          reservationPax: reservationData.pax,
+          reservationNotes: reservationData.notes,
+        };
+      }
+      // Mesas que pertenecían a la reserva editada y fueron desmarcadas: quedan libres
+      if (
+        previousGroupId &&
+        t.reservationGroupId === previousGroupId &&
+        t.status === 'reservada'
+      ) {
+        return { ...t, status: 'libre' as const, ...clearedReservationFields };
+      }
+      return t;
+    });
     setTables(updated);
     saveStoredTables(updated);
     setIsReserveModalOpen(false);
 
-    const target = updated.find((t) => t.id === tableId);
-    showNotification(`Mesa ${target?.number} reservada para ${reservationData.name}.`);
+    const names = updated
+      .filter((t) => tableIds.includes(t.id))
+      .map((t) => t.number)
+      .join(', ');
+    showNotification(
+      tableIds.length > 1
+        ? `Mesas ${names} reservadas en conjunto para ${reservationData.name}.`
+        : `Mesa ${names} reservada para ${reservationData.name}.`
+    );
   };
 
-  const handleCancelReservation = (table: Table) => {
-    const confirmed = window.confirm(
-      `¿Deseas cancelar la reserva de "${table.number}" para ${table.reservationName || 'el cliente'} y dejarla libre?`
-    );
-    if (!confirmed) return;
+  const handleCancelReservation = (
+    table: Table,
+    scope: 'table' | 'group' = 'table'
+  ) => {
+    const groupMembers = table.reservationGroupId
+      ? tables.filter((t) => t.reservationGroupId === table.reservationGroupId)
+      : [table];
+    const targets = scope === 'group' ? groupMembers : [table];
+    const label =
+      targets.length > 1
+        ? `las ${targets.length} mesas (${targets.map((t) => t.number).join(', ')})`
+        : `"${table.number}"`;
 
-    const updated = tables.map((t) =>
-      t.id === table.id
-        ? {
-            ...t,
-            status: 'libre' as const,
-            reservationName: undefined,
-            reservationPhone: undefined,
-            reservationDate: undefined,
-            reservationTime: undefined,
-            reservationPax: undefined,
-            reservationNotes: undefined,
-          }
-        : t
+    const confirmed = window.confirm(
+      `¿Quitar la reserva de ${label} para ${table.reservationName || 'el cliente'}? ${targets.length > 1 ? 'Quedarán libres' : 'Quedará libre'}.`
     );
+    if (!confirmed) return false;
+
+    const ids = targets.map((t) => t.id);
+    const remaining = groupMembers.filter((t) => !ids.includes(t.id));
+    const updated = tables.map((t) => {
+      if (ids.includes(t.id)) {
+        return { ...t, status: 'libre' as const, ...clearedReservationFields };
+      }
+      // Si en el grupo solo queda una mesa, deja de ser una reserva conjunta
+      if (remaining.length === 1 && t.id === remaining[0].id) {
+        return { ...t, reservationGroupId: undefined };
+      }
+      return t;
+    });
     setTables(updated);
     saveStoredTables(updated);
-    showNotification(`Reserva de ${table.number} cancelada. Mesa libre.`);
+    showNotification(
+      targets.length > 1
+        ? `Reserva quitada. ${targets.length} mesas libres.`
+        : `Reserva de ${table.number} quitada. Mesa libre.`
+    );
+    return true;
   };
 
   const handleConfirmOpenTable = (
@@ -498,6 +548,7 @@ export const App: React.FC = () => {
             patronName,
             waiter,
             capacity: pax,
+            reservationGroupId: undefined,
             reservationName: undefined,
             reservationPhone: undefined,
             reservationDate: undefined,
@@ -642,15 +693,8 @@ export const App: React.FC = () => {
     setSales(updatedSales);
     saveStoredSales(updatedSales);
 
-    // 2. Deduct inventory stock for sold items
-    const updatedProducts = products.map((prod) => {
-      const soldItem = saleRecord.items.find((i) => i.productId === prod.id);
-      if (soldItem) {
-        const newStock = Math.max(0, prod.stock - soldItem.quantity);
-        return { ...prod, stock: newStock };
-      }
-      return prod;
-    });
+    // 2. Deduct inventory stock for sold items (supports composite recipes)
+    const updatedProducts = deductInventoryForSale(products, saleRecord.items);
     setProducts(updatedProducts);
     saveStoredProducts(updatedProducts);
 
@@ -689,6 +733,117 @@ export const App: React.FC = () => {
     showNotification(
       `Venta ${saleRecord.ticketNumber} registrada exitosamente (${saleRecord.paymentMethod.toUpperCase()}).`
     );
+  };
+
+  // --- FACTURACIÓN PARCIAL POR COMENSAL (SPLIT BILL) ---
+  const handleCompletePartialPayment = (
+    saleRecord: SaleRecord,
+    tableId: string,
+    paidItems: { id: string; quantity: number }[]
+  ) => {
+    // 1. Guardar la venta en el historial y arqueo de caja
+    const updatedSales = [saleRecord, ...sales];
+    setSales(updatedSales);
+    saveStoredSales(updatedSales);
+
+    // 2. Descontar stock de inventario por los productos vendidos al comensal (supports composite recipes)
+    const updatedProducts = deductInventoryForSale(products, saleRecord.items);
+    setProducts(updatedProducts);
+    saveStoredProducts(updatedProducts);
+
+    // 3. Actualizar la comanda de la mesa restando únicamente lo pagado
+    let remainingTotal = 0;
+    let isTableFreed = false;
+    let targetTableNumber = '';
+
+    const updatedTables = tables.map((t) => {
+      if (t.id !== tableId) return t;
+
+      targetTableNumber = t.number;
+      const remainingItems: OrderItem[] = [];
+
+      t.items.forEach((item) => {
+        const paid = paidItems.find((p) => p.id === item.id);
+        const qtyPaid = paid ? paid.quantity : 0;
+        const newQty = item.quantity - qtyPaid;
+
+        if (newQty > 0) {
+          remainingItems.push({
+            ...item,
+            quantity: newQty,
+          });
+        }
+      });
+
+      // Si no quedan productos pendientes en la comanda, se libera la mesa
+      if (remainingItems.length === 0) {
+        isTableFreed = true;
+        return {
+          ...t,
+          status: 'libre' as const,
+          openedAt: undefined,
+          patronName: undefined,
+          waiter: undefined,
+          items: [],
+          subtotal: 0,
+          tipPercentage: 0,
+          tipAmount: 0,
+          total: 0,
+        };
+      }
+
+      // Si aún quedan productos, la mesa continúa ABIERTA (ocupada) con saldo restante
+      const subtotal = remainingItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+      const tipPercentage = t.tipPercentage || 0;
+      const tipAmount = tipPercentage > 0 ? Math.round((subtotal * tipPercentage) / 100) : 0;
+      const total = subtotal + tipAmount;
+      remainingTotal = total;
+
+      return {
+        ...t,
+        items: remainingItems,
+        subtotal,
+        tipAmount,
+        total,
+      };
+    });
+
+    setTables(updatedTables);
+    saveStoredTables(updatedTables);
+
+    // Sincronizar activeTableDetail si la mesa está abierta en el panel de detalle
+    if (activeTableDetail && activeTableDetail.id === tableId) {
+      if (isTableFreed) {
+        setActiveTableDetail(null);
+        setIsTableDetailOpen(false);
+      } else {
+        const updatedTableObj = updatedTables.find((t) => t.id === tableId);
+        if (updatedTableObj) {
+          setActiveTableDetail(updatedTableObj);
+        }
+      }
+    }
+
+    // 4. Cerrar el modal de Dividir Cuenta
+    setIsSplitBillOpen(false);
+    setSplitBillTable(null);
+
+    // 5. Abrir el modal de ticket térmico para el comensal que se retira
+    setTicketSaleRecord(saleRecord);
+    setTicketTable(null);
+    setIsTicketOpen(true);
+
+    // 6. Notificación y sonido de éxito
+    playSound('success');
+    if (isTableFreed) {
+      showNotification(
+        `✅ Venta ${saleRecord.ticketNumber} registrada (${saleRecord.paymentMethod.toUpperCase()}). ${targetTableNumber} completó su cuenta y quedó liberada.`
+      );
+    } else {
+      showNotification(
+        `✅ Cobro individual registrado (${saleRecord.paymentMethod.toUpperCase()}). ${targetTableNumber} continúa abierta con saldo de ${formatCurrency(remainingTotal)}.`
+      );
+    }
   };
 
   // --- POS TO TABLE DISPATCH ---
@@ -775,8 +930,9 @@ export const App: React.FC = () => {
       updated = [prodToSave, ...products];
       showNotification(`Nuevo producto "${prod.name}" registrado en catálogo.`);
     }
-    setProducts(updated);
-    saveStoredProducts(updated);
+    const synced = syncCompositeProductsStock(updated);
+    setProducts(synced);
+    saveStoredProducts(synced);
     setIsProductFormOpen(false);
   };
 
@@ -837,8 +993,9 @@ export const App: React.FC = () => {
       }
       return p;
     });
-    setProducts(updated);
-    saveStoredProducts(updated);
+    const synced = syncCompositeProductsStock(updated);
+    setProducts(synced);
+    saveStoredProducts(synced);
   };
 
   // --- SALES HISTORY & CASH CLOSING ---
@@ -1095,6 +1252,7 @@ export const App: React.FC = () => {
         onClose={() => setIsProductFormOpen(false)}
         onSave={handleSaveProduct}
         initialData={editingProduct}
+        availableProducts={products}
       />
 
       {/* 5. Open Table Modal */}
@@ -1112,8 +1270,10 @@ export const App: React.FC = () => {
       <SplitBillModal
         isOpen={isSplitBillOpen}
         table={splitBillTable}
+        ticketConsecutive={sales.length + 1}
         onClose={() => setIsSplitBillOpen(false)}
         onShowNotification={showNotification}
+        onCompletePartialPayment={handleCompletePartialPayment}
       />
 
       {/* 7. Table Transfer Modal */}
@@ -1153,6 +1313,9 @@ export const App: React.FC = () => {
         preSelectedTable={preSelectedReserveTable}
         onClose={() => setIsReserveModalOpen(false)}
         onConfirmReserve={handleConfirmReserveTable}
+        onCancelReservation={(t) => {
+          if (handleCancelReservation(t, 'group')) setIsReserveModalOpen(false);
+        }}
       />
 
       {/* 10. Authentication & Shift Login Screen */}
