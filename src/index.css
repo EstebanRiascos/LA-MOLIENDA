@@ -15898,32 +15898,79 @@ body.modal-open .app-main {
   line-height: 1.4;
 }
 
-/* Button Historial Cierres in Sales Toolbar */
-.btn-cash-history-action {
+/* Spacing for Toolbar Right buttons */
+.toolbar-right,
+.sales-toolbar .toolbar-right {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.55rem 0.95rem;
-  background: rgba(99, 102, 241, 0.12);
-  border: 1px solid rgba(99, 102, 241, 0.35);
-  color: #a5b4fc;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+/* Button Historial Cierres in Sales Toolbar */
+.btn-cash-history-action {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.05rem;
+  background: rgba(99, 102, 241, 0.16);
+  border: 1.5px solid #818cf8;
+  color: #c7d2fe;
   border-radius: var(--radius-md);
-  font-size: 0.82rem;
-  font-weight: 700;
+  font-size: 0.83rem;
+  font-weight: 800;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  margin-right: 0.25rem;
+}
+
+.btn-cash-history-action svg {
+  color: #a5b4fc;
+  transition: transform 0.2s ease;
 }
 
 .btn-cash-history-action:hover {
-  background: rgba(99, 102, 241, 0.24);
-  border-color: #6366f1;
-  color: #e0e7ff;
+  background: rgba(99, 102, 241, 0.3);
+  border-color: #a5b4fc;
+  color: #ffffff;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+  box-shadow: 0 5px 15px rgba(99, 102, 241, 0.35);
+}
+
+.btn-cash-history-action:hover svg {
+  transform: rotate(-30deg);
+  color: #ffffff;
 }
 
 .btn-cash-history-action:active {
   transform: translateY(1px);
+}
+
+/* Light mode for Historial de Cierres button - Tono notorio y legible */
+[data-theme='light'] .btn-cash-history-action {
+  background: #eef2ff !important;
+  border: 1.5px solid #6366f1 !important;
+  color: #4338ca !important;
+  font-weight: 800 !important;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.16) !important;
+}
+
+[data-theme='light'] .btn-cash-history-action svg {
+  color: #4f46e5 !important;
+}
+
+[data-theme='light'] .btn-cash-history-action:hover {
+  background: #e0e7ff !important;
+  border-color: #4338ca !important;
+  color: #312e81 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(79, 70, 229, 0.28) !important;
+}
+
+[data-theme='light'] .btn-cash-history-action:hover svg {
+  color: #312e81 !important;
 }
 
 /* Cash History Modal */
