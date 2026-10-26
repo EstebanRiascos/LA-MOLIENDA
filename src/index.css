@@ -21092,3 +21092,413 @@ body.mobile-waiter-active {
   border-color: #dc2626 !important;
   color: #ffffff !important;
 }
+
+/* ==========================================================================
+   PWA - INSTALACIÓN Y EXPERIENCIA MÓVIL EN PANTALLA COMPLETA
+   ========================================================================== */
+
+/* Botón Instalar en la barra superior del comandero móvil */
+.mobile-install-pwa-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  height: 30px;
+  padding: 0 0.65rem;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(217, 119, 6, 0.22) 0%, rgba(180, 83, 9, 0.35) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  color: #fbbf24;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  animation: pulse-glow-amber 2.5s infinite ease-in-out;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+@keyframes pulse-glow-amber {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(245, 158, 11, 0);
+  }
+}
+
+.mobile-install-pwa-btn:active {
+  transform: scale(0.94);
+  background: rgba(245, 158, 11, 0.3);
+}
+
+[data-theme='light'] .mobile-install-pwa-btn {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-color: #d97706;
+  color: #92400e;
+  box-shadow: 0 1px 4px rgba(217, 119, 6, 0.15);
+}
+
+/* Banner de instalación en la pantalla de login */
+.mobile-login-pwa-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  width: 100%;
+  max-width: 420px;
+  margin: 1rem auto 0 auto;
+  padding: 0.85rem 1rem;
+  background: rgba(28, 20, 14, 0.85);
+  border: 1px dashed rgba(245, 158, 11, 0.4);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.mobile-login-pwa-banner:hover,
+.mobile-login-pwa-banner:active {
+  background: rgba(45, 30, 20, 0.95);
+  border-color: #f59e0b;
+  transform: translateY(-1px);
+}
+
+.mobile-pwa-banner-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(217, 119, 6, 0.25) 0%, rgba(180, 83, 9, 0.4) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+  flex-shrink: 0;
+}
+
+.mobile-pwa-banner-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.mobile-pwa-banner-info strong {
+  font-size: 0.82rem;
+  color: #f3efe9;
+  font-weight: 700;
+}
+
+.mobile-pwa-banner-info span {
+  font-size: 0.7rem;
+  color: #a89f91;
+  margin-top: 2px;
+  line-height: 1.3;
+}
+
+.mobile-pwa-banner-dl-icon {
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+[data-theme='light'] .mobile-login-pwa-banner {
+  background: #fffaf2;
+  border: 1px dashed #d97706;
+}
+
+[data-theme='light'] .mobile-login-pwa-banner:hover {
+  background: #fef3c7;
+}
+
+[data-theme='light'] .mobile-pwa-banner-info strong {
+  color: #451a03;
+}
+
+[data-theme='light'] .mobile-pwa-banner-info span {
+  color: #78350f;
+}
+
+/* Botón instalar dentro del modal de perfil del mesero */
+.btn-mobile-install-sheet {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.8rem;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(217, 119, 6, 0.15) 0%, rgba(180, 83, 9, 0.25) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-mobile-install-sheet:active {
+  transform: scale(0.98);
+  background: rgba(245, 158, 11, 0.3);
+}
+
+[data-theme='light'] .btn-mobile-install-sheet {
+  background: #fffbeb;
+  border-color: #d97706;
+  color: #92400e;
+}
+
+/* Modal de Guía de Instalación PWA */
+.mobile-pwa-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  box-sizing: border-box;
+  animation: fadeIn 0.2s ease;
+}
+
+.mobile-pwa-modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  background: #17110c;
+  border: 1px solid rgba(217, 119, 6, 0.35);
+  border-radius: 20px;
+  padding: 1.5rem;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.6), 0 0 30px rgba(217, 119, 6, 0.12);
+  color: #f3efe9;
+  box-sizing: border-box;
+  animation: slideUpModal 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUpModal {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.mobile-pwa-modal-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: #a89f91;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mobile-pwa-modal-close:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.mobile-pwa-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.2rem;
+  padding-right: 2rem;
+}
+
+.mobile-pwa-modal-icon-badge {
+  width: 58px;
+  height: 58px;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), 0 0 16px rgba(217, 119, 6, 0.25);
+  border: 2px solid rgba(245, 158, 11, 0.5);
+  flex-shrink: 0;
+}
+
+.mobile-pwa-preview-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.mobile-pwa-modal-title-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-pwa-modal-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+.mobile-pwa-modal-sub {
+  font-size: 0.74rem;
+  color: #f59e0b;
+  font-weight: 600;
+  margin-top: 3px;
+  letter-spacing: 0.02em;
+}
+
+.mobile-pwa-feature-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1.2rem;
+}
+
+.mobile-pwa-pill {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.25rem 0.55rem;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  color: #fbbf24;
+  border-radius: 999px;
+}
+
+.mobile-pwa-ready-desc {
+  font-size: 0.88rem;
+  color: #d1c7bc;
+  line-height: 1.45;
+  margin-bottom: 1rem;
+}
+
+.btn-pwa-install-direct {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.95rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  border: 1px solid #f59e0b;
+  color: #ffffff;
+  font-size: 0.92rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(217, 119, 6, 0.4);
+  transition: all 0.2s ease;
+}
+
+.btn-pwa-install-direct:active {
+  transform: scale(0.97);
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.3);
+}
+
+.mobile-pwa-instructions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 0.85rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 1.2rem;
+}
+
+.pwa-instruction-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+}
+
+.step-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #f59e0b;
+  color: #17110c;
+  font-size: 0.75rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.step-content p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #e5ded4;
+  line-height: 1.4;
+}
+
+.step-content strong {
+  color: #fbbf24;
+}
+
+.mobile-pwa-modal-footer {
+  margin-top: 1rem;
+}
+
+.btn-pwa-understood {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.85rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-pwa-understood:active {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Modo claro para el modal de PWA */
+[data-theme='light'] .mobile-pwa-modal-card {
+  background: #ffffff;
+  border-color: #fde68a;
+  box-shadow: 0 20px 45px rgba(120, 53, 15, 0.18);
+  color: #291a0f;
+}
+
+[data-theme='light'] .mobile-pwa-modal-title {
+  color: #1f140a;
+}
+
+[data-theme='light'] .mobile-pwa-instructions {
+  background: #fffaf2;
+  border-color: #fae8d2;
+}
+
+[data-theme='light'] .step-content p {
+  color: #451a03;
+}
+
+[data-theme='light'] .step-content strong {
+  color: #b45309;
+}
+
+[data-theme='light'] .btn-pwa-understood {
+  background: #f5f0eb;
+  border-color: #e6ded5;
+  color: #451a03;
+}

@@ -263,8 +263,8 @@ export const MobileSyncModal: React.FC<MobileSyncModalProps> = ({ isOpen, onClos
                 <div className="sync-step-item">
                   <div className="sync-step-badge">3</div>
                   <div className="sync-step-details">
-                    <strong>¡A Comandar!</strong>
-                    <p>Elige mesa y envía; llega a este PC al instante.</p>
+                    <strong>¡Instalar y Comandar!</strong>
+                    <p>Toca "Instalar App" para tener el ícono oficial en pantalla completa.</p>
                   </div>
                 </div>
               </div>

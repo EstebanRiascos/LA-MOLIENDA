@@ -31,6 +31,9 @@ import {
   Sparkles,
   X,
   ArrowRight,
+  Download,
+  Smartphone,
+  Share2,
 } from 'lucide-react';
 import { Product, Table, TableZone, OrderItem, ProductCategory, SystemUser } from '../types';
 import { CATEGORIES, DEFAULT_TABLES, DEFAULT_PRODUCTS } from '../utils/defaults';
@@ -177,6 +180,61 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
     document.documentElement.setAttribute('data-theme', effectiveTheme);
     saveStoredTheme(effectiveTheme);
   }, [effectiveTheme]);
+
+  // Detección de PWA instalada y prompt nativo de instalación
+  const [isStandalone, setIsStandalone] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true ||
+      document.referrer.includes('android-app://')
+    );
+  });
+  const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<any>(null);
+  const [showInstallGuideModal, setShowInstallGuideModal] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleBeforeInstall = (e: any) => {
+      e.preventDefault();
+      setDeferredInstallPrompt(e);
+    };
+
+    const mediaQuery = window.matchMedia('(display-mode: standalone)');
+    const handleDisplayModeChange = (e: MediaQueryListEvent) => {
+      if (e.matches) setIsStandalone(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleDisplayModeChange);
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', handleDisplayModeChange);
+      }
+    };
+  }, []);
+
+  const handleInstallPwa = async () => {
+    playSound('click');
+    if (deferredInstallPrompt) {
+      try {
+        deferredInstallPrompt.prompt();
+        const choice = await deferredInstallPrompt.userChoice;
+        if (choice && choice.outcome === 'accepted') {
+          setIsStandalone(true);
+          setDeferredInstallPrompt(null);
+        }
+      } catch (err) {
+        console.warn('Error launching install prompt:', err);
+        setShowInstallGuideModal(true);
+      }
+    } else {
+      setShowInstallGuideModal(true);
+    }
+  };
 
   const handleToggleTheme = () => {
     playSound('toggle');
@@ -845,6 +903,20 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
         </div>
 
         <div className="mobile-header-right">
+          {/* Botón Instalar App PWA (solo visible si no está ya instalada) */}
+          {!isStandalone && (
+            <button
+              type="button"
+              className="mobile-install-pwa-btn"
+              onClick={handleInstallPwa}
+              title="Instalar App oficial de La Molienda en tu teléfono"
+              aria-label="Instalar App"
+            >
+              <Download size={13} />
+              <span className="mobile-install-btn-text">Instalar App</span>
+            </button>
+          )}
+
           {/* Botón Cambiar Tema (Claro / Oscuro) */}
           <button
             type="button"
@@ -1115,6 +1187,26 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
               </form>
             )}
           </div>
+
+          {/* Banner de Instalación PWA en pantalla de login si aún no está en standalone */}
+          {!isStandalone && (
+            <div
+              className="mobile-login-pwa-banner"
+              onClick={handleInstallPwa}
+              role="button"
+              tabIndex={0}
+              title="Toca para instalar la aplicación oficial"
+            >
+              <div className="mobile-pwa-banner-icon">
+                <Smartphone size={20} />
+              </div>
+              <div className="mobile-pwa-banner-info">
+                <strong>¿Instalar App oficial en tu celular?</strong>
+                <span>Toca aquí para guardarla con ícono oficial y usarla a pantalla completa</span>
+              </div>
+              <Download size={16} className="mobile-pwa-banner-dl-icon" />
+            </div>
+          )}
 
           {/* Footer institucional de autoría técnica */}
           <footer className="mobile-waiter-footer">
@@ -1646,6 +1738,20 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
             </div>
 
             <div className="mobile-profile-modal-actions">
+              {!isStandalone && (
+                <button
+                  type="button"
+                  className="btn-mobile-install-sheet"
+                  onClick={() => {
+                    setIsProfileModalOpen(false);
+                    handleInstallPwa();
+                  }}
+                >
+                  <Download size={15} />
+                  <span>Instalar App en este celular</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 className="btn-mobile-continue"
@@ -1662,6 +1768,124 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
               >
                 <LogOut size={15} />
                 <span>Cerrar Sesión / Cambiar Mesero</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Guía de Instalación PWA */}
+      {showInstallGuideModal && (
+        <div className="mobile-pwa-modal-overlay" onClick={() => setShowInstallGuideModal(false)}>
+          <div className="mobile-pwa-modal-card" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="mobile-pwa-modal-close"
+              onClick={() => setShowInstallGuideModal(false)}
+              aria-label="Cerrar modal"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="mobile-pwa-modal-header">
+              <div className="mobile-pwa-modal-icon-badge">
+                <img src="/pwa-192x192.png" alt="La Molienda" className="mobile-pwa-preview-icon" />
+              </div>
+              <div className="mobile-pwa-modal-title-col">
+                <h3 className="mobile-pwa-modal-title">Instalar La Molienda</h3>
+                <span className="mobile-pwa-modal-sub">App Oficial &bull; Pantalla Completa</span>
+              </div>
+            </div>
+
+            <div className="mobile-pwa-modal-body">
+              <div className="mobile-pwa-feature-pills">
+                <span className="mobile-pwa-pill">⚡ 100% Gratis</span>
+                <span className="mobile-pwa-pill">📶 Funciona en Red Wi-Fi</span>
+                <span className="mobile-pwa-pill">📱 Pantalla Completa</span>
+              </div>
+
+              {deferredInstallPrompt ? (
+                <div className="mobile-pwa-prompt-ready">
+                  <p className="mobile-pwa-ready-desc">
+                    Tu teléfono permite instalar la app oficial directamente con un solo toque:
+                  </p>
+                  <button
+                    type="button"
+                    className="btn-pwa-install-direct"
+                    onClick={() => {
+                      setShowInstallGuideModal(false);
+                      handleInstallPwa();
+                    }}
+                  >
+                    <Download size={18} />
+                    <span>Instalar Ahora en Pantalla de Inicio</span>
+                  </button>
+                </div>
+              ) : /iPad|iPhone|iPod/.test(navigator.userAgent) ? (
+                <div className="mobile-pwa-instructions ios-instructions">
+                  <div className="pwa-instruction-step">
+                    <div className="step-num">1</div>
+                    <div className="step-content">
+                      <p>
+                        Toca el botón <strong>Compartir</strong> en la barra de Safari (el ícono del recuadro con la flecha hacia arriba <Share2 size={13} style={{ display: 'inline', verticalAlign: 'middle' }} />).
+                      </p>
+                    </div>
+                  </div>
+                  <div className="pwa-instruction-step">
+                    <div className="step-num">2</div>
+                    <div className="step-content">
+                      <p>
+                        Desplaza hacia abajo en las opciones y selecciona <strong>"Agregar a pantalla de inicio"</strong> (ícono con el signo <strong>＋</strong>).
+                      </p>
+                    </div>
+                  </div>
+                  <div className="pwa-instruction-step">
+                    <div className="step-num">3</div>
+                    <div className="step-content">
+                      <p>
+                        Toca <strong>"Agregar"</strong> arriba a la derecha. ¡Listo! Se creará el ícono oficial de La Molienda en tu iPhone.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="mobile-pwa-instructions android-instructions">
+                  <div className="pwa-instruction-step">
+                    <div className="step-num">1</div>
+                    <div className="step-content">
+                      <p>
+                        Toca el menú de opciones de Chrome (los <strong>tres puntos verticales ⋮</strong> arriba a la derecha).
+                      </p>
+                    </div>
+                  </div>
+                  <div className="pwa-instruction-step">
+                    <div className="step-num">2</div>
+                    <div className="step-content">
+                      <p>
+                        Selecciona <strong>"Instalar aplicación"</strong> o <strong>"Agregar a la pantalla principal"</strong>.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="pwa-instruction-step">
+                    <div className="step-num">3</div>
+                    <div className="step-content">
+                      <p>
+                        Confirma tocando <strong>"Instalar"</strong>. La app se guardará con su ícono y abrirá a pantalla completa.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mobile-pwa-modal-footer">
+              <button
+                type="button"
+                className="btn-pwa-understood"
+                onClick={() => setShowInstallGuideModal(false)}
+              >
+                <CheckCircle2 size={16} />
+                <span>¡Entendido, gracias!</span>
               </button>
             </div>
           </div>
