@@ -386,7 +386,10 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
                         <button
                           type="button"
                           className="btn-qty-mini btn-qty-minus"
-                          onClick={() => handleDecreaseQty(item.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDecreaseQty(item.id);
+                          }}
                           title="Disminuir"
                         >
                           <Minus size={13} />
@@ -395,7 +398,10 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
                         <button
                           type="button"
                           className="btn-qty-mini btn-qty-plus"
-                          onClick={() => handleIncreaseQty(item.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleIncreaseQty(item.id);
+                          }}
                           title="Aumentar"
                         >
                           <Plus size={13} />
@@ -415,7 +421,10 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
                         <button
                           type="button"
                           className="btn-qty-delete"
-                          onClick={() => handleRemoveItem(item.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveItem(item.id);
+                          }}
                           title="Eliminar producto"
                         >
                           <Trash2 size={13} />

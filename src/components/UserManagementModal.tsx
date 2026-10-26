@@ -31,6 +31,7 @@ interface UserManagementModalProps {
   onClose: () => void;
   currentUser: SystemUser;
   onUserUpdated: (user: SystemUser) => void;
+  onUsersChanged?: (users: SystemUser[]) => void;
 }
 
 export const UserManagementModal: React.FC<UserManagementModalProps> = ({
@@ -38,6 +39,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   onClose,
   currentUser,
   onUserUpdated,
+  onUsersChanged,
 }) => {
   const [users, setUsers] = useState<SystemUser[]>(() => getStoredUsers());
   const [activeTab, setActiveTab] = useState<'list' | 'create' | 'my_profile'>('list');
@@ -72,6 +74,17 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const reloadUsers = () => {
     const list = getStoredUsers();
     setUsers(list);
+    onUsersChanged?.(list);
+  };
+
+  const handleClose = () => {
+    if (editingUserId) {
+      const userToSave = users.find((u) => u.id === editingUserId);
+      if (userToSave && editUserName.trim() && (!editUserPin || editUserPin.length === 4)) {
+        handleSaveEdit(userToSave);
+      }
+    }
+    onClose();
   };
 
   const showMsg = (type: 'success' | 'error', message: string) => {
@@ -139,6 +152,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       setNewPin('');
       setNewPassword('');
       reloadUsers();
+      onUsersChanged?.(getStoredUsers());
       setActiveTab('list');
     } else {
       showMsg('error', res.error || 'Error al crear el usuario.');
@@ -177,6 +191,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     }
     setEditingUserId(null);
     reloadUsers();
+    onUsersChanged?.(getStoredUsers());
     showMsg('success', 'Usuario actualizado correctamente.');
   };
 
@@ -185,6 +200,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       const res = deleteStoredUser(id);
       if (res.success) {
         reloadUsers();
+        onUsersChanged?.(getStoredUsers());
         showMsg('success', 'Usuario eliminado del sistema.');
       } else {
         showMsg('error', res.error || 'No se pudo eliminar el usuario.');
@@ -219,7 +235,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className="modal-backdrop" onClick={handleClose}>
       <div
         className="modal-container user-mgmt-modal"
         onClick={(e) => e.stopPropagation()}
@@ -237,7 +253,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
               </p>
             </div>
           </div>
-          <button type="button" className="modal-close-btn" onClick={onClose}>
+          <button type="button" className="modal-close-btn" onClick={handleClose}>
             <X size={18} />
           </button>
         </div>
@@ -308,7 +324,12 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                                 className="inline-edit-input"
                                 value={editUserName}
                                 onChange={(e) => setEditUserName(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleSaveEdit(user);
+                                  if (e.key === 'Escape') setEditingUserId(null);
+                                }}
                                 placeholder="Nombre completo"
+                                autoFocus
                               />
                             </td>
                             <td style={{ width: '165px' }}>
@@ -329,6 +350,10 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                                 className="inline-edit-input pin"
                                 value={editUserPin}
                                 onChange={(e) => setEditUserPin(e.target.value.replace(/\D/g, ''))}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleSaveEdit(user);
+                                  if (e.key === 'Escape') setEditingUserId(null);
+                                }}
                                 placeholder="PIN"
                               />
                             </td>
@@ -336,22 +361,38 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                               <span className="user-status-pill active">Activo</span>
                             </td>
                             <td style={{ textAlign: 'right' }}>
-                              <button
-                                type="button"
-                                className="btn-user-action save"
-                                onClick={() => handleSaveEdit(user)}
-                                title="Guardar cambios"
-                              >
-                                <Check size={15} />
-                              </button>
-                              <button
-                                type="button"
-                                className="btn-user-action cancel"
-                                onClick={() => setEditingUserId(null)}
-                                title="Cancelar"
-                              >
-                                <X size={15} />
-                              </button>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                <button
+                                  type="button"
+                                  className="btn-user-action save"
+                                  onClick={() => handleSaveEdit(user)}
+                                  title="Guardar cambios (Enter)"
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    backgroundColor: '#059669',
+                                    color: '#ffffff',
+                                    padding: '5px 10px',
+                                    borderRadius: '6px',
+                                    fontWeight: 600,
+                                    fontSize: '12px',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  <Check size={14} />
+                                  <span>Guardar</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-user-action cancel"
+                                  onClick={() => setEditingUserId(null)}
+                                  title="Cancelar"
+                                >
+                                  <X size={15} />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );

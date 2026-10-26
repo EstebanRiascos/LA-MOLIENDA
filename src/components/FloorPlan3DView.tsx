@@ -1009,12 +1009,6 @@ export const FloorPlan3DView: React.FC<FloorPlan3DViewProps> = ({
                 <line x1="187" y1="575" x2="198" y2="575" stroke="#c9a464" strokeWidth="1" opacity="0.6" />
                 <line x1="220" y1="586" x2="228" y2="578" stroke="#c9a464" strokeWidth="1" opacity="0.6" />
                 <line x1="245" y1="577" x2="252" y2="569" stroke="#c9a464" strokeWidth="1" opacity="0.6" />
-
-                {showZoneLabels && (
-                  <text x="210" y="555" fill="#dfc28d" fontSize="9.5" fontWeight="750" letterSpacing="1">
-                    ZONA LOUNGE
-                  </text>
-                )}
               </g>
             </svg>
 

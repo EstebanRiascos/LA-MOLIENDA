@@ -2,7 +2,11 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, app } from 'electron';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export interface ServerState {
   tables: any[];
@@ -22,10 +26,10 @@ const DEFAULT_SERVER_TABLES = [
   { id: 'tbl-salon-7', number: 'Mesa 07', zone: 'salon', capacity: 4, status: 'libre', items: [], subtotal: 0, tipPercentage: 0, tipAmount: 0, total: 0 },
   { id: 'tbl-salon-8', number: 'Mesa 08', zone: 'salon', capacity: 4, status: 'libre', items: [], subtotal: 0, tipPercentage: 0, tipAmount: 0, total: 0 },
   { id: 'tbl-salon-9', number: 'Mesa 09', zone: 'salon', capacity: 4, status: 'libre', items: [], subtotal: 0, tipPercentage: 0, tipAmount: 0, total: 0 },
-  { id: 'tbl-salon-10', number: 'Mesa 10 (Lounge)', zone: 'salon', capacity: 6, status: 'libre', items: [], subtotal: 0, tipPercentage: 0, tipAmount: 0, total: 0 },
-  { id: 'tbl-barra-1', number: 'Barra Cerveza', zone: 'barra', capacity: 5, status: 'libre', items: [], subtotal: 0, tipPercentage: 0, tipAmount: 0, total: 0 },
-  { id: 'tbl-barra-2', number: 'Barra Vinos & Café', zone: 'barra', capacity: 5, status: 'libre', items: [], subtotal: 0, tipPercentage: 0, tipAmount: 0, total: 0 },
-  { id: 'tbl-barra-3', number: 'Barra Cocineta', zone: 'barra', capacity: 3, status: 'libre', items: [], subtotal: 0, tipPercentage: 0, tipAmount: 0, total: 0 },
+  { id: 'tbl-salon-10', number: 'Mesa 10', zone: 'salon', capacity: 4, status: 'libre', items: [], subtotal: 0, tipPercentage: 0, tipAmount: 0, total: 0 },
+  { id: 'tbl-barra-1', number: 'Barra 1', zone: 'barra', capacity: 4, status: 'libre', items: [], subtotal: 0, tipPercentage: 0, tipAmount: 0, total: 0 },
+  { id: 'tbl-barra-2', number: 'Barra 2', zone: 'barra', capacity: 4, status: 'libre', items: [], subtotal: 0, tipPercentage: 0, tipAmount: 0, total: 0 },
+  { id: 'tbl-barra-3', number: 'Barra 3', zone: 'barra', capacity: 4, status: 'libre', items: [], subtotal: 0, tipPercentage: 0, tipAmount: 0, total: 0 },
 ];
 
 const DEFAULT_SYSTEM_USERS = [
@@ -40,15 +44,55 @@ const DEFAULT_SYSTEM_USERS = [
   },
 ];
 
+function getServerStoragePath(): string {
+  try {
+    if (app && typeof app.getPath === 'function') {
+      const userDir = app.getPath('userData');
+      if (userDir) {
+        return path.join(userDir, 'server_state.json');
+      }
+    }
+  } catch {}
+  return path.join(process.cwd(), 'server_state.json');
+}
+
+function loadPersistedServerState(): Partial<ServerState> | null {
+  try {
+    const file = getServerStoragePath();
+    if (fs.existsSync(file)) {
+      const raw = fs.readFileSync(file, 'utf-8');
+      return JSON.parse(raw);
+    }
+  } catch (err) {
+    console.warn('No se pudo cargar estado previo del servidor:', err);
+  }
+  return null;
+}
+
+function persistServerState(state: ServerState): void {
+  try {
+    const file = getServerStoragePath();
+    const dir = path.dirname(file);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(file, JSON.stringify(state, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Error al persistir estado del servidor:', err);
+  }
+}
+
+const savedState = loadPersistedServerState();
+
 let server: http.Server | null = null;
 let sseClients: http.ServerResponse[] = [];
 let heartbeatInterval: NodeJS.Timeout | null = null;
 let currentState: ServerState = {
-  tables: DEFAULT_SERVER_TABLES,
-  products: [],
-  staffList: ['Administrador', 'Mesero 1', 'Mesero 2'],
-  systemUsers: DEFAULT_SYSTEM_USERS,
-  updatedAt: new Date().toISOString(),
+  tables: savedState?.tables && savedState.tables.length > 0 ? savedState.tables : DEFAULT_SERVER_TABLES,
+  products: savedState?.products || [],
+  staffList: savedState?.staffList && savedState.staffList.length > 0 ? savedState.staffList : ['Administrador'],
+  systemUsers: savedState?.systemUsers && savedState.systemUsers.length > 0 ? savedState.systemUsers : DEFAULT_SYSTEM_USERS,
+  updatedAt: savedState?.updatedAt || new Date().toISOString(),
 };
 
 export interface AvailableNetworkInterface {
@@ -162,6 +206,7 @@ export function updateServerState(partial: Partial<ServerState>): void {
     ...partial,
     updatedAt: new Date().toISOString(),
   };
+  persistServerState(currentState);
   broadcastToMobileClients('state-update', currentState);
 }
 
@@ -225,7 +270,7 @@ export function startLocalServer(win: BrowserWindow | null, port: number = 4545)
         return;
       }
 
-      // 2.1 ENDPOINT: Sincronizar estado completo desde el PC (mesas, productos, personal)
+      // 2.1 ENDPOINT: Sincronizar estado completo desde el PC (mesas, productos, personal, usuarios)
       if (pathname === '/api/sync' && req.method === 'POST') {
         let body = '';
         req.on('data', (chunk) => {
@@ -237,6 +282,42 @@ export function startLocalServer(win: BrowserWindow | null, port: number = 4545)
             updateServerState(syncData);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ success: true, clients: sseClients.length }));
+          } catch (err: any) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, error: err.message }));
+          }
+        });
+        return;
+      }
+
+      // 2.2 ENDPOINT: Consulta y Sincronización directa de usuarios del sistema
+      if (pathname === '/api/users' && req.method === 'GET') {
+        const users =
+          currentState.systemUsers && currentState.systemUsers.length > 0
+            ? currentState.systemUsers
+            : DEFAULT_SYSTEM_USERS;
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, users }));
+        return;
+      }
+
+      if (pathname === '/api/users' && req.method === 'POST') {
+        let body = '';
+        req.on('data', (chunk) => {
+          body += chunk;
+        });
+        req.on('end', () => {
+          try {
+            const data = JSON.parse(body);
+            const usersList = Array.isArray(data) ? data : data.users || data.systemUsers;
+            if (Array.isArray(usersList)) {
+              updateServerState({ systemUsers: usersList });
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ success: true, count: usersList.length }));
+            } else {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ success: false, error: 'Lista de usuarios inválida' }));
+            }
           } catch (err: any) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ success: false, error: err.message }));
@@ -264,12 +345,14 @@ export function startLocalServer(win: BrowserWindow | null, port: number = 4545)
         if (win && !win.isDestroyed()) {
           win.webContents.send('server:clients-changed', sseClients.length);
         }
+        broadcastToMobileClients('clients-changed', sseClients.length);
 
         req.on('close', () => {
           sseClients = sseClients.filter((c) => c !== res);
           if (win && !win.isDestroyed()) {
             win.webContents.send('server:clients-changed', sseClients.length);
           }
+          broadcastToMobileClients('clients-changed', sseClients.length);
         });
         return;
       }
@@ -387,7 +470,7 @@ export function startLocalServer(win: BrowserWindow | null, port: number = 4545)
                   openedAt: new Date().toISOString(),
                   patronName: data.patronName || 'Cliente',
                   waiter: data.waiter || 'Mesero',
-                  capacity: data.diners || target.capacity,
+                  capacity: 4,
                   items: [],
                   subtotal: 0,
                   tipAmount: 0,
@@ -400,6 +483,7 @@ export function startLocalServer(win: BrowserWindow | null, port: number = 4545)
             if (win && !win.isDestroyed()) {
               win.webContents.send('mobile:open-table', data);
             }
+            broadcastToMobileClients('mobile-open-table', data);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ success: true }));
           } catch (err: any) {
@@ -438,6 +522,7 @@ export function startLocalServer(win: BrowserWindow | null, port: number = 4545)
             if (win && !win.isDestroyed()) {
               win.webContents.send('mobile:request-bill', data);
             }
+            broadcastToMobileClients('mobile-request-bill', data);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ success: true }));
           } catch (err: any) {
@@ -465,7 +550,16 @@ export function startLocalServer(win: BrowserWindow | null, port: number = 4545)
 
             if (data.pin) {
               const cleanPin = String(data.pin).trim();
-              authenticatedUser = users.find((u: any) => String(u.pin).trim() === cleanPin && u.active);
+              if (data.userId) {
+                authenticatedUser = users.find(
+                  (u: any) => u.id === data.userId && String(u.pin).trim() === cleanPin && u.active
+                );
+              }
+              if (!authenticatedUser) {
+                authenticatedUser = users.find(
+                  (u: any) => String(u.pin).trim() === cleanPin && u.active
+                );
+              }
             } else if (data.username && data.password) {
               const cleanUsername = String(data.username).trim().toLowerCase();
               authenticatedUser = users.find(
@@ -499,7 +593,7 @@ export function startLocalServer(win: BrowserWindow | null, port: number = 4545)
 
       // 7. SERVIR ARCHIVOS ESTÁTICOS DE LA APLICACIÓN WEB
       // En producción busca en dist/; en dev redirige a Vite dev server o busca en dist/
-      const distDir = path.join(__dirname, '../dist');
+      const distDir = process.env.DIST || path.join(__dirname, '../dist');
       let sanitizedPath = path.normalize(pathname).replace(/^(\.\.[\/\\])+/, '');
       if (sanitizedPath === '/' || sanitizedPath === '\\') {
         sanitizedPath = 'index.html';

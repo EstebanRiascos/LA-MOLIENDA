@@ -16,11 +16,13 @@ import {
   formatCurrency,
   deductInventoryForSale,
   syncCompositeProductsStock,
+  saveStoredStaffList,
 } from './utils/storage';
 import {
   getStoredSessionUser,
   logoutSession,
   getStoredUsers,
+  broadcastUsersSync,
 } from './utils/authStorage';
 import { DEFAULT_TABLES, DEFAULT_PRODUCTS } from './utils/defaults';
 import { exportLaMoliendaReport, ExportReportOptions } from './utils/excelExporter';
@@ -86,10 +88,16 @@ export const App: React.FC = () => {
     playSound('tab');
   };
 
-  // Core data states
   const [products, setProducts] = useState<Product[]>(() => getStoredProducts());
   const [tables, setTables] = useState<Table[]>(() => getStoredTables());
   const [sales, setSales] = useState<SaleRecord[]>(() => getStoredSales());
+
+  useEffect(() => {
+    const stored = getStoredTables();
+    if (stored.length !== tables.length) {
+      setTables(stored);
+    }
+  }, [tables.length]);
 
   // Authentication & Users state
   const [currentUser, setCurrentUser] = useState<SystemUser | null>(() => {
@@ -115,12 +123,46 @@ export const App: React.FC = () => {
     return params.get('modal') === 'users';
   });
 
-  // Staff state
+  // Staff & System Users state
   const [currentStaff, setCurrentStaff] = useState<string>(() => {
     const session = getStoredSessionUser();
     return session ? session.name : getStoredCurrentStaff();
   });
-  const [staffList] = useState<string[]>(() => getStoredStaffList());
+  const [systemUsers, setSystemUsers] = useState<SystemUser[]>(() => getStoredUsers());
+  const [staffList, setStaffList] = useState<string[]>(() => {
+    const storedStaff = getStoredStaffList();
+    const users = getStoredUsers();
+    const activeStaff = users.filter((u) => u.active).map((u) => u.name);
+    const combined = Array.from(new Set([...storedStaff, ...activeStaff]));
+    return combined.length > 0 ? combined : ['Administrador'];
+  });
+
+  // Escuchar actualizaciones de usuarios y mantener sincronizado el personal activo
+  useEffect(() => {
+    const handleUsersEvent = (e: any) => {
+      const updated = e.detail?.users || getStoredUsers();
+      setSystemUsers(updated);
+      const activeStaff = updated.filter((u: any) => u.active).map((u: any) => u.name);
+      if (activeStaff.length > 0) {
+        setStaffList(activeStaff);
+        saveStoredStaffList(activeStaff);
+      }
+    };
+
+    window.addEventListener('lamolienda:users-changed', handleUsersEvent);
+
+    // Sincronizar inmediatamente al iniciar la aplicación con el servidor Wi-Fi
+    const currentUsers = getStoredUsers();
+    broadcastUsersSync(currentUsers);
+    const timer = setTimeout(() => {
+      broadcastUsersSync(getStoredUsers());
+    }, 1500);
+
+    return () => {
+      window.removeEventListener('lamolienda:users-changed', handleUsersEvent);
+      clearTimeout(timer);
+    };
+  }, []);
 
   // Exit confirmation (Electron window close)
   const [isExitConfirmOpen, setIsExitConfirmOpen] = useState<boolean>(false);
@@ -377,7 +419,16 @@ export const App: React.FC = () => {
     return notifications.filter((n) => !n.read).length;
   }, [notifications]);
 
+  const lastNotificationTimeRef = useRef<{ [msg: string]: number }>({});
+
   const showNotification = (msg: string, explicitType?: NotificationType) => {
+    const now = Date.now();
+    const lastTime = lastNotificationTimeRef.current[msg] || 0;
+    if (now - lastTime < 1800) {
+      return;
+    }
+    lastNotificationTimeRef.current[msg] = now;
+
     playSound(soundForNotification(msg));
     setNotification(msg);
     setTimeout(() => {
@@ -678,7 +729,7 @@ export const App: React.FC = () => {
             openedAt: new Date().toISOString(),
             patronName,
             waiter,
-            capacity: pax,
+            capacity: 4,
             reservationGroupId: undefined,
             reservationName: undefined,
             reservationPhone: undefined,
@@ -731,6 +782,7 @@ export const App: React.FC = () => {
 
   // Registro de órdenes ya procesadas para evitar duplicación entre IPC y SSE
   const processedOrderIdsRef = useRef<Set<string>>(new Set());
+  const recentOrdersSignaturesRef = useRef<Map<string, number>>(new Map());
 
   const handleApplyMobileOrder = (
     tableId: string,
@@ -799,41 +851,95 @@ export const App: React.FC = () => {
 
   // Transmitir cualquier cambio de mesas, productos, personal y usuarios del sistema a los celulares conectados
   useEffect(() => {
-    const payload = {
-      tables,
-      products: synchronizedProducts,
-      staffList,
-      systemUsers: getStoredUsers().map((u) => ({
-        id: u.id,
-        name: u.name,
-        username: u.username,
-        role: u.role,
-        pin: u.pin,
-        password: u.password,
-        active: u.active,
-      })),
-    };
-    const api = (window as any).electronAPI;
-    if (api && typeof api.broadcastState === 'function') {
-      api.broadcastState(payload);
-    }
-    // Sincronización HTTP directa con el servidor local (funciona en Electron y navegador)
-    fetch('http://localhost:4545/api/sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    }).catch(() => {});
-  }, [tables, synchronizedProducts, staffList]);
+    const timer = setTimeout(() => {
+      const payload = {
+        tables,
+        products: synchronizedProducts,
+        staffList,
+        systemUsers: systemUsers.map((u) => ({
+          id: u.id,
+          name: u.name,
+          username: u.username,
+          role: u.role,
+          pin: u.pin,
+          password: u.password,
+          active: u.active,
+        })),
+      };
+      const api = (window as any).electronAPI;
+      if (api && typeof api.broadcastState === 'function') {
+        api.broadcastState(payload);
+      } else {
+        // Sincronización HTTP directa con el servidor local cuando no estamos en Electron
+        fetch('http://localhost:4545/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }).catch(() => {});
+      }
+    }, 120);
+
+    return () => clearTimeout(timer);
+  }, [tables, synchronizedProducts, staffList, systemUsers]);
 
   // Escuchar eventos en tiempo real desde el Servidor Wi-Fi (Celulares de Meseros)
   useEffect(() => {
-    // 1. Vía IPC en Electron
     const api = (window as any).electronAPI;
     let unsubClients: any;
     let unsubOrder: any;
     let unsubOpen: any;
     let unsubBill: any;
 
+    const processIncomingMobileOrder = (orderData: {
+      orderId?: string;
+      tableId: string;
+      tableName?: string;
+      items: OrderItem[];
+      waiter?: string;
+      notes?: string;
+    }) => {
+      if (!orderData || !orderData.tableId) return;
+
+      // 1. Deduplicación por orderId único
+      if (orderData.orderId) {
+        if (processedOrderIdsRef.current.has(orderData.orderId)) {
+          return;
+        }
+        processedOrderIdsRef.current.add(orderData.orderId);
+        if (processedOrderIdsRef.current.size > 200) {
+          const arr = Array.from(processedOrderIdsRef.current);
+          processedOrderIdsRef.current = new Set(arr.slice(100));
+        }
+      }
+
+      // 2. Deduplicación temporal por firma (misma mesa, mesero y cantidad de productos en < 2.5s)
+      const totalCount = (orderData.items || []).reduce((s: number, i: any) => s + (i.quantity || 1), 0);
+      const signature = `${orderData.tableId}-${orderData.waiter || ''}-${totalCount}`;
+      const now = Date.now();
+      const lastTime = recentOrdersSignaturesRef.current.get(signature);
+      if (lastTime && now - lastTime < 2500) {
+        return;
+      }
+      recentOrdersSignaturesRef.current.set(signature, now);
+
+      // 3. Aplicar comanda a las mesas
+      handleApplyMobileOrder(orderData.tableId, orderData.items, orderData.waiter, orderData.orderId);
+
+      // 4. Sonido y Notificación única en caja
+      playSound('dispatch');
+      const currentTables = tablesRef.current;
+      const targetTable = currentTables.find(
+        (t: Table) =>
+          t.id === orderData.tableId ||
+          (t.number && orderData.tableId && t.number.toLowerCase() === orderData.tableId.toLowerCase())
+      );
+      const tableName = orderData.tableName || (targetTable ? targetTable.number : 'Mesa');
+      showNotification(
+        `🛎️ ¡Nueva Comanda Móvil! ${orderData.waiter || 'Mesero'} envió ${totalCount} producto(s) a ${tableName}.`
+      );
+    };
+
+    // 1. Vía IPC en Electron
     if (api && api.isElectron) {
       unsubClients = api.onMobileClientsChanged?.((count: number) => {
         setConnectedClientsCount(count);
@@ -847,19 +953,7 @@ export const App: React.FC = () => {
         waiter?: string;
         notes?: string;
       }) => {
-        handleApplyMobileOrder(orderData.tableId, orderData.items, orderData.waiter, orderData.orderId);
-        playSound('dispatch');
-        const currentTables = tablesRef.current;
-        const targetTable = currentTables.find(
-          (t: Table) =>
-            t.id === orderData.tableId ||
-            (t.number && orderData.tableId && t.number.toLowerCase() === orderData.tableId.toLowerCase())
-        );
-        const tableName = orderData.tableName || (targetTable ? targetTable.number : 'Mesa');
-        const totalCount = (orderData.items || []).reduce((s, i) => s + (i.quantity || 1), 0);
-        showNotification(
-          `🛎️ ¡Nueva Comanda Móvil! ${orderData.waiter || 'Mesero'} envió ${totalCount} producto(s) a ${tableName}.`
-        );
+        processIncomingMobileOrder(orderData);
       });
 
       unsubOpen = api.onMobileOpenTable?.((data: {
@@ -877,7 +971,7 @@ export const App: React.FC = () => {
                 openedAt: new Date().toISOString(),
                 patronName: data.patronName || 'Cliente',
                 waiter: data.waiter || 'Mesero',
-                capacity: data.diners || t.capacity,
+                capacity: 4,
                 items: [],
                 subtotal: 0,
                 tipPercentage: 0,
@@ -927,84 +1021,96 @@ export const App: React.FC = () => {
       });
     }
 
-    // 2. Vía Server-Sent Events (SSE) hacia el servidor local (funciona en Electron y en navegador)
+    // 2. Vía Server-Sent Events (SSE) hacia el servidor local (únicamente cuando se ejecuta en navegador sin Electron)
     let sse: EventSource | null = null;
-    try {
-      const serverPort = window.location.port === '5173' ? '4545' : (window.location.port || '4545');
-      const sseUrl = `http://${window.location.hostname || 'localhost'}:${serverPort}/api/stream`;
-      sse = new EventSource(sseUrl);
+    const isElectronEnv = Boolean(api && api.isElectron);
 
-      sse.addEventListener('state-update', (e: any) => {
-        try {
-          const state = JSON.parse(e.data);
-          if (state.tables && Array.isArray(state.tables) && state.tables.length > 0) {
+    if (!isElectronEnv) {
+      try {
+        const serverPort = window.location.port === '5173' ? '4545' : (window.location.port || '4545');
+        const sseUrl = `http://${window.location.hostname || 'localhost'}:${serverPort}/api/stream`;
+        sse = new EventSource(sseUrl);
+
+        sse.addEventListener('clients-changed', (e: any) => {
+          try {
+            const count = JSON.parse(e.data);
+            if (typeof count === 'number') setConnectedClientsCount(count);
+          } catch {}
+        });
+
+        sse.addEventListener('mobile-open-table', (e: any) => {
+          try {
+            const data = JSON.parse(e.data);
             setTables((prevTables) => {
-              let hasChanges = false;
-              const merged = prevTables.map((localT) => {
-                const incoming = state.tables.find(
-                  (st: any) => st.id === localT.id || (st.number && st.number.toLowerCase() === localT.number.toLowerCase())
-                );
-                if (!incoming) return localT;
-                if (incoming.status !== 'libre' || (incoming.items && incoming.items.length > 0)) {
-                  if (
-                    incoming.status !== localT.status ||
-                    (incoming.items && incoming.items.length !== localT.items.length) ||
-                    incoming.total !== localT.total
-                  ) {
-                    hasChanges = true;
-                    return {
-                      ...localT,
-                      status: incoming.status,
-                      items: incoming.items || [],
-                      subtotal: incoming.subtotal || 0,
-                      tipPercentage: incoming.tipPercentage || 0,
-                      tipAmount: incoming.tipAmount || 0,
-                      total: incoming.total || 0,
-                      waiter: incoming.waiter || localT.waiter,
-                      patronName: incoming.patronName || localT.patronName,
-                      openedAt: incoming.openedAt || localT.openedAt,
-                    };
-                  }
+              const updated = prevTables.map((t) => {
+                if (t.id === data.tableId || (t.number && t.number.toLowerCase() === data.tableId.toLowerCase())) {
+                  return {
+                    ...t,
+                    status: 'ocupada' as const,
+                    openedAt: new Date().toISOString(),
+                    patronName: data.patronName || 'Cliente',
+                    waiter: data.waiter || 'Mesero',
+                    capacity: 4,
+                    items: [],
+                    subtotal: 0,
+                    tipPercentage: 0,
+                    tipAmount: 0,
+                    total: 0,
+                  };
                 }
-                return localT;
+                return t;
               });
-
-              if (!hasChanges) return prevTables;
-              saveStoredTables(merged);
-              setActiveTableDetail((curr) =>
-                curr ? merged.find((t: Table) => t.id === curr.id || t.number === curr.number) || curr : null
-              );
-              return merged;
+              saveStoredTables(updated);
+              return updated;
             });
-          }
-        } catch (err) {
-          console.error('Error parseando SSE state-update en caja:', err);
-        }
-      });
+            playSound('click');
+            const currentTables = tablesRef.current;
+            const targetTable = currentTables.find(
+              (t: Table) => t.id === data.tableId || (t.number && t.number.toLowerCase() === data.tableId.toLowerCase())
+            );
+            const tableName = targetTable ? targetTable.number : 'Mesa';
+            showNotification(`📱 ${tableName} abierta por ${data.waiter || 'Mesero'} desde celular.`);
+          } catch {}
+        });
 
-      sse.addEventListener('new-order-broadcast', (e: any) => {
-        try {
-          const orderData = JSON.parse(e.data);
-          playSound('dispatch');
-          if (orderData.tableId && orderData.items) {
-            handleApplyMobileOrder(orderData.tableId, orderData.items, orderData.waiter, orderData.orderId);
+        sse.addEventListener('mobile-request-bill', (e: any) => {
+          try {
+            const data = JSON.parse(e.data);
+            setTables((prevTables) => {
+              const updated = prevTables.map((t) => {
+                if (
+                  (t.id === data.tableId || (t.number && t.number.toLowerCase() === data.tableId.toLowerCase())) &&
+                  t.items.length > 0
+                ) {
+                  return { ...t, status: 'por_cobrar' as const };
+                }
+                return t;
+              });
+              saveStoredTables(updated);
+              return updated;
+            });
+            playSound('cash');
+            const currentTables = tablesRef.current;
+            const targetTable = currentTables.find(
+              (t: Table) => t.id === data.tableId || (t.number && t.number.toLowerCase() === data.tableId?.toLowerCase())
+            );
+            const resolvedTableName = data.tableName || (targetTable ? targetTable.number : 'la mesa');
+            showNotification(`🧾 Mesero ${data.waiter || 'Mesero'} solicita la precuenta / cobro de ${resolvedTableName}.`, 'prebill');
+          } catch {}
+        });
+
+        sse.addEventListener('new-order-broadcast', (e: any) => {
+          try {
+            const orderData = JSON.parse(e.data);
+            if (typeof processIncomingMobileOrder === 'function') {
+              processIncomingMobileOrder(orderData);
+            }
+          } catch (err) {
+            console.error('Error procesando new-order-broadcast SSE:', err);
           }
-          const currentTables = tablesRef.current;
-          const targetTable = currentTables.find(
-            (t: Table) =>
-              t.id === orderData.tableId ||
-              (t.number && orderData.tableId && t.number.toLowerCase() === orderData.tableId.toLowerCase())
-          );
-          const tableName = orderData.tableName || (targetTable ? targetTable.number : 'Mesa');
-          const totalCount = (orderData.items || []).reduce((s: number, i: any) => s + (i.quantity || 1), 0);
-          showNotification(
-            `🛎️ ¡Nueva Comanda Móvil! ${orderData.waiter || 'Mesero'} envió ${totalCount} producto(s) a ${tableName}.`
-          );
-        } catch (err) {
-          console.error('Error procesando new-order-broadcast SSE:', err);
-        }
-      });
-    } catch {}
+        });
+      } catch {}
+    }
 
     return () => {
       if (typeof unsubClients === 'function') unsubClients();
@@ -1784,6 +1890,14 @@ export const App: React.FC = () => {
           onClose={() => setIsUserManagementOpen(false)}
           currentUser={currentUser}
           onUserUpdated={handleUserUpdated}
+          onUsersChanged={(updated) => {
+            setSystemUsers(updated);
+            const activeStaff = updated.filter((u) => u.active).map((u) => u.name);
+            if (activeStaff.length > 0) {
+              setStaffList(activeStaff);
+              saveStoredStaffList(activeStaff);
+            }
+          }}
         />
       )}
 

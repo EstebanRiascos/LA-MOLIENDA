@@ -55,11 +55,71 @@ export function getStoredUsers(): SystemUser[] {
 }
 
 /**
- * Guardar lista de usuarios en almacenamiento local
+ * Sincroniza la lista de usuarios y personal activo con el servidor local Wi-Fi y celulares
+ */
+export function broadcastUsersSync(users: SystemUser[]): void {
+  try {
+    const safeUsers = users.map((u) => ({
+      id: u.id,
+      name: u.name,
+      username: u.username,
+      role: u.role,
+      pin: u.pin,
+      password: u.password,
+      active: u.active,
+    }));
+    const activeStaff = users.filter((u) => u.active).map((u) => u.name);
+
+    if (typeof window !== 'undefined') {
+      const api = (window as any).electronAPI;
+      if (api && typeof api.broadcastState === 'function') {
+        api.broadcastState({
+          systemUsers: safeUsers,
+          staffList: activeStaff.length > 0 ? activeStaff : ['Administrador'],
+        });
+      }
+
+      // Solo llamar a /api/sync si estamos en la máquina anfitriona (Electron o localhost)
+      const isLocal =
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1' ||
+        Boolean(api);
+
+      if (isLocal) {
+        fetch('http://localhost:4545/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            systemUsers: safeUsers,
+            staffList: activeStaff.length > 0 ? activeStaff : ['Administrador'],
+          }),
+        }).catch(() => {});
+
+        fetch('http://localhost:4545/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ systemUsers: safeUsers }),
+        }).catch(() => {});
+      }
+
+      window.dispatchEvent(
+        new CustomEvent('lamolienda:users-changed', {
+          detail: { users: safeUsers, staffList: activeStaff },
+        })
+      );
+    }
+  } catch (err) {
+    console.error('Error al sincronizar usuarios con el servidor:', err);
+  }
+}
+
+/**
+ * Guardar lista de usuarios en almacenamiento local y sincronizar con red
  */
 export function saveStoredUsers(users: SystemUser[]): void {
   try {
     localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
+    broadcastUsersSync(users);
   } catch (err) {
     console.error('Error al guardar usuarios:', err);
   }

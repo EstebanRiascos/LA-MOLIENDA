@@ -27,6 +27,10 @@ import {
   Delete,
   LogOut,
   CheckCircle2,
+  LayoutGrid,
+  Sparkles,
+  X,
+  ArrowRight,
 } from 'lucide-react';
 import { Product, Table, TableZone, OrderItem, ProductCategory, SystemUser } from '../types';
 import { CATEGORIES, DEFAULT_TABLES, DEFAULT_PRODUCTS } from '../utils/defaults';
@@ -49,7 +53,7 @@ interface WaiterViewProps {
 export const WaiterView: React.FC<WaiterViewProps> = ({
   initialTables = [],
   initialProducts = [],
-  initialStaffList = ['Administrador', 'Mesero 1', 'Mesero 2'],
+  initialStaffList = ['Administrador'],
   serverUrl = '',
   theme: themeProp,
   onToggleTheme: onToggleThemeProp,
@@ -68,6 +72,13 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
   const [staffList, setStaffList] = useState<string[]>(initialStaffList);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [activeZone, setActiveZone] = useState<TableZone>('salon');
+
+  useEffect(() => {
+    const stored = getStoredTables();
+    if (stored.length !== tables.length) {
+      setTables(stored);
+    }
+  }, [tables.length]);
 
   // Sesión del usuario autenticado en el comandero móvil
   const [currentUser, setCurrentUser] = useState<SystemUser | null>(() => {
@@ -129,7 +140,10 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
   const [isLoginSuccess, setIsLoginSuccess] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginShake, setLoginShake] = useState(false);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('modal') === 'profile';
+  });
 
   // Mesa seleccionada para comandar
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
@@ -346,6 +360,17 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
         }
       })
       .catch(() => {});
+
+    // Carga directa y específica de usuarios
+    fetch(`${apiBase}/api/users`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.users) && data.users.length > 0) {
+          setSystemUsers(data.users);
+          saveStoredUsers(data.users);
+        }
+      })
+      .catch(() => {});
   }, [apiBase]);
 
   // Manejo de errores y animaciones de login
@@ -383,6 +408,48 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
         }, 400);
         return;
       } else {
+        // Fallback inmediato si el backend respondió 401 pero localmente el usuario ya está disponible
+        const localUsers = systemUsers && systemUsers.length > 0 ? systemUsers : getStoredUsers();
+        let localMatched: SystemUser | undefined;
+
+        if (credentials.pin) {
+          const p = credentials.pin.trim();
+          if (selectedUserForPin && selectedUserForPin.pin === p && selectedUserForPin.active) {
+            localMatched = selectedUserForPin;
+          } else {
+            localMatched = localUsers.find((u) => u.pin === p && u.active);
+          }
+        } else if (credentials.username && credentials.password) {
+          const u = credentials.username.trim().toLowerCase();
+          localMatched = localUsers.find(
+            (user) => user.username.toLowerCase() === u && user.password === credentials.password && user.active
+          );
+        }
+
+        if (localMatched) {
+          const safe = {
+            id: localMatched.id,
+            name: localMatched.name,
+            username: localMatched.username,
+            role: localMatched.role,
+            active: localMatched.active,
+            createdAt: localMatched.createdAt,
+          };
+          setIsLoginSuccess(true);
+          playSound('success');
+          setTimeout(() => {
+            setCurrentUser(safe as any);
+            setCurrentWaiter(safe.name);
+            localStorage.setItem('lamolienda_mobile_session_user', JSON.stringify(safe));
+            localStorage.setItem('lamolienda_waiter_name', safe.name);
+            setIsLoginSuccess(false);
+            setLoginPin('');
+            setLoginPassword('');
+            setSelectedUserForPin(null);
+          }, 400);
+          return;
+        }
+
         triggerLoginError(data.error || 'Credenciales o PIN inválidos.');
         return;
       }
@@ -446,7 +513,10 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
 
     if (newPin.length === 4) {
       setTimeout(() => {
-        handleExecuteLogin({ pin: newPin });
+        handleExecuteLogin({
+          pin: newPin,
+          ...(selectedUserForPin ? { userId: selectedUserForPin.id } : {}),
+        } as any);
       }, 100);
     }
   };
@@ -717,7 +787,7 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
             openedAt: new Date().toISOString(),
             patronName,
             waiter: waiterToUse,
-            capacity: pax,
+            capacity: 4,
             items: [],
             subtotal: 0,
             tipPercentage: 0,
@@ -744,7 +814,7 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
         status: 'ocupada',
         patronName,
         waiter,
-        capacity: pax,
+        capacity: 4,
         items: target.items || [],
       });
       setNewOrderItems([]);
@@ -1496,49 +1566,102 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
       {isProfileModalOpen && currentUser && (
         <div className="mobile-profile-modal-overlay" onClick={() => setIsProfileModalOpen(false)}>
           <div className="mobile-profile-modal-card" onClick={(e) => e.stopPropagation()}>
+            {/* Indicador táctil superior */}
+            <div className="mobile-sheet-drag-handle" />
+
             <div className="mobile-profile-modal-header">
               <div className="mobile-profile-avatar-large">
-                <User size={28} />
+                <User size={30} />
+                <span className="avatar-status-dot" title="Sesión activa" />
               </div>
-              <h3 className="mobile-profile-user-name">{currentUser.name}</h3>
-              <div className="mobile-profile-badges-row">
-                <span className={`mobile-role-tag role-${currentUser.role}`}>
-                  {currentUser.role.toUpperCase()}
-                </span>
-                <span className="mobile-active-tag">● Sesión Activa</span>
+
+              <div className="mobile-profile-title-col">
+                <h3 className="mobile-profile-user-name">{currentUser.name}</h3>
+                <div className="mobile-profile-badges-row">
+                  <span className={`mobile-role-tag role-${currentUser.role}`}>
+                    {currentUser.role === 'admin' ? (
+                      <>
+                        <ShieldCheck size={12} />
+                        <span>Administrador</span>
+                      </>
+                    ) : currentUser.role === 'cajero' ? (
+                      <>
+                        <Receipt size={12} />
+                        <span>Cajero</span>
+                      </>
+                    ) : (
+                      <>
+                        <Coffee size={12} />
+                        <span>Mesero</span>
+                      </>
+                    )}
+                  </span>
+                  <span className="mobile-active-tag">
+                    <span className="active-pulse-dot" />
+                    <span>Sesión Activa</span>
+                  </span>
+                </div>
               </div>
+
+              <button
+                type="button"
+                className="mobile-profile-close-btn"
+                onClick={() => setIsProfileModalOpen(false)}
+                title="Cerrar ventana"
+              >
+                <X size={18} />
+              </button>
             </div>
 
             <div className="mobile-profile-info-body">
+              {/* Tarjeta de Métrica: Mesas Asignadas */}
               <div className="mobile-profile-stat-box">
-                <span className="stat-label">Mesas Activas con tu Nombre</span>
-                <span className="stat-val">
-                  {tables.filter((t) => t.status !== 'libre' && t.waiter === currentUser.name).length}
-                </span>
+                <div className="stat-left-group">
+                  <div className="stat-icon-wrapper">
+                    <LayoutGrid size={18} />
+                  </div>
+                  <div className="stat-text-col">
+                    <span className="stat-label">Mesas activas a tu cargo</span>
+                    <span className="stat-desc">Asignadas a tu nombre en este turno</span>
+                  </div>
+                </div>
+                <div className="stat-count-pill">
+                  <strong>{tables.filter((t) => t.status !== 'libre' && t.waiter === currentUser.name).length}</strong>
+                  <span>{tables.filter((t) => t.status !== 'libre' && t.waiter === currentUser.name).length === 1 ? 'mesa' : 'mesas'}</span>
+                </div>
               </div>
 
+              {/* Tarjeta de Aviso Contextual de Registro de Comandas */}
               <div className="mobile-profile-notice">
-                <p>
-                  Todas las comandas y aperturas de mesas que realices se registrarán automáticamente con tu nombre (<strong>{currentUser.name}</strong>).
-                </p>
+                <div className="notice-icon-circle">
+                  <Sparkles size={16} />
+                </div>
+                <div className="notice-content-col">
+                  <strong>Registro automático de comandas</strong>
+                  <p>
+                    Todas las comandas y aperturas de mesas que realices se registrarán automáticamente con tu nombre (<strong>{currentUser.name}</strong>).
+                  </p>
+                </div>
               </div>
             </div>
 
             <div className="mobile-profile-modal-actions">
               <button
                 type="button"
-                className="btn-mobile-change-waiter"
-                onClick={handleLogoutWaiter}
-              >
-                <LogOut size={16} />
-                <span>Cerrar Sesión / Cambiar Mesero</span>
-              </button>
-              <button
-                type="button"
                 className="btn-mobile-continue"
                 onClick={() => setIsProfileModalOpen(false)}
               >
-                Continuar Comandando
+                <span>Continuar Comandando</span>
+                <ArrowRight size={16} />
+              </button>
+
+              <button
+                type="button"
+                className="btn-mobile-change-waiter"
+                onClick={handleLogoutWaiter}
+              >
+                <LogOut size={15} />
+                <span>Cerrar Sesión / Cambiar Mesero</span>
               </button>
             </div>
           </div>

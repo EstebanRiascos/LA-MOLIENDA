@@ -271,7 +271,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     <Flame size={16} />
                   </div>
                   <div>
-                    <h4 className="sales-col-title">🔥 Más Vendidos (Alta Rotación)</h4>
+                    <h4 className="sales-col-title">Más Vendidos (Alta Rotación)</h4>
                     <span className="sales-col-desc">Mayor demanda y facturación en el negocio</span>
                   </div>
                 </div>
@@ -376,7 +376,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     <TrendingDown size={16} />
                   </div>
                   <div>
-                    <h4 className="sales-col-title">❄️ Menos Vendidos (Baja Rotación)</h4>
+                    <h4 className="sales-col-title">Menos Vendidos (Baja Rotación)</h4>
                     <span className="sales-col-desc">Menor salida de comandas y stock en reposo</span>
                   </div>
                 </div>

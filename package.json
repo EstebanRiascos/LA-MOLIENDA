@@ -39,7 +39,8 @@
     "appId": "com.lamolienda.pos",
     "productName": "La Molienda POS",
     "directories": {
-      "output": "release"
+      "output": "release",
+      "buildResources": "build"
     },
     "files": [
       "dist/**/*",

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   BookmarkCheck,
@@ -68,43 +68,50 @@ export const ReserveTableModal: React.FC<ReserveTableModalProps> = ({
   const [pax, setPax] = useState<number>(2);
   const [notes, setNotes] = useState<string>('');
   const [error, setError] = useState<string>('');
+  const wasOpenRef = useRef(false);
+  const customerInputRef = useRef<HTMLInputElement>(null);
 
-  // Inicializar estado según preSelectedTable o defaults
+  // Inicializar estado ÚNICAMENTE al abrir el modal para no resetear lo que el usuario escribe
   useEffect(() => {
-    // Fecha de hoy por defecto en formato YYYY-MM-DD
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
-    const todayStr = `${yyyy}-${mm}-${dd}`;
+    if (isOpen && !wasOpenRef.current) {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const todayStr = `${yyyy}-${mm}-${dd}`;
 
-    // Hora sugerida: siguiente hora en punto
-    const currentHour = today.getHours();
-    const nextHour = (currentHour + 1) % 24;
-    const defaultTimeStr = `${String(nextHour).padStart(2, '0')}:00`;
+      const currentHour = today.getHours();
+      const nextHour = (currentHour + 1) % 24;
+      const defaultTimeStr = `${String(nextHour).padStart(2, '0')}:00`;
 
-    if (preSelectedTable) {
-      setSelectedTableIds(
-        preSelectedTable.status === 'reservada' ? groupTableIds : [preSelectedTable.id]
-      );
-      setPax(preSelectedTable.reservationPax || preSelectedTable.capacity || 2);
-      setCustomerName(preSelectedTable.reservationName || '');
-      setCustomerPhone(preSelectedTable.reservationPhone || '');
-      setReservationDate(preSelectedTable.reservationDate || todayStr);
-      setReservationTime(preSelectedTable.reservationTime || defaultTimeStr);
-      setNotes(preSelectedTable.reservationNotes || '');
-    } else {
-      const firstFree = eligibleTables[0];
-      setSelectedTableIds(firstFree ? [firstFree.id] : []);
-      setPax(firstFree?.capacity || 2);
-      setCustomerName('');
-      setCustomerPhone('');
-      setReservationDate(todayStr);
-      setReservationTime(defaultTimeStr);
-      setNotes('');
+      if (preSelectedTable) {
+        setSelectedTableIds(
+          preSelectedTable.status === 'reservada' ? groupTableIds : [preSelectedTable.id]
+        );
+        setPax(preSelectedTable.reservationPax || preSelectedTable.capacity || 2);
+        setCustomerName(preSelectedTable.reservationName || '');
+        setCustomerPhone(preSelectedTable.reservationPhone || '');
+        setReservationDate(preSelectedTable.reservationDate || todayStr);
+        setReservationTime(preSelectedTable.reservationTime || defaultTimeStr);
+        setNotes(preSelectedTable.reservationNotes || '');
+      } else {
+        const firstFree = eligibleTables[0];
+        setSelectedTableIds(firstFree ? [firstFree.id] : []);
+        setPax(firstFree?.capacity || 2);
+        setCustomerName('');
+        setCustomerPhone('');
+        setReservationDate(todayStr);
+        setReservationTime(defaultTimeStr);
+        setNotes('');
+      }
+      setError('');
+
+      setTimeout(() => {
+        customerInputRef.current?.focus();
+      }, 60);
     }
-    setError('');
-  }, [preSelectedTable, isOpen]);
+    wasOpenRef.current = isOpen;
+  }, [isOpen, preSelectedTable]);
 
   const selectedTables = eligibleTables.filter((t) => selectedTableIds.includes(t.id));
   const totalCapacity = selectedTables.reduce((sum, t) => sum + (t.capacity || 0), 0);
@@ -260,13 +267,15 @@ export const ReserveTableModal: React.FC<ReserveTableModalProps> = ({
                   <div className="input-with-icon">
                     <User size={15} className="input-inner-icon" />
                     <input
+                      ref={customerInputRef}
                       type="text"
                       placeholder="Ej: Familia Morales, Dra. Gómez, Reunión Ejecutiva..."
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
                       className="form-input input-with-padding"
                       required
-                      autoFocus
+                      autoComplete="off"
+                      spellCheck={false}
                     />
                   </div>
                 </div>

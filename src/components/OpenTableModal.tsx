@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, LayoutGrid, User, Users, CheckCircle, Coffee, Plus, Minus } from 'lucide-react';
 import { Table } from '../types';
 
@@ -31,23 +31,36 @@ export const OpenTableModal: React.FC<OpenTableModalProps> = ({
     preSelectedTable?.id || openableTables[0]?.id || ''
   );
   const [patronName, setPatronName] = useState(preSelectedTable?.reservationName || '');
-  const [waiter, setWaiter] = useState(currentStaff || staffList[0]);
+  const [waiter, setWaiter] = useState(currentStaff || staffList[0] || 'Mesero');
   const [pax, setPax] = useState<number>(
     preSelectedTable?.reservationPax || preSelectedTable?.capacity || 2
   );
 
+  const wasOpenRef = useRef(false);
+  const patronInputRef = useRef<HTMLInputElement>(null);
+
+  // Inicializar estado ÚNICAMENTE cuando el modal pasa de cerrado a abierto
   useEffect(() => {
-    if (preSelectedTable) {
-      setSelectedTableId(preSelectedTable.id);
-      setPatronName(preSelectedTable.reservationName || '');
-      setPax(preSelectedTable.reservationPax || preSelectedTable.capacity || 2);
-    } else {
-      const firstAvailable = tables.find((t) => t.status === 'libre');
-      setSelectedTableId(firstAvailable?.id || '');
-      setPatronName('');
-      setPax(firstAvailable?.capacity || 2);
+    if (isOpen && !wasOpenRef.current) {
+      if (preSelectedTable) {
+        setSelectedTableId(preSelectedTable.id);
+        setPatronName(preSelectedTable.reservationName || '');
+        setPax(preSelectedTable.reservationPax || preSelectedTable.capacity || 2);
+      } else {
+        const firstAvailable = tables.find((t) => t.status === 'libre');
+        setSelectedTableId(firstAvailable?.id || '');
+        setPatronName('');
+        setPax(firstAvailable?.capacity || 2);
+      }
+      setWaiter(currentStaff || staffList[0] || 'Mesero');
+
+      // Enfocar suavemente el campo de texto al abrir sin bloquear la interacción
+      setTimeout(() => {
+        patronInputRef.current?.focus();
+      }, 60);
     }
-  }, [preSelectedTable, isOpen]);
+    wasOpenRef.current = isOpen;
+  }, [isOpen, preSelectedTable]);
 
   const selectedTable = tables.find((t) => t.id === selectedTableId);
 
@@ -173,12 +186,20 @@ export const OpenTableModal: React.FC<OpenTableModalProps> = ({
                 <div className="input-with-icon">
                   <User size={15} className="input-inner-icon" />
                   <input
+                    ref={patronInputRef}
                     type="text"
                     placeholder="Ej: Familia Morales, Pareja Terraza, Reunión..."
                     value={patronName}
                     onChange={(e) => setPatronName(e.target.value)}
                     className="form-input input-with-padding"
-                    autoFocus
+                    autoComplete="off"
+                    spellCheck={false}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSubmit(e);
+                      }
+                    }}
                   />
                 </div>
               </div>

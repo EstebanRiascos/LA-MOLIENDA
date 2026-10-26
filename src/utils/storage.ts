@@ -1,12 +1,35 @@
 import { Product, Table, SaleRecord, SystemStats, OrderItem } from '../types';
 import { DEFAULT_PRODUCTS, DEFAULT_TABLES, DEFAULT_SALES } from './defaults';
 
-const STORAGE_KEY_PRODUCTS = 'lamolienda_products_clean_v1';
-const STORAGE_KEY_TABLES = 'lamolienda_tables_clean_v1';
-const STORAGE_KEY_SALES = 'lamolienda_sales_clean_v1';
+const STORAGE_KEY_PRODUCTS = 'lamolienda_products_v3';
+const STORAGE_KEY_TABLES = 'lamolienda_tables_v3';
+const STORAGE_KEY_SALES = 'lamolienda_sales_v3';
 const STORAGE_KEY_THEME = 'lamolienda_theme_v1';
 const STORAGE_KEY_STAFF = 'lamolienda_current_staff_v2';
 const STORAGE_KEY_STAFF_LIST = 'lamolienda_staff_list_v2';
+
+// Auto-limpieza garantizada de versiones y datos de prueba al iniciar el sistema
+try {
+  const legacyKeys = [
+    'lamolienda_tables_v1',
+    'lamolienda_sales_v1',
+    'lamolienda_products_v1',
+    'lamolienda_tables_prod_v2',
+    'lamolienda_tables_prod_v3',
+    'lamolienda_tables_prod_v4',
+    'lamolienda_sales_prod_v2',
+    'lamolienda_products_prod_v2',
+    'lamolienda_tables_clean_v1',
+    'lamolienda_sales_clean_v1',
+    'lamolienda_products_clean_v1',
+    'cashClosingHistory',
+  ];
+  legacyKeys.forEach((key) => {
+    if (localStorage.getItem(key)) {
+      localStorage.removeItem(key);
+    }
+  });
+} catch {}
 
 export const DEFAULT_STAFF_LIST = [
   'Administrador',
@@ -14,17 +37,32 @@ export const DEFAULT_STAFF_LIST = [
 
 export function resetAllDataToProduction(): void {
   try {
-    localStorage.removeItem('lamolienda_tables_v1');
-    localStorage.removeItem('lamolienda_sales_v1');
-    localStorage.removeItem('lamolienda_products_v1');
-    localStorage.removeItem('lamolienda_tables_prod_v2');
-    localStorage.removeItem('lamolienda_tables_prod_v3');
-    localStorage.removeItem('lamolienda_tables_prod_v4');
-    localStorage.removeItem('lamolienda_sales_prod_v2');
-    localStorage.removeItem('lamolienda_products_prod_v2');
-    localStorage.removeItem(STORAGE_KEY_TABLES);
-    localStorage.removeItem(STORAGE_KEY_SALES);
-    localStorage.removeItem(STORAGE_KEY_PRODUCTS);
+    const keys = [
+      'lamolienda_tables_v1',
+      'lamolienda_sales_v1',
+      'lamolienda_products_v1',
+      'lamolienda_tables_prod_v2',
+      'lamolienda_tables_prod_v3',
+      'lamolienda_tables_prod_v4',
+      'lamolienda_sales_prod_v2',
+      'lamolienda_products_prod_v2',
+      'lamolienda_tables_clean_v1',
+      'lamolienda_sales_clean_v1',
+      'lamolienda_products_clean_v1',
+      'cashClosingHistory',
+      'lamolienda_cash_closing_v1',
+      STORAGE_KEY_TABLES,
+      STORAGE_KEY_SALES,
+      STORAGE_KEY_PRODUCTS,
+    ];
+    keys.forEach((k) => {
+      try {
+        localStorage.removeItem(k);
+      } catch {}
+    });
+    saveStoredProducts(DEFAULT_PRODUCTS);
+    saveStoredTables(DEFAULT_TABLES);
+    saveStoredSales(DEFAULT_SALES);
   } catch (err) {
     console.error('Error resetting production data:', err);
   }
@@ -151,23 +189,64 @@ export function getStoredTables(): Table[] {
       return DEFAULT_TABLES;
     }
 
-    // Asegurar que cada mesa tenga coordenadas y propiedades del plano
-    const synchronized = parsed.map((t, idx) => {
-      const defaultMatch = DEFAULT_TABLES.find((d) => d.id === t.id);
-      return {
-        ...t,
-        tipPercentage: t.tipPercentage ?? 0,
-        tipAmount: t.tipAmount ?? 0,
-        posX: t.posX ?? defaultMatch?.posX ?? 25 + ((idx * 15) % 60),
-        posY: t.posY ?? defaultMatch?.posY ?? 40 + Math.floor(idx / 4) * 15,
-        rotation: t.rotation ?? defaultMatch?.rotation ?? 0,
-        shape: t.shape ?? defaultMatch?.shape ?? 'square',
-      };
+    // Regla del negocio: 10 mesas ("Mesa 01" a "Mesa 10") y 3 barras ("Barra 1", "Barra 2", "Barra 3"), capacidad 4
+    let needsResave = false;
+    const validTableIds = new Set(DEFAULT_TABLES.map((d) => d.id));
+
+    if (parsed.length !== DEFAULT_TABLES.length || parsed.some((t) => !validTableIds.has(t.id))) {
+      needsResave = true;
+    }
+
+    const synchronized: Table[] = DEFAULT_TABLES.map((defTable, idx) => {
+      // Buscar si ya existía en localStorage por ID o número
+      const existing = parsed.find(
+        (t) =>
+          t.id === defTable.id ||
+          (t.number &&
+            (t.number.trim().toLowerCase() === defTable.number.toLowerCase() ||
+             t.number.replace(/\s*\(.*?\)/g, '').trim().toLowerCase() === defTable.number.toLowerCase() ||
+             (defTable.zone === 'salon' && (t.number.toLowerCase() === `mesa ${idx + 1}`.toLowerCase() || t.number.toLowerCase() === `mesa 0${idx + 1}`.toLowerCase()))))
+      );
+
+      const cleanNumber = defTable.number;
+      const cleanCapacity = 4;
+
+      if (existing) {
+        if (
+          existing.number !== cleanNumber ||
+          existing.capacity !== cleanCapacity ||
+          existing.zone !== defTable.zone
+        ) {
+          needsResave = true;
+        }
+
+        return {
+          ...existing,
+          id: defTable.id,
+          number: cleanNumber,
+          zone: defTable.zone,
+          capacity: cleanCapacity,
+          tipPercentage: existing.tipPercentage ?? 0,
+          tipAmount: existing.tipAmount ?? 0,
+          posX: existing.posX ?? defTable.posX,
+          posY: existing.posY ?? defTable.posY,
+          rotation: existing.rotation ?? defTable.rotation,
+          shape: defTable.shape || existing.shape || (defTable.zone === 'barra' ? 'bar' : 'square'),
+        };
+      }
+
+      needsResave = true;
+      return { ...defTable };
     });
+
+    if (needsResave) {
+      saveStoredTables(synchronized);
+    }
 
     return synchronized;
   } catch (err) {
     console.error('Error loading tables from storage:', err);
+    saveStoredTables(DEFAULT_TABLES);
     return DEFAULT_TABLES;
   }
 }
