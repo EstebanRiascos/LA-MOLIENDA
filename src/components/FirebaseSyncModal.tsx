@@ -389,162 +389,153 @@ export const FirebaseSyncModal: React.FC<FirebaseSyncModalProps> = ({
                   )}
                   <span>Probar Conexión</span>
                 </button>
-
-                {statusSnap.source === 'local_ui' && (
-                  <button
-                    type="button"
-                    className="btn-fb-action danger"
-                    onClick={handleDisconnect}
-                    disabled={busyAction !== null}
-                  >
-                    <Trash2 size={15} />
-                    <span>Desvincular</span>
-                  </button>
-                )}
               </div>
             </div>
           )}
 
-          <div className="firebase-setup-columns">
-            {/* Left Column: 3-Step Guide */}
-            <div className="firebase-guide-card">
-              <div className="firebase-guide-head">
-                <strong>Cómo obtener tu llave gratis (2 min)</strong>
-                <button
-                  type="button"
-                  className="btn-open-firebase-console"
-                  onClick={() => window.open('https://console.firebase.google.com/', '_blank')}
-                >
-                  <ExternalLink size={12} />
-                  <span>Abrir Firebase</span>
-                </button>
+          {/* Si NO está configurado, mostrar formulario de vinculación */}
+          {!isConfigured && (
+            <div className="firebase-setup-columns">
+              {/* Left Column: 3-Step Guide */}
+              <div className="firebase-guide-card">
+                <div className="firebase-guide-head">
+                  <strong>Cómo obtener tu llave gratis (2 min)</strong>
+                  <button
+                    type="button"
+                    className="btn-open-firebase-console"
+                    onClick={() => window.open('https://console.firebase.google.com/', '_blank')}
+                  >
+                    <ExternalLink size={12} />
+                    <span>Abrir Firebase</span>
+                  </button>
+                </div>
+
+                <div className="firebase-steps-list">
+                  <div className="fb-step-row">
+                    <span className="fb-step-num">1</span>
+                    <div>
+                      <strong>Crear proyecto gratuito</strong>
+                      <p>En Firebase Console pulsa <em>Crear un proyecto</em> (plan Spark 0 USD).</p>
+                    </div>
+                  </div>
+                  <div className="fb-step-row">
+                    <span className="fb-step-num">2</span>
+                    <div>
+                      <strong>Activar Firestore Database</strong>
+                      <p>Menú <em>Compilación → Firestore Database → Crear base de datos</em> (Modo de prueba).</p>
+                    </div>
+                  </div>
+                  <div className="fb-step-row">
+                    <span className="fb-step-num">3</span>
+                    <div>
+                      <strong>Pegar bloque Web &lt;/&gt;</strong>
+                      <p>En Descripción general haz clic en el ícono Web <code>&lt;/&gt;</code> y pega el texto a la derecha.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="firebase-rules-helper">
+                  <div className="firebase-rules-info">
+                    <span>¿Te pide Reglas en Firestore?</span>
+                    <small>Copia y pega estas reglas en la pestaña "Reglas" de Firestore:</small>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-copy-fb-rules"
+                    onClick={handleCopyRules}
+                  >
+                    {rulesCopied ? <Check size={13} /> : <Copy size={13} />}
+                    <span>{rulesCopied ? '¡Reglas copiadas!' : 'Copiar Reglas'}</span>
+                  </button>
+                </div>
               </div>
 
-              <div className="firebase-steps-list">
-                <div className="fb-step-row">
-                  <span className="fb-step-num">1</span>
-                  <div>
-                    <strong>Crear proyecto gratuito</strong>
-                    <p>En Firebase Console pulsa <em>Crear un proyecto</em> (plan Spark 0 USD).</p>
-                  </div>
-                </div>
-                <div className="fb-step-row">
-                  <span className="fb-step-num">2</span>
-                  <div>
-                    <strong>Activar Firestore Database</strong>
-                    <p>Menú <em>Compilación → Firestore Database → Crear base de datos</em> (Modo de prueba).</p>
-                  </div>
-                </div>
-                <div className="fb-step-row">
-                  <span className="fb-step-num">3</span>
-                  <div>
-                    <strong>Pegar bloque Web &lt;/&gt;</strong>
-                    <p>En Descripción general haz clic en el ícono Web <code>&lt;/&gt;</code> y pega el texto a la derecha.</p>
-                  </div>
-                </div>
-              </div>
+              {/* Right Column: Smart Paste Form */}
+              <form className="firebase-form-card" onSubmit={handleSaveAndConnect}>
+                <label className="fb-form-label">
+                  <span>Pegar código <code>firebaseConfig</code> completo aquí:</span>
+                  <button
+                    type="button"
+                    className="btn-link-manual-fields"
+                    onClick={() => setShowManualFields((v) => !v)}
+                  >
+                    {showManualFields ? 'Ocultar campos individuales' : 'Ver / editar campos'}
+                  </button>
+                </label>
 
-              <div className="firebase-rules-helper">
-                <div className="firebase-rules-info">
-                  <span>¿Te pide Reglas en Firestore?</span>
-                  <small>Copia y pega estas reglas en la pestaña "Reglas" de Firestore:</small>
-                </div>
+                <textarea
+                  className="fb-snippet-textarea"
+                  rows={showManualFields ? 3 : 5}
+                  value={rawSnippet}
+                  onChange={(e) => handleRawPasteChange(e.target.value)}
+                  placeholder={`Pega tal cual el código de Firebase, por ejemplo:\nconst firebaseConfig = {\n  apiKey: "AIzaSy...",\n  projectId: "la-molienda-pos",\n  ...\n};`}
+                />
+
+                {(showManualFields || projectId || apiKey) && (
+                  <div className="fb-manual-fields-grid">
+                    <div className="fb-field">
+                      <label>Project ID *</label>
+                      <input
+                        type="text"
+                        value={projectId}
+                        onChange={(e) => setProjectId(e.target.value)}
+                        placeholder="la-molienda-pos"
+                      />
+                    </div>
+                    <div className="fb-field">
+                      <label>API Key *</label>
+                      <input
+                        type="text"
+                        value={apiKey}
+                        onChange={(e) => setApiKey(e.target.value)}
+                        placeholder="AIzaSy..."
+                      />
+                    </div>
+                    {showManualFields && (
+                      <>
+                        <div className="fb-field">
+                          <label>Auth Domain</label>
+                          <input
+                            type="text"
+                            value={authDomain}
+                            onChange={(e) => setAuthDomain(e.target.value)}
+                            placeholder="la-molienda-pos.firebaseapp.com"
+                          />
+                        </div>
+                        <div className="fb-field">
+                          <label>App ID</label>
+                          <input
+                            type="text"
+                            value={appId}
+                            onChange={(e) => setAppId(e.target.value)}
+                            placeholder="1:123456:web:abcdef"
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
                 <button
-                  type="button"
-                  className="btn-copy-fb-rules"
-                  onClick={handleCopyRules}
+                  type="submit"
+                  className="btn-fb-connect-submit"
+                  disabled={busyAction !== null}
                 >
-                  {rulesCopied ? <Check size={13} /> : <Copy size={13} />}
-                  <span>{rulesCopied ? '¡Reglas copiadas!' : 'Copiar Reglas'}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Right Column: Smart Paste Form */}
-            <form className="firebase-form-card" onSubmit={handleSaveAndConnect}>
-              <label className="fb-form-label">
-                <span>Pegar código <code>firebaseConfig</code> completo aquí:</span>
-                <button
-                  type="button"
-                  className="btn-link-manual-fields"
-                  onClick={() => setShowManualFields((v) => !v)}
-                >
-                  {showManualFields ? 'Ocultar campos individuales' : 'Ver / editar campos'}
-                </button>
-              </label>
-
-              <textarea
-                className="fb-snippet-textarea"
-                rows={showManualFields ? 3 : 5}
-                value={rawSnippet}
-                onChange={(e) => handleRawPasteChange(e.target.value)}
-                placeholder={`Pega tal cual el código de Firebase, por ejemplo:\nconst firebaseConfig = {\n  apiKey: "AIzaSy...",\n  projectId: "la-molienda-pos",\n  ...\n};`}
-              />
-
-              {(showManualFields || projectId || apiKey) && (
-                <div className="fb-manual-fields-grid">
-                  <div className="fb-field">
-                    <label>Project ID *</label>
-                    <input
-                      type="text"
-                      value={projectId}
-                      onChange={(e) => setProjectId(e.target.value)}
-                      placeholder="la-molienda-pos"
-                    />
-                  </div>
-                  <div className="fb-field">
-                    <label>API Key *</label>
-                    <input
-                      type="text"
-                      value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
-                      placeholder="AIzaSy..."
-                    />
-                  </div>
-                  {showManualFields && (
+                  {busyAction === 'connect' ? (
                     <>
-                      <div className="fb-field">
-                        <label>Auth Domain</label>
-                        <input
-                          type="text"
-                          value={authDomain}
-                          onChange={(e) => setAuthDomain(e.target.value)}
-                          placeholder="la-molienda-pos.firebaseapp.com"
-                        />
-                      </div>
-                      <div className="fb-field">
-                        <label>App ID</label>
-                        <input
-                          type="text"
-                          value={appId}
-                          onChange={(e) => setAppId(e.target.value)}
-                          placeholder="1:123456:web:abcdef"
-                        />
-                      </div>
+                      <RefreshCw size={16} className="animate-spin" />
+                      <span>Conectando y verificando Firestore...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Cloud size={16} />
+                      <span>Guardar y Conectar con Firebase</span>
                     </>
                   )}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                className="btn-fb-connect-submit"
-                disabled={busyAction !== null}
-              >
-                {busyAction === 'connect' ? (
-                  <>
-                    <RefreshCw size={16} className="animate-spin" />
-                    <span>Conectando y verificando Firestore...</span>
-                  </>
-                ) : (
-                  <>
-                    <Cloud size={16} />
-                    <span>{isConfigured ? 'Actualizar y Reconectar Firebase' : 'Guardar y Conectar con Firebase'}</span>
-                  </>
-                )}
-              </button>
-            </form>
-          </div>
+                </button>
+              </form>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
