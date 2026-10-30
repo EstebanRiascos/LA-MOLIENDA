@@ -43,6 +43,7 @@ import { playSound } from '../utils/sounds';
 import laMoliendaLogo from '../assets/la_molienda_logo.png';
 import { OpenTableModal } from './OpenTableModal';
 import { TicketModal } from './TicketModal';
+import { sendOrderDirectToCloud } from '../utils/firebaseSync';
 
 interface WaiterViewProps {
   initialTables?: Table[];
@@ -730,6 +731,10 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
     }
 
     setIsSending(true);
+    const waiterName = currentUser ? currentUser.name : currentWaiter;
+
+    // 1. Intentar enviar vía Wi-Fi local primero (0 ms de latencia)
+    let sentLocally = false;
     try {
       const response = await fetch(`${apiBase}/api/order`, {
         method: 'POST',
@@ -738,31 +743,46 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
           orderId: `ord-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
           tableId: selectedTable.id,
           tableName: selectedTable.number,
-          waiter: currentUser ? currentUser.name : currentWaiter,
+          waiter: waiterName,
           items: newOrderItems,
           timestamp: new Date().toISOString(),
         }),
       });
-
       const resData = await response.json();
       if (resData.success) {
-        playSound('dispatch');
-        setOrderSuccessMsg(`✅ Comanda enviada exitosamente a la barra para ${selectedTable.number}`);
-        setNewOrderItems([]);
-
-        // Limpiar mensaje tras 3.5 segundos
-        setTimeout(() => {
-          setOrderSuccessMsg(null);
-        }, 3500);
-      } else {
-        alert(`Error al enviar comanda: ${resData.error || 'Error desconocido'}`);
+        sentLocally = true;
       }
-    } catch (err: any) {
-      console.error('Error enviando comanda:', err);
-      alert('No se pudo conectar con el computador de caja. Verifica la conexión Wi-Fi.');
-    } finally {
-      setIsSending(false);
+    } catch {
+      sentLocally = false;
     }
+
+    // 2. Si no hay conexión al servidor local Wi-Fi, enviar directamente a Firebase Firestore (Nube / Datos Móviles)
+    if (!sentLocally) {
+      try {
+        const cloudRes = await sendOrderDirectToCloud(selectedTable.id, newOrderItems, waiterName);
+        if (cloudRes.success) {
+          sentLocally = true;
+        } else {
+          alert(`Error al enviar comanda: ${cloudRes.error || 'Verifica tu conexión a internet o Wi-Fi'}`);
+          setIsSending(false);
+          return;
+        }
+      } catch (cloudErr: any) {
+        alert('No se pudo conectar ni por Wi-Fi local ni por internet a Firebase.');
+        setIsSending(false);
+        return;
+      }
+    }
+
+    if (sentLocally) {
+      playSound('dispatch');
+      setOrderSuccessMsg(`✅ Comanda enviada exitosamente para ${selectedTable.number}`);
+      setNewOrderItems([]);
+      setTimeout(() => {
+        setOrderSuccessMsg(null);
+      }, 3500);
+    }
+    setIsSending(false);
   };
 
   // ABRIR TICKET DE PRECUENTA DETALLADO

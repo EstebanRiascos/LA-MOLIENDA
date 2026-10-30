@@ -13,7 +13,7 @@ import {
   Firestore,
   Unsubscribe,
 } from 'firebase/firestore';
-import { Product, Table, SaleRecord, SystemUser, CashClosingSummary } from '../types';
+import { Product, Table, SaleRecord, SystemUser, CashClosingSummary, OrderItem } from '../types';
 
 export interface FirebaseConnectionConfig {
   apiKey: string;
@@ -1018,3 +1018,89 @@ if (typeof window !== 'undefined') {
   });
 }
 
+
+
+/**
+ * Permite a cualquier cliente (ej: APK móvil de meseros o navegador)
+ * enviar una comanda directamente a Firebase Firestore
+ */
+export async function sendOrderDirectToCloud(
+  tableId: string,
+  itemsToAdd: OrderItem[],
+  waiterName: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!firestoreInstance) {
+    return { success: false, error: 'Sin conexión a Firebase Firestore' };
+  }
+  const db = firestoreInstance;
+
+  try {
+    const tableRef = doc(db, COLLECTIONS.tables, tableId);
+    const existingSnap = await getDocs(collection(db, COLLECTIONS.tables));
+    const targetDoc = existingSnap.docs.find((d) => d.id === tableId);
+
+    let merged: OrderItem[] = [];
+    let tipPercentage = 0;
+    let patronName = 'Cliente';
+    let zone: any = 'salon';
+    let capacity = 4;
+    let number = 'Mesa';
+
+    if (targetDoc && targetDoc.exists()) {
+      const data = targetDoc.data() as Table;
+      merged = [...(data.items || [])];
+      tipPercentage = data.tipPercentage || 0;
+      patronName = data.patronName || 'Cliente';
+      zone = data.zone || 'salon';
+      capacity = data.capacity || 4;
+      number = data.number || 'Mesa';
+    }
+
+    itemsToAdd.forEach((newItem) => {
+      const existingIdx = merged.findIndex(
+        (i) => i.productId === newItem.productId && (i.notes || '') === (newItem.notes || '')
+      );
+      if (existingIdx >= 0) {
+        merged[existingIdx] = {
+          ...merged[existingIdx],
+          quantity: merged[existingIdx].quantity + (newItem.quantity || 1),
+        };
+      } else {
+        merged.push({
+          ...newItem,
+          id: newItem.id || `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          status: newItem.status || 'pending',
+        });
+      }
+    });
+
+    const subtotal = merged.reduce((acc, i) => acc + (i.unitPrice || 0) * (i.quantity || 1), 0);
+    const tipAmount = tipPercentage ? Math.round((subtotal * tipPercentage) / 100) : 0;
+    const total = subtotal + tipAmount;
+
+    await setDoc(
+      tableRef,
+      {
+        id: tableId,
+        number,
+        zone,
+        capacity,
+        status: 'ocupada',
+        openedAt: new Date().toISOString(),
+        waiter: waiterName,
+        patronName,
+        items: merged,
+        subtotal,
+        tipPercentage,
+        tipAmount,
+        total,
+        _updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: translateFirebaseError(err) };
+  }
+}
