@@ -22,8 +22,16 @@ import {
   getStoredSessionUser,
   logoutSession,
   getStoredUsers,
+  saveStoredUsers,
   broadcastUsersSync,
 } from './utils/authStorage';
+import { getCashClosingHistory, saveCashClosingHistory } from './utils/cashClosing';
+import {
+  initFirebaseRealtimeSync,
+  subscribeFirebaseStatus,
+  getFirebaseStatus,
+  FirebaseStatusSnapshot,
+} from './utils/firebaseSync';
 import { DEFAULT_TABLES, DEFAULT_PRODUCTS } from './utils/defaults';
 import { exportLaMoliendaReport, ExportReportOptions } from './utils/excelExporter';
 import { playSound, soundForNotification } from './utils/sounds';
@@ -52,6 +60,7 @@ import { UserManagementModal } from './components/UserManagementModal';
 import { AboutModal } from './components/AboutModal';
 import { ExitConfirmModal } from './components/ExitConfirmModal';
 import { MobileSyncModal } from './components/MobileSyncModal';
+import { FirebaseSyncModal } from './components/FirebaseSyncModal';
 import { NotificationsPanel } from './components/NotificationsPanel';
 import { WaiterView } from './components/WaiterView';
 import { Info } from 'lucide-react';
@@ -278,6 +287,15 @@ export const App: React.FC = () => {
   });
   const [connectedClientsCount, setConnectedClientsCount] = useState<number>(0);
 
+  // Firebase Cloud Sync states
+  const [isFirebaseSyncOpen, setIsFirebaseSyncOpen] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('modal') === 'firebase';
+  });
+  const [firebaseStatusSnap, setFirebaseStatusSnap] = useState<FirebaseStatusSnapshot>(() =>
+    getFirebaseStatus()
+  );
+
   // Determinar si quien carga es un celular de mesero o la ventana de Electron
   const isMobileClient = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
@@ -298,11 +316,13 @@ export const App: React.FC = () => {
     isSplitBillOpen ||
     isTransferModalOpen ||
     isCashClosingOpen ||
+    isCashClosingHistoryOpen ||
     isTableFormOpen ||
     isLoginOpen ||
     isUserManagementOpen ||
     isAboutModalOpen ||
-    isMobileSyncOpen
+    isMobileSyncOpen ||
+    isFirebaseSyncOpen
   );
 
   useEffect(() => {
@@ -774,11 +794,73 @@ export const App: React.FC = () => {
     setActiveTableDetail(updatedTable);
   };
 
-  // Referencia a las mesas actuales para lecturas asíncronas sin romper efectos
+  // Referencias actualizadas para lecturas asíncronas y sincronización en tiempo real con Firebase
   const tablesRef = useRef<Table[]>(tables);
+  const productsRef = useRef<Product[]>(products);
+  const salesRef = useRef<SaleRecord[]>(sales);
+  const systemUsersRef = useRef<SystemUser[]>(systemUsers);
+
   useEffect(() => {
     tablesRef.current = tables;
   }, [tables]);
+  useEffect(() => {
+    productsRef.current = products;
+  }, [products]);
+  useEffect(() => {
+    salesRef.current = sales;
+  }, [sales]);
+  useEffect(() => {
+    systemUsersRef.current = systemUsers;
+  }, [systemUsers]);
+
+  // Inicializar sincronización híbrida Offline + Nube con Firebase Firestore
+  useEffect(() => {
+    const unsubStatus = subscribeFirebaseStatus((snap) => {
+      setFirebaseStatusSnap(snap);
+    });
+
+    initFirebaseRealtimeSync({
+      getLocalData: () => ({
+        products: productsRef.current,
+        tables: tablesRef.current,
+        sales: salesRef.current,
+        users: systemUsersRef.current,
+        cashClosings: getCashClosingHistory(),
+      }),
+      onRemoteProducts: (remoteProducts) => {
+        const synced = syncCompositeProductsStock(remoteProducts);
+        setProducts(synced);
+        saveStoredProducts(synced);
+      },
+      onRemoteTables: (remoteTables) => {
+        setTables(remoteTables);
+        saveStoredTables(remoteTables);
+        setActiveTableDetail((curr) =>
+          curr ? remoteTables.find((t) => t.id === curr.id) || curr : null
+        );
+      },
+      onRemoteSales: (remoteSales) => {
+        setSales(remoteSales);
+        saveStoredSales(remoteSales);
+      },
+      onRemoteUsers: (remoteUsers) => {
+        setSystemUsers(remoteUsers);
+        saveStoredUsers(remoteUsers);
+        const activeStaff = remoteUsers.filter((u) => u.active).map((u) => u.name);
+        if (activeStaff.length > 0) {
+          setStaffList(activeStaff);
+          saveStoredStaffList(activeStaff);
+        }
+      },
+      onRemoteCashClosings: (remoteClosings) => {
+        saveCashClosingHistory(remoteClosings);
+      },
+    });
+
+    return () => {
+      unsubStatus();
+    };
+  }, []);
 
   // Registro de órdenes ya procesadas para evitar duplicación entre IPC y SSE
   const processedOrderIdsRef = useRef<Set<string>>(new Set());
@@ -1616,6 +1698,9 @@ export const App: React.FC = () => {
         onOpenUserManagement={() => setIsUserManagementOpen(true)}
         onOpenMobileSync={() => setIsMobileSyncOpen(true)}
         connectedClientsCount={connectedClientsCount}
+        onOpenFirebaseSync={() => setIsFirebaseSyncOpen(true)}
+        firebaseStatus={firebaseStatusSnap.status}
+        firebaseProjectId={firebaseStatusSnap.projectId}
         unreadNotificationsCount={unreadNotificationsCount}
         onOpenNotifications={() => {
           playSound('click');
@@ -1918,6 +2003,13 @@ export const App: React.FC = () => {
       <MobileSyncModal
         isOpen={isMobileSyncOpen}
         onClose={() => setIsMobileSyncOpen(false)}
+      />
+
+      {/* 14b. Firebase Cloud Database Sync Modal */}
+      <FirebaseSyncModal
+        isOpen={isFirebaseSyncOpen}
+        onClose={() => setIsFirebaseSyncOpen(false)}
+        onShowNotification={showNotification}
       />
 
       {/* 15. Centro y Drawer de Notificaciones */}

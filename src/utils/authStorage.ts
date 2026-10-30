@@ -1,4 +1,5 @@
 import { SystemUser } from '../types';
+import { syncUsersToCloud } from './firebaseSync';
 
 const STORAGE_KEY_USERS = 'lamolienda_users_prod_v2';
 const STORAGE_KEY_CURRENT_SESSION = 'lamolienda_session_user_v2';
@@ -120,6 +121,7 @@ export function saveStoredUsers(users: SystemUser[]): void {
   try {
     localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
     broadcastUsersSync(users);
+    syncUsersToCloud(users);
   } catch (err) {
     console.error('Error al guardar usuarios:', err);
   }

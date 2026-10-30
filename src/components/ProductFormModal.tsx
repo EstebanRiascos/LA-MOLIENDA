@@ -118,7 +118,32 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       const reader = new FileReader();
       reader.onloadend = () => {
         if (typeof reader.result === 'string') {
-          setImage(reader.result);
+          const dataUrl = reader.result;
+          const img = new window.Image();
+          img.onload = () => {
+            try {
+              const MAX_SIZE = 520;
+              let { width, height } = img;
+              if (width > MAX_SIZE || height > MAX_SIZE) {
+                const ratio = Math.min(MAX_SIZE / width, MAX_SIZE / height);
+                width = Math.round(width * ratio);
+                height = Math.round(height * ratio);
+              }
+              const canvas = document.createElement('canvas');
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              if (ctx) {
+                ctx.drawImage(img, 0, 0, width, height);
+                const compressed = canvas.toDataURL('image/jpeg', 0.82);
+                setImage(compressed);
+                return;
+              }
+            } catch {}
+            setImage(dataUrl);
+          };
+          img.onerror = () => setImage(dataUrl);
+          img.src = dataUrl;
         }
       };
       reader.readAsDataURL(file);

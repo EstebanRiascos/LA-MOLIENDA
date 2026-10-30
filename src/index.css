@@ -21502,3 +21502,578 @@ body.mobile-waiter-active {
   border-color: #e6ded5;
   color: #451a03;
 }
+
+
+/* ==========================================================================
+   FIREBASE CLOUD SYNC BUTTON & MODAL (DARK + LIGHT THEME)
+   ========================================================================== */
+
+.btn-header-firebase-sync {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.36rem;
+  border-color: rgba(217, 119, 6, 0.32);
+  background: rgba(217, 119, 6, 0.08);
+  color: #f3d29b;
+}
+
+.btn-header-firebase-sync:hover {
+  border-color: rgba(245, 158, 11, 0.65);
+  background: rgba(217, 119, 6, 0.16);
+}
+
+.btn-header-firebase-sync.status-connected,
+.btn-header-firebase-sync.status-syncing {
+  border-color: rgba(16, 185, 129, 0.45);
+  background: rgba(16, 185, 129, 0.12);
+  color: #6ee7b7;
+}
+
+.btn-header-firebase-sync.status-error {
+  border-color: rgba(244, 63, 94, 0.55);
+  background: rgba(244, 63, 94, 0.13);
+  color: #fda4af;
+}
+
+[data-theme='light'] .btn-header-firebase-sync {
+  background: #fff8ed;
+  border-color: #f3d3a5;
+  color: #7c3f09;
+}
+
+[data-theme='light'] .btn-header-firebase-sync.status-connected,
+[data-theme='light'] .btn-header-firebase-sync.status-syncing {
+  background: #ecfdf5;
+  border-color: #6ee7b7;
+  color: #065f46;
+}
+
+[data-theme='light'] .btn-header-firebase-sync.status-error {
+  background: #fff1f2;
+  border-color: #fda4af;
+  color: #9f1239;
+}
+
+.header-fb-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #9ca3af;
+  flex-shrink: 0;
+}
+
+.header-fb-dot.dot-connected {
+  background: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.85);
+}
+
+.header-fb-dot.dot-syncing,
+.header-fb-dot.dot-connecting {
+  background: #38bdf8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.85);
+}
+
+.header-fb-dot.dot-offline {
+  background: #f59e0b;
+}
+
+.header-fb-dot.dot-error {
+  background: #f43f5e;
+  box-shadow: 0 0 8px rgba(244, 63, 94, 0.85);
+}
+
+.firebase-sync-modal-card {
+  max-width: 860px !important;
+  width: 95vw;
+}
+
+.firebase-sync-icon-glow {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.24), rgba(217, 119, 6, 0.06));
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+.firebase-sync-icon-glow.connected {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(16, 185, 129, 0.06));
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #10b981;
+}
+
+.firebase-sync-body {
+  padding: 1.15rem 1.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.95rem;
+  max-height: 78vh;
+  overflow-y: auto;
+}
+
+.firebase-status-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  padding: 0.78rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.firebase-status-banner.status-connected,
+.firebase-status-banner.status-syncing {
+  border-color: rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.09);
+}
+
+.firebase-status-banner.status-offline {
+  border-color: rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.firebase-status-banner.status-error {
+  border-color: rgba(244, 63, 94, 0.45);
+  background: rgba(244, 63, 94, 0.1);
+}
+
+.firebase-status-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.firebase-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #9ca3af;
+  flex-shrink: 0;
+}
+
+.firebase-status-dot.dot-connected {
+  background: #10b981;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.8);
+}
+
+.firebase-status-dot.dot-syncing,
+.firebase-status-dot.dot-connecting {
+  background: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+}
+
+.firebase-status-dot.dot-offline {
+  background: #f59e0b;
+}
+
+.firebase-status-dot.dot-error {
+  background: #f43f5e;
+}
+
+.firebase-status-texts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.firebase-status-texts strong {
+  font-size: 0.86rem;
+  color: var(--text-primary);
+}
+
+.firebase-status-texts span {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.firebase-source-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.16);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  white-space: nowrap;
+}
+
+[data-theme='light'] .firebase-source-pill {
+  color: #065f46;
+  background: #d1fae5;
+  border-color: #6ee7b7;
+}
+
+.firebase-feedback-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.68rem 0.9rem;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.firebase-feedback-alert.success {
+  background: rgba(16, 185, 129, 0.13);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #6ee7b7;
+}
+
+.firebase-feedback-alert.error {
+  background: rgba(244, 63, 94, 0.13);
+  border: 1px solid rgba(244, 63, 94, 0.45);
+  color: #fda4af;
+}
+
+.firebase-feedback-alert.info {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fcd34d;
+}
+
+[data-theme='light'] .firebase-feedback-alert.success {
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+[data-theme='light'] .firebase-feedback-alert.error {
+  background: #fff1f2;
+  color: #9f1239;
+}
+
+[data-theme='light'] .firebase-feedback-alert.info {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.firebase-actions-panel {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.firebase-actions-header {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.firebase-actions-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.btn-fb-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.48rem 0.82rem;
+  border-radius: 9px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.btn-fb-action:hover:not(:disabled) {
+  border-color: var(--accent-amber);
+}
+
+.btn-fb-action.primary {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  border-color: #f59e0b;
+  color: #ffffff;
+}
+
+.btn-fb-action.danger {
+  border-color: rgba(244, 63, 94, 0.45);
+  color: #fb7185;
+}
+
+.btn-fb-action:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.firebase-setup-columns {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 0.95rem;
+}
+
+@media (max-width: 760px) {
+  .firebase-setup-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.firebase-guide-card,
+.firebase-form-card {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 0.95rem;
+  background: rgba(255, 255, 255, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+[data-theme='light'] .firebase-guide-card,
+[data-theme='light'] .firebase-form-card,
+[data-theme='light'] .firebase-actions-panel {
+  background: #fffcf8;
+  border-color: #eadbc8;
+}
+
+.firebase-guide-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.firebase-guide-head strong {
+  font-size: 0.83rem;
+  color: var(--text-primary);
+}
+
+.btn-open-firebase-console {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  font-size: 0.73rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+[data-theme='light'] .btn-open-firebase-console {
+  background: #fef3c7;
+  border-color: #f59e0b;
+  color: #92400e;
+}
+
+.firebase-steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.fb-step-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.fb-step-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(217, 119, 6, 0.2);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: #fbbf24;
+  font-size: 0.72rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+[data-theme='light'] .fb-step-num {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.fb-step-row strong {
+  display: block;
+  font-size: 0.79rem;
+  color: var(--text-primary);
+}
+
+.fb-step-row p {
+  margin: 0.1rem 0 0;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.firebase-rules-helper {
+  margin-top: auto;
+  padding-top: 0.65rem;
+  border-top: 1px dashed var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.firebase-rules-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.firebase-rules-info span {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.firebase-rules-info small {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.btn-copy-fb-rules {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  padding: 0.36rem 0.68rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 0.73rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.fb-form-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.79rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.btn-link-manual-fields {
+  background: transparent;
+  border: none;
+  color: #f59e0b;
+  font-size: 0.73rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+[data-theme='light'] .btn-link-manual-fields {
+  color: #b45309;
+}
+
+.fb-snippet-textarea {
+  width: 100%;
+  resize: vertical;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text-primary);
+  padding: 0.65rem 0.75rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  outline: none;
+}
+
+.fb-snippet-textarea:focus {
+  border-color: var(--accent-amber);
+}
+
+[data-theme='light'] .fb-snippet-textarea {
+  background: #ffffff;
+  border-color: #dfd0be;
+  color: #1f140a;
+}
+
+.fb-manual-fields-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+}
+
+.fb-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+}
+
+.fb-field label {
+  font-size: 0.71rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.fb-field input {
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: rgba(0, 0, 0, 0.22);
+  color: var(--text-primary);
+  padding: 0.42rem 0.6rem;
+  font-size: 0.76rem;
+  outline: none;
+}
+
+.fb-field input:focus {
+  border-color: var(--accent-amber);
+}
+
+[data-theme='light'] .fb-field input {
+  background: #ffffff;
+  border-color: #dfd0be;
+  color: #1f140a;
+}
+
+.btn-fb-connect-submit {
+  margin-top: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.48rem;
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  border: 1px solid #f59e0b;
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  color: #ffffff;
+  font-size: 0.83rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.28);
+}
+
+.btn-fb-connect-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(217, 119, 6, 0.38);
+}
+
+.btn-fb-connect-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}

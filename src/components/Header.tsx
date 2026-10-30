@@ -15,10 +15,12 @@ import {
   VolumeX,
   Smartphone,
   Bell,
+  Cloud,
 } from 'lucide-react';
 import laMoliendaLogo from '../assets/la_molienda_logo.png';
 import { isSoundEnabled, setSoundEnabled } from '../utils/sounds';
 import { SystemUser } from '../types';
+import { FirebaseSyncStatus } from '../utils/firebaseSync';
 
 export type ActiveSection = 'mesas' | 'pos' | 'inventario' | 'caja';
 
@@ -40,6 +42,9 @@ interface HeaderProps {
   onOpenUserManagement?: () => void;
   onOpenMobileSync?: () => void;
   connectedClientsCount?: number;
+  onOpenFirebaseSync?: () => void;
+  firebaseStatus?: FirebaseSyncStatus;
+  firebaseProjectId?: string | null;
   unreadNotificationsCount?: number;
   onOpenNotifications?: () => void;
   onLogout?: () => void;
@@ -63,6 +68,9 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenUserManagement,
   onOpenMobileSync,
   connectedClientsCount = 0,
+  onOpenFirebaseSync,
+  firebaseStatus = 'unconfigured',
+  firebaseProjectId = null,
   unreadNotificationsCount = 0,
   onOpenNotifications,
   onLogout,
@@ -250,6 +258,28 @@ export const Header: React.FC<HeaderProps> = ({
                   {connectedClientsCount}
                 </span>
               )}
+            </button>
+          )}
+
+          {/* Base de Datos en la Nube (Firebase Firestore) */}
+          {currentUser?.role === 'admin' && onOpenFirebaseSync && (
+            <button
+              type="button"
+              className={`btn-header-action btn-header-compact btn-header-firebase-sync status-${firebaseStatus}`}
+              onClick={onOpenFirebaseSync}
+              title={
+                firebaseStatus === 'connected' || firebaseStatus === 'syncing'
+                  ? `Nube Firebase conectada (${firebaseProjectId || 'Firestore'})`
+                  : firebaseStatus === 'offline'
+                  ? `Firebase en modo Offline (${firebaseProjectId || 'cola activa'})`
+                  : firebaseStatus === 'error'
+                  ? 'Revisar conexión con Firebase Firestore'
+                  : 'Conectar Base de Datos Gratuita en la Nube (Firebase)'
+              }
+            >
+              <Cloud size={15} />
+              <span className="btn-text-desktop">Nube</span>
+              <span className={`header-fb-dot dot-${firebaseStatus}`} />
             </button>
           )}
 

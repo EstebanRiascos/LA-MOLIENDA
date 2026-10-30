@@ -1,5 +1,6 @@
 import { Product, Table, SaleRecord, SystemStats, OrderItem } from '../types';
 import { DEFAULT_PRODUCTS, DEFAULT_TABLES, DEFAULT_SALES } from './defaults';
+import { syncProductsToCloud, syncTablesToCloud, syncSalesToCloud } from './firebaseSync';
 
 const STORAGE_KEY_PRODUCTS = 'lamolienda_products_v3';
 const STORAGE_KEY_TABLES = 'lamolienda_tables_v3';
@@ -170,6 +171,7 @@ export function saveStoredProducts(products: Product[]): void {
   try {
     const synced = syncCompositeProductsStock(products);
     localStorage.setItem(STORAGE_KEY_PRODUCTS, JSON.stringify(synced));
+    syncProductsToCloud(synced);
   } catch (err) {
     console.error('Error saving products:', err);
   }
@@ -254,6 +256,7 @@ export function getStoredTables(): Table[] {
 export function saveStoredTables(tables: Table[]): void {
   try {
     localStorage.setItem(STORAGE_KEY_TABLES, JSON.stringify(tables));
+    syncTablesToCloud(tables);
   } catch (err) {
     console.error('Error saving tables:', err);
   }
@@ -282,6 +285,7 @@ export function getStoredSales(): SaleRecord[] {
 export function saveStoredSales(sales: SaleRecord[]): void {
   try {
     localStorage.setItem(STORAGE_KEY_SALES, JSON.stringify(sales));
+    syncSalesToCloud(sales);
   } catch (err) {
     console.error('Error saving sales:', err);
   }

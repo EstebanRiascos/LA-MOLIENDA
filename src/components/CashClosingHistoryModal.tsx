@@ -45,6 +45,15 @@ export const CashClosingHistoryModal: React.FC<CashClosingHistoryModalProps> = (
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleRemoteUpdate = () => {
+      setHistory(getCashClosingHistory());
+    };
+    window.addEventListener('lamolienda:cash-closings-changed', handleRemoteUpdate);
+    return () => window.removeEventListener('lamolienda:cash-closings-changed', handleRemoteUpdate);
+  }, [isOpen]);
+
   // Extraer lista única de cajeros
   const uniqueCashiers = useMemo(() => {
     return Array.from(new Set(history.map((h) => h.cashier).filter(Boolean)));
