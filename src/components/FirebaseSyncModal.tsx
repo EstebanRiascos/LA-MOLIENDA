@@ -350,20 +350,6 @@ export const FirebaseSyncModal: React.FC<FirebaseSyncModalProps> = ({
               <div className="firebase-actions-grid">
                 <button
                   type="button"
-                  className="btn-fb-action primary"
-                  onClick={handlePushLocal}
-                  disabled={busyAction !== null}
-                >
-                  {busyAction === 'push' ? (
-                    <RefreshCw size={15} className="animate-spin" />
-                  ) : (
-                    <UploadCloud size={15} />
-                  )}
-                  <span>Subir datos del PC a Firebase</span>
-                </button>
-
-                <button
-                  type="button"
                   className="btn-fb-action"
                   onClick={handlePullCloud}
                   disabled={busyAction !== null}
