@@ -22077,3 +22077,83 @@ body.mobile-waiter-active {
   opacity: 0.65;
   cursor: not-allowed;
 }
+
+
+/* Botón de Bloqueo / Suspensión de Comandero Móvil en Header */
+.btn-header-service-lock {
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.btn-header-service-lock.service-open {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #10b981;
+}
+
+.btn-header-service-lock.service-open:hover {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: #10b981;
+}
+
+.btn-header-service-lock.service-closed {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #ef4444;
+  animation: pulse-border 2s infinite ease-in-out;
+}
+
+.btn-header-service-lock.service-closed:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: #dc2626;
+}
+
+[data-theme='light'] .btn-header-service-lock.service-open {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #047857;
+}
+
+[data-theme='light'] .btn-header-service-lock.service-closed {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+/* Banner de servicio cerrado en la pantalla del celular / APK */
+.mobile-service-closed-banner {
+  background: linear-gradient(135deg, rgba(185, 28, 28, 0.95), rgba(127, 29, 29, 0.95));
+  color: #ffffff;
+  padding: 0.75rem 1rem;
+  margin: 0.65rem 0.85rem;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  box-shadow: 0 4px 15px rgba(185, 28, 28, 0.35);
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  animation: slide-in-top 0.3s ease;
+}
+
+.mobile-service-closed-banner svg {
+  flex-shrink: 0;
+  color: #fca5a5;
+}
+
+.mobile-service-closed-banner div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.mobile-service-closed-banner strong {
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+}
+
+.mobile-service-closed-banner span {
+  font-size: 0.73rem;
+  color: #fee2e2;
+  line-height: 1.3;
+}

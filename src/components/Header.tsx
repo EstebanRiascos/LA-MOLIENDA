@@ -16,6 +16,8 @@ import {
   Smartphone,
   Bell,
   Cloud,
+  Lock,
+  Unlock,
 } from 'lucide-react';
 import laMoliendaLogo from '../assets/la_molienda_logo.png';
 import { isSoundEnabled, setSoundEnabled } from '../utils/sounds';
@@ -42,6 +44,8 @@ interface HeaderProps {
   onOpenUserManagement?: () => void;
   onOpenMobileSync?: () => void;
   connectedClientsCount?: number;
+  isServiceOpen?: boolean;
+  onToggleServiceLock?: () => void;
   onOpenFirebaseSync?: () => void;
   firebaseStatus?: FirebaseSyncStatus;
   firebaseProjectId?: string | null;
@@ -68,6 +72,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenUserManagement,
   onOpenMobileSync,
   connectedClientsCount = 0,
+  isServiceOpen = true,
+  onToggleServiceLock,
   onOpenFirebaseSync,
   firebaseStatus = 'unconfigured',
   firebaseProjectId = null,
@@ -258,6 +264,27 @@ export const Header: React.FC<HeaderProps> = ({
                   {connectedClientsCount}
                 </span>
               )}
+            </button>
+          )}
+
+          {/* Interruptor de Bloqueo de Comandero Móvil (Solo Admin) */}
+          {currentUser?.role === 'admin' && onToggleServiceLock && (
+            <button
+              type="button"
+              className={`btn-header-action btn-header-compact btn-header-service-lock ${
+                isServiceOpen ? 'service-open' : 'service-closed'
+              }`}
+              onClick={onToggleServiceLock}
+              title={
+                isServiceOpen
+                  ? 'Comandero Móvil Activo: Haz clic para BLOQUEAR pedidos desde celulares'
+                  : 'Comandero Móvil BLOQUEADO: Haz clic para HABILITAR pedidos desde celulares'
+              }
+            >
+              {isServiceOpen ? <Unlock size={14} /> : <Lock size={14} />}
+              <span className="btn-text-desktop">
+                {isServiceOpen ? 'Comandas ON' : 'Comandas OFF'}
+              </span>
             </button>
           )}
 

@@ -31,6 +31,8 @@ import {
   subscribeFirebaseStatus,
   getFirebaseStatus,
   FirebaseStatusSnapshot,
+  getStoredServiceStatus,
+  updateServiceLockStatus,
 } from './utils/firebaseSync';
 import { DEFAULT_TABLES, DEFAULT_PRODUCTS } from './utils/defaults';
 import { exportLaMoliendaReport, ExportReportOptions } from './utils/excelExporter';
@@ -295,6 +297,24 @@ export const App: React.FC = () => {
   const [firebaseStatusSnap, setFirebaseStatusSnap] = useState<FirebaseStatusSnapshot>(() =>
     getFirebaseStatus()
   );
+
+  // Estado del Servicio / Bloqueo de Comandero Móvil
+  const [isServiceOpen, setIsServiceOpen] = useState<boolean>(() => {
+    return getStoredServiceStatus().isOpen;
+  });
+
+  const handleToggleServiceLock = async () => {
+    const nextState = !isServiceOpen;
+    setIsServiceOpen(nextState);
+    const reason = nextState ? 'Servicio reabierto' : 'Local cerrado por administración';
+    await updateServiceLockStatus(nextState, reason);
+    playSound(nextState ? 'success' : 'warning');
+    showNotification(
+      nextState
+        ? '🔓 Comandero Móvil HABILITADO: Los meseros ya pueden enviar comandas.'
+        : '🔒 Comandero Móvil BLOQUEADO: Los meseros no podrán enviar pedidos.'
+    );
+  };
 
   // Determinar si quien carga es un celular de mesero o la ventana de Electron
   const isMobileClient = useMemo(() => {
@@ -854,6 +874,9 @@ export const App: React.FC = () => {
       },
       onRemoteCashClosings: (remoteClosings) => {
         saveCashClosingHistory(remoteClosings);
+      },
+      onRemoteServiceStatus: (isOpen) => {
+        setIsServiceOpen(isOpen);
       },
     });
 
@@ -1620,7 +1643,12 @@ export const App: React.FC = () => {
     setIsCashClosingOpen(false);
     const cajero = summary.cashier || 'Cajero';
     const total = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(summary.totalSales);
-    showNotification(`✅ Turno cerrado — ${cajero} · ${total} facturados · ${summary.salesCount} venta(s)`);
+    
+    // Bloqueo automático de comandas móviles en celulares y APK al cerrar turno
+    setIsServiceOpen(false);
+    updateServiceLockStatus(false, `Turno cerrado por ${cajero} a las ${new Date().toLocaleTimeString('es-CO')}`);
+
+    showNotification(`✅ Turno cerrado — ${cajero} · ${total} facturados · Comandero móvil suspendido.`);
   };
 
   // --- EXPORT TO EXCEL ---
@@ -1698,6 +1726,8 @@ export const App: React.FC = () => {
         onOpenUserManagement={() => setIsUserManagementOpen(true)}
         onOpenMobileSync={() => setIsMobileSyncOpen(true)}
         connectedClientsCount={connectedClientsCount}
+        isServiceOpen={isServiceOpen}
+        onToggleServiceLock={handleToggleServiceLock}
         onOpenFirebaseSync={() => setIsFirebaseSyncOpen(true)}
         firebaseStatus={firebaseStatusSnap.status}
         firebaseProjectId={firebaseStatusSnap.projectId}

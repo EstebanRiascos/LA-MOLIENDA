@@ -53,10 +53,26 @@ export interface FirebaseSyncCallbacks {
   onRemoteSales: (sales: SaleRecord[]) => void;
   onRemoteUsers: (users: SystemUser[]) => void;
   onRemoteCashClosings: (closings: CashClosingSummary[]) => void;
+  onRemoteServiceStatus?: (isOpen: boolean, reason?: string) => void;
 }
 
 const FIREBASE_CONFIG_STORAGE_KEY = 'lamolienda_firebase_config_v1';
+const SERVICE_STATUS_STORAGE_KEY = 'lamolienda_service_status_v1';
 const FIREBASE_APP_NAME = 'la-molienda-pos-cloud';
+
+export function getStoredServiceStatus(): { isOpen: boolean; reason?: string } {
+  try {
+    const raw = localStorage.getItem(SERVICE_STATUS_STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return { isOpen: true };
+}
+
+export function saveStoredServiceStatus(isOpen: boolean, reason?: string): void {
+  try {
+    localStorage.setItem(SERVICE_STATUS_STORAGE_KEY, JSON.stringify({ isOpen, reason }));
+  } catch {}
+}
 
 const COLLECTIONS = {
   products: 'lamolienda_products',
@@ -788,12 +804,36 @@ function attachRealtimeListeners(db: Firestore, cb: FirebaseSyncCallbacks): void
     }
   );
 
+  // 6. ESTADO DEL SERVICIO / BLOQUEO DE COMANDAS MÓVILES
+  const unsubServiceStatus = onSnapshot(
+    doc(db, COLLECTIONS.health, 'service_status'),
+    (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const isOpen = data.isOpen !== false;
+        saveStoredServiceStatus(isOpen, data.reason);
+        if (cb.onRemoteServiceStatus) {
+          cb.onRemoteServiceStatus(isOpen, data.reason);
+        }
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('lamolienda:service-status-changed', {
+              detail: { isOpen, reason: data.reason },
+            })
+          );
+        }
+      }
+    },
+    () => {}
+  );
+
   activeUnsubscribers.push(
     unsubProducts,
     unsubTables,
     unsubSales,
     unsubUsers,
-    unsubCashClosings
+    unsubCashClosings,
+    unsubServiceStatus
   );
 }
 
@@ -1021,6 +1061,44 @@ if (typeof window !== 'undefined') {
 
 
 /**
+ * Cambia el estado del servicio de comandas móviles en Firebase Firestore y red local
+ */
+export async function updateServiceLockStatus(
+  isOpen: boolean,
+  reason: string = 'Local cerrado por turno'
+): Promise<{ success: boolean; error?: string }> {
+  saveStoredServiceStatus(isOpen, reason);
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('lamolienda:service-status-changed', {
+        detail: { isOpen, reason },
+      })
+    );
+  }
+
+  if (!firestoreInstance) {
+    return { success: true };
+  }
+
+  try {
+    const statusRef = doc(firestoreInstance, COLLECTIONS.health, 'service_status');
+    await setDoc(
+      statusRef,
+      {
+        isOpen,
+        reason,
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: translateFirebaseError(err) };
+  }
+}
+
+/**
  * Permite a cualquier cliente (ej: APK móvil de meseros o navegador)
  * enviar una comanda directamente a Firebase Firestore
  */
@@ -1029,6 +1107,14 @@ export async function sendOrderDirectToCloud(
   itemsToAdd: OrderItem[],
   waiterName: string
 ): Promise<{ success: boolean; error?: string }> {
+  const current = getStoredServiceStatus();
+  if (!current.isOpen) {
+    return {
+      success: false,
+      error: `Servicio cerrado: ${current.reason || 'Comandero bloqueado por la administración.'}`,
+    };
+  }
+
   if (!firestoreInstance) {
     return { success: false, error: 'Sin conexión a Firebase Firestore' };
   }

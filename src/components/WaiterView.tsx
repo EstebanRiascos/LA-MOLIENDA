@@ -43,7 +43,7 @@ import { playSound } from '../utils/sounds';
 import laMoliendaLogo from '../assets/la_molienda_logo.png';
 import { OpenTableModal } from './OpenTableModal';
 import { TicketModal } from './TicketModal';
-import { sendOrderDirectToCloud } from '../utils/firebaseSync';
+import { sendOrderDirectToCloud, getStoredServiceStatus } from '../utils/firebaseSync';
 
 interface WaiterViewProps {
   initialTables?: Table[];
@@ -159,6 +159,22 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
   const [isSending, setIsSending] = useState(false);
   const [orderSuccessMsg, setOrderSuccessMsg] = useState<string | null>(null);
   const [reconnectCounter, setReconnectCounter] = useState(0);
+
+  // Estado del servicio (Bloqueo de comandero al cierre de caja)
+  const [serviceStatus, setServiceStatus] = useState<{ isOpen: boolean; reason?: string }>(() =>
+    getStoredServiceStatus()
+  );
+
+  useEffect(() => {
+    const handleServiceStatusChange = (e: any) => {
+      if (e.detail) {
+        setServiceStatus(e.detail);
+      }
+    };
+    window.addEventListener('lamolienda:service-status-changed', handleServiceStatusChange);
+    return () =>
+      window.removeEventListener('lamolienda:service-status-changed', handleServiceStatusChange);
+  }, []);
   const [isOpenTableModalOpen, setIsOpenTableModalOpen] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('modal') === 'opentable';
@@ -724,6 +740,11 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
 
   // ENVIAR COMANDA AL COMPUTADOR DEL CAJERO
   const handleSendOrder = async () => {
+    if (!serviceStatus.isOpen) {
+      alert(`Servicio cerrado por Administración: ${serviceStatus.reason || 'El comandero móvil se encuentra pausado temporalmente.'}`);
+      return;
+    }
+
     if (!selectedTable) return;
     if (newOrderItems.length === 0) {
       alert('Selecciona al menos un producto para enviar la comanda.');
@@ -993,6 +1014,17 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
           )}
         </div>
       </header>
+
+      {/* BANNER DE SERVICIO CERRADO / BLOQUEADO POR CIERRE DE CAJA */}
+      {!serviceStatus.isOpen && (
+        <div className="mobile-service-closed-banner">
+          <Lock size={16} />
+          <div>
+            <strong>Servicio Suspendido por Administración</strong>
+            <span>{serviceStatus.reason || 'Turno cerrado. Las comandas están deshabilitadas hasta la próxima apertura.'}</span>
+          </div>
+        </div>
+      )}
 
       {/* Main Content Area */}
       {!currentUser ? (
