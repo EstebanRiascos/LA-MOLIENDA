@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
+import './customAdditions.css';
 
 // Registrar Service Worker para PWA en celulares y navegadores
 if ('serviceWorker' in navigator && !(window as any).electronAPI?.isElectron) {

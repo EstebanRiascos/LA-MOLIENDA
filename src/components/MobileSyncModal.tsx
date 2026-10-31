@@ -5,21 +5,17 @@ import {
   Wifi,
   Copy,
   Check,
-  ExternalLink,
+  Download,
+  FolderOpen,
+  Share2,
   Users,
   AlertCircle,
   RefreshCw,
-  Pencil,
+  ExternalLink,
+  Paperclip,
+  FileCheck,
 } from 'lucide-react';
 import QRCode from 'qrcode';
-
-const getCleanInterfaceLabel = (name: string, _address: string) => {
-  const isVirtual = /vethernet|hyper-v|wsl|virtual|docker|vbox|vmnet/i.test(name);
-  if (/wi-fi|wifi|wlan|inal[aá]mbrica|wireless/i.test(name)) return 'Wi-Fi';
-  if (/ethernet|lan|eth/i.test(name)) return isVirtual ? 'Virtual WSL' : 'Ethernet';
-  if (isVirtual) return 'Virtual WSL';
-  return name.length > 14 ? name.slice(0, 13) + '…' : name;
-};
 
 interface MobileSyncModalProps {
   isOpen: boolean;
@@ -30,32 +26,24 @@ export const MobileSyncModal: React.FC<MobileSyncModalProps> = ({ isOpen, onClos
   if (!isOpen) return null;
 
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
-  const [serverUrl, setServerUrl] = useState<string>('');
-  const [availableInterfaces, setAvailableInterfaces] = useState<Array<{ name: string; address: string; isWifi?: boolean }>>([]);
+  const [apkDownloadUrl, setApkDownloadUrl] = useState<string>('');
   const [localIp, setLocalIp] = useState<string>(() => {
-    const saved = localStorage.getItem('lamolienda_server_ip');
-    // Si se guardó una IP virtual de WSL o Docker (172.16-31.x.x), descartarla
-    if (saved && !/^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(saved)) {
-      return saved;
-    }
-    return '192.168.1.15';
-  });
-  const [isEditingIp, setIsEditingIp] = useState<boolean>(false);
-  const [tempIp, setTempIp] = useState<string>('');
-  const [port, setPort] = useState<number>(() => {
-    return Number(window.location.port) || 5173;
+    return localStorage.getItem('lamolienda_server_ip') || '192.168.1.15';
   });
   const [connectedClients, setConnectedClients] = useState<number>(0);
   const [isCopied, setIsCopied] = useState<boolean>(false);
+  const [isApkFileCopied, setIsApkFileCopied] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
+
+  const serverPort = 4545;
 
   const generateQRForUrl = async (targetUrl: string) => {
     try {
       const qr = await QRCode.toDataURL(targetUrl, {
-        width: 300,
+        width: 320,
         margin: 1.5,
         color: {
-          dark: '#140c06',
+          dark: '#1a120b',
           light: '#ffffff',
         },
       });
@@ -69,7 +57,6 @@ export const MobileSyncModal: React.FC<MobileSyncModalProps> = ({ isOpen, onClos
     setLoading(true);
     try {
       let resolvedIp = localIp;
-      let resolvedPort = port;
 
       const api = (window as any).electronAPI;
       if (api && typeof api.getServerInfo === 'function') {
@@ -77,66 +64,36 @@ export const MobileSyncModal: React.FC<MobileSyncModalProps> = ({ isOpen, onClos
         if (info.ip && info.ip !== '127.0.0.1') {
           resolvedIp = info.ip;
         }
-        if (info.port) {
-          resolvedPort = info.port;
-        }
-        if (Array.isArray(info.availableInterfaces)) {
-          setAvailableInterfaces(info.availableInterfaces);
-        }
         setConnectedClients(info.clientsCount || 0);
       } else {
-        // En navegador web directo, intentar consultar el backend en puerto 4545
         try {
           const res = await fetch('http://localhost:4545/api/info');
           const data = await res.json();
           if (data.localIp && data.localIp !== '127.0.0.1') {
             resolvedIp = data.localIp;
           }
-          if (Array.isArray(data.availableInterfaces)) {
-            setAvailableInterfaces(data.availableInterfaces);
-          }
           if (data.connectedClients !== undefined) {
             setConnectedClients(data.connectedClients);
           }
-        } catch {
-          // Si no responde el backend en 4545, usar la IP Wi-Fi detectada o 192.168.1.15
-        }
+        } catch {}
       }
 
       setLocalIp(resolvedIp);
-      setTempIp(resolvedIp);
-      setPort(resolvedPort);
       localStorage.setItem('lamolienda_server_ip', resolvedIp);
 
-      // URL accesible para cualquier celular en la red Wi-Fi
-      const activePort = window.location.port || String(resolvedPort);
-      const fullUrl = `http://${resolvedIp}:${activePort}/?view=waiter`;
-      setServerUrl(fullUrl);
-
-      await generateQRForUrl(fullUrl);
+      const downloadUrl = `http://${resolvedIp}:${serverPort}/download/apk`;
+      setApkDownloadUrl(downloadUrl);
+      await generateQRForUrl(downloadUrl);
     } catch (err) {
-      console.error('Error al generar QR de sincronización móvil:', err);
+      console.error('Error al obtener datos del APK:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUpdateIp = (newIp: string) => {
-    const trimmed = newIp.trim();
-    if (!trimmed) return;
-    setLocalIp(trimmed);
-    setTempIp(trimmed);
-    localStorage.setItem('lamolienda_server_ip', trimmed);
-    const activePort = window.location.port || String(port);
-    const fullUrl = `http://${trimmed}:${activePort}/?view=waiter`;
-    setServerUrl(fullUrl);
-    generateQRForUrl(fullUrl);
-  };
-
   useEffect(() => {
     fetchServerInfo();
 
-    // Escuchar cambios en la cantidad de meseros conectados en tiempo real
     const api = (window as any).electronAPI;
     if (api && typeof api.onMobileClientsChanged === 'function') {
       const unsubscribe = api.onMobileClientsChanged((count: number) => {
@@ -148,244 +105,271 @@ export const MobileSyncModal: React.FC<MobileSyncModalProps> = ({ isOpen, onClos
     }
   }, [isOpen]);
 
-  const handleCopyLink = () => {
-    if (!serverUrl) return;
-    navigator.clipboard.writeText(serverUrl);
+  // Mensaje prediseñado para compartir por WhatsApp
+  const whatsappMessage = `☕ *LA MOLIENDA - COMANDERO MÓVIL (APK)* ☕\n\n📲 *Descarga la aplicación en tu celular:* \n${apkDownloadUrl}\n\n*Pasos para instalar:*\n1️⃣ Conéctate al Wi-Fi del restaurante.\n2️⃣ Toca el enlace para descargar el instalador.\n3️⃣ Abre el archivo descargado y presiona *Instalar* (si Android pide permiso, selecciona "Permitir desde esta fuente").\n4️⃣ Abre la App e ingresa tu PIN de mesero.`;
+
+  const handleShareWhatsApp = () => {
+    const encoded = encodeURIComponent(whatsappMessage);
+    const whatsappWebUrl = `https://api.whatsapp.com/send?text=${encoded}`;
+    window.open(whatsappWebUrl, '_blank');
+  };
+
+  const handleCopyWhatsAppMessage = () => {
+    navigator.clipboard.writeText(whatsappMessage);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2500);
   };
 
-  const handleOpenLocalBrowser = () => {
-    if (serverUrl) {
-      window.open(serverUrl, '_blank');
+  const handleOpenApkFolder = async () => {
+    const api = (window as any).electronAPI;
+    if (api && typeof api.openApkFolder === 'function') {
+      await api.openApkFolder();
+    } else {
+      window.open(apkDownloadUrl, '_blank');
+    }
+  };
+
+  const handleCopyApkFile = async () => {
+    const api = (window as any).electronAPI;
+    if (api && typeof api.copyApkToClipboard === 'function') {
+      const res = await api.copyApkToClipboard();
+      if (res && res.success) {
+        setIsApkFileCopied(true);
+        setTimeout(() => setIsApkFileCopied(false), 3500);
+      } else {
+        handleOpenApkFolder();
+      }
+    } else {
+      handleOpenApkFolder();
     }
   };
 
   return (
-    <div className="modal-backdrop mobile-sync-backdrop" onClick={onClose}>
+    <div className="modal-backdrop mobile-sync-backdrop" onClick={onClose} role="presentation">
       <div
         className="modal-container mobile-sync-modal-card"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-labelledby="apk-modal-title"
       >
-        {/* Header */}
+        {/* Cabecera idéntica al estándar de La Molienda */}
         <div className="modal-header">
           <div className="mobile-sync-head-box">
             <div className="mobile-sync-icon-glow">
               <Smartphone size={22} />
             </div>
             <div>
-              <h2 className="modal-title">Vincular Celulares de Meseros</h2>
+              <h2 id="apk-modal-title" className="modal-title">
+                App Móvil para Meseros (APK Android)
+              </h2>
               <span className="modal-subtitle">
-                Comandero Móvil en tiempo real por red Wi-Fi local
+                Instalador oficial para teléfonos celulares de meseros por red Wi-Fi local
               </span>
             </div>
           </div>
-          <button type="button" className="modal-close-btn" onClick={onClose} title="Cerrar ventana">
+          <button
+            type="button"
+            className="modal-close-btn"
+            onClick={onClose}
+            title="Cerrar ventana"
+          >
             <X size={18} />
           </button>
         </div>
 
-        {/* Body */}
+        {/* Cuerpo del Modal */}
         <div className="mobile-sync-body">
-          {/* Status Banner */}
+          {/* Tira de Estado: Servidor Activo + Celulares Conectados */}
           <div className="wifi-server-status-strip">
             <div className="wifi-status-left">
               <span className="wifi-live-dot" />
               <div className="wifi-status-text">
-                <strong>Servidor Wi-Fi Local Activo</strong>
-                <span>No requiere internet • Comunicación local instantánea</span>
+                <strong>Servidor Local Wi-Fi Activo (Puerto {serverPort})</strong>
+                <span>El APK se conecta automáticamente a este computador en la red local</span>
               </div>
             </div>
-            <div className="wifi-clients-badge" title="Dispositivos móviles conectados actualmente">
+            <div className="wifi-clients-badge" title="Meseros con la APK abierta en este momento">
               <Users size={14} />
-              <span>{connectedClients} {connectedClients === 1 ? 'móvil conectado' : 'móviles conectados'}</span>
+              <span>
+                {connectedClients} {connectedClients === 1 ? 'celular conectado' : 'celulares conectados'}
+              </span>
             </div>
           </div>
 
+          {/* Grilla Principal: QR de Descarga a la izquierda, WhatsApp e Instrucciones a la derecha */}
           <div className="mobile-sync-grid">
-            {/* Left: QR Code & Quick Action */}
+            {/* Columna Izquierda: QR de Descarga Directa */}
             <div className="qr-container-box">
               <div className="qr-paper-frame">
                 {loading ? (
                   <div className="qr-loading-spinner">
                     <RefreshCw className="animate-spin" size={32} />
-                    <span>Generando código QR...</span>
+                    <span>Cargando enlace...</span>
                   </div>
                 ) : qrDataUrl ? (
                   <img
                     src={qrDataUrl}
-                    alt="Código QR para Meseros"
+                    alt="Escanear para descargar APK"
                     className="qr-img-display"
                   />
                 ) : (
                   <div className="qr-error-box">
                     <AlertCircle size={28} />
-                    <span>No se pudo generar el QR</span>
+                    <span>No se pudo generar QR</span>
                   </div>
                 )}
               </div>
               <span className="qr-scan-instruction">
-                Escanea con la cámara de cualquier celular (Android o iPhone)
+                Apunta con la cámara de cualquier celular Android para <strong>descargar el instalador APK</strong>
               </span>
 
-              {/* Botón para probar directamente en el navegador del equipo */}
               <button
                 type="button"
                 className="btn-preview-local-app"
-                onClick={handleOpenLocalBrowser}
-                title="Abrir vista de mesero en una nueva pestaña de este equipo"
+                onClick={handleOpenApkFolder}
+                title="Abre la carpeta de Windows donde está guardado el archivo LaMolienda_Comandero.apk"
               >
-                <ExternalLink size={13} />
-                <span>Abrir en navegador de esta PC</span>
+                <FolderOpen size={14} />
+                <span>Abrir carpeta del archivo APK</span>
               </button>
             </div>
 
-            {/* Right: Instructions & Connection Card */}
+            {/* Columna Derecha: Compartir por WhatsApp y Pasos */}
             <div className="mobile-sync-info-col">
-              {/* Pasos en 3 tarjetas compactas horizontales */}
+              {/* Tarjeta de Compartir por WhatsApp */}
+              <div className="apk-whatsapp-card">
+                <div className="apk-whatsapp-header">
+                  <div className="whatsapp-icon-badge">
+                    {/* Icono vectorial SVG de WhatsApp */}
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="whatsapp-card-title">Compartir APK en WhatsApp</h3>
+                    <p className="whatsapp-card-desc">
+                      Envía el archivo APK como documento directamente al chat o comparte el enlace Wi-Fi.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Método 1: Enviar el archivo APK físico (documento) */}
+                <div className="whatsapp-sub-section">
+                  <div className="whatsapp-sub-label">
+                    <Paperclip size={13} />
+                    <span>Enviar archivo instalador .APK (como Documento):</span>
+                  </div>
+                  <div className="whatsapp-action-buttons">
+                    <button
+                      type="button"
+                      className={`btn-whatsapp-file-copy ${isApkFileCopied ? 'copied-active' : ''}`}
+                      onClick={handleCopyApkFile}
+                      title="Copia el archivo instalador APK. Luego ve a WhatsApp y presiona Ctrl + V para enviarlo como documento."
+                    >
+                      {isApkFileCopied ? <FileCheck size={16} /> : <Paperclip size={16} />}
+                      <span>
+                        {isApkFileCopied
+                          ? '¡Archivo Copiado! Pega con Ctrl + V en WhatsApp'
+                          : 'Copiar Archivo APK (Pegar en WhatsApp con Ctrl + V)'}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-whatsapp-drag"
+                      onClick={handleOpenApkFolder}
+                      title="Abre la carpeta de Windows para arrastrar el archivo APK directamente a tu chat de WhatsApp"
+                    >
+                      <FolderOpen size={15} />
+                      <span>Arrastrar archivo al chat</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Método 2: Enviar enlace Wi-Fi con mensaje explicativo */}
+                <div className="whatsapp-sub-section">
+                  <div className="whatsapp-sub-label">
+                    <Share2 size={13} />
+                    <span>O compartir enlace directo con instrucciones:</span>
+                  </div>
+                  <div className="whatsapp-action-buttons">
+                    <button
+                      type="button"
+                      className="btn-whatsapp-send"
+                      onClick={handleShareWhatsApp}
+                      title="Abre WhatsApp Web con el mensaje explicativo y el enlace"
+                    >
+                      <Share2 size={15} />
+                      <span>Abrir mensaje en WhatsApp Web</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn-whatsapp-copy"
+                      onClick={handleCopyWhatsAppMessage}
+                      title="Copia el texto del mensaje"
+                    >
+                      {isCopied ? <Check size={15} /> : <Copy size={15} />}
+                      <span>{isCopied ? '¡Texto Copiado!' : 'Copiar Texto'}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tarjeta con enlace directo al APK */}
+              <div className="sync-network-card">
+                <div className="sync-card-header">
+                  <div className="sync-card-title-group">
+                    <Wifi size={15} className="sync-card-wifi-icon" />
+                    <span className="sync-card-title">Enlace Wi-Fi de Descarga Directa</span>
+                  </div>
+                  <span className="apk-pill-badge">APK Android</span>
+                </div>
+
+                <div className="url-copy-box">
+                  <span className="url-display-text">{apkDownloadUrl}</span>
+                  <button
+                    type="button"
+                    className="btn-copy-url"
+                    onClick={handleCopyWhatsAppMessage}
+                    title="Copiar enlace"
+                  >
+                    {isCopied ? <Check size={14} /> : <Copy size={14} />}
+                    <span>{isCopied ? 'Copiado' : 'Copiar'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 3 Pasos Ilustrados de Instalación */}
               <div className="sync-steps-grid">
                 <div className="sync-step-item">
                   <div className="sync-step-badge">1</div>
                   <div className="sync-step-details">
-                    <strong>Misma Red Wi-Fi</strong>
-                    <p>El celular y este PC deben estar en la misma red Wi-Fi.</p>
+                    <strong>Conectar a la Red Wi-Fi</strong>
+                    <p>El celular del mesero debe estar conectado al mismo Wi-Fi del restaurante.</p>
                   </div>
                 </div>
 
                 <div className="sync-step-item">
                   <div className="sync-step-badge">2</div>
                   <div className="sync-step-details">
-                    <strong>Escanear QR</strong>
-                    <p>Apunta con la cámara. No requiere descargar app.</p>
+                    <strong>Descargar e Instalar APK</strong>
+                    <p>Toca el enlace de WhatsApp o escanea el QR. Al descargar, toca <em>"Instalar"</em>.</p>
                   </div>
                 </div>
 
                 <div className="sync-step-item">
                   <div className="sync-step-badge">3</div>
                   <div className="sync-step-details">
-                    <strong>¡Instalar y Comandar!</strong>
-                    <p>Toca "Instalar App" para tener el ícono oficial en pantalla completa.</p>
+                    <strong>Ingresar con su PIN</strong>
+                    <p>Abre la App oficial en el celular y digita el PIN personal de mesero para comandar.</p>
                   </div>
-                </div>
-              </div>
-
-              {/* Tarjeta de Enlace Wi-Fi y Configuración de Red */}
-              <div className="sync-network-card">
-                {/* Cabecera de la tarjeta */}
-                <div className="sync-card-header">
-                  <div className="sync-card-title-group">
-                    <Wifi size={15} className="sync-card-wifi-icon" />
-                    <span className="sync-card-title">Enlace Wi-Fi para Meseros</span>
-                  </div>
-                  <button
-                    type="button"
-                    className={`btn-toggle-edit-ip ${isEditingIp ? 'active' : ''}`}
-                    onClick={() => {
-                      if (!isEditingIp) setTempIp(localIp);
-                      setIsEditingIp(!isEditingIp);
-                    }}
-                    title="Editar IP manualmente"
-                  >
-                    <Pencil size={11} />
-                    <span>{isEditingIp ? 'Cerrar edición' : 'Cambiar IP'}</span>
-                  </button>
-                </div>
-
-                {/* Input de Enlace o Editor de IP */}
-                {isEditingIp ? (
-                  <div className="sync-ip-edit-box">
-                    <span className="sync-ip-edit-label">Modificar IP del servidor local:</span>
-                    <div className="sync-ip-edit-row">
-                      <input
-                        type="text"
-                        value={tempIp}
-                        onChange={(e) => setTempIp(e.target.value)}
-                        placeholder="Ej: 192.168.1.15"
-                        className="sync-ip-edit-input"
-                        autoFocus
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            handleUpdateIp(tempIp);
-                            setIsEditingIp(false);
-                          } else if (e.key === 'Escape') {
-                            setIsEditingIp(false);
-                          }
-                        }}
-                      />
-                      <button
-                        type="button"
-                        className="btn-save-ip"
-                        onClick={() => {
-                          handleUpdateIp(tempIp);
-                          setIsEditingIp(false);
-                        }}
-                      >
-                        <Check size={13} />
-                        <span>Guardar</span>
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="sync-url-bar-group">
-                    <input
-                      type="text"
-                      readOnly
-                      value={serverUrl || 'Detectando IP local...'}
-                      className="sync-url-input"
-                    />
-                    <button
-                      type="button"
-                      className={`btn-sync-copy ${isCopied ? 'copied' : ''}`}
-                      onClick={handleCopyLink}
-                      title="Copiar enlace completo al portapapeles"
-                    >
-                      {isCopied ? <Check size={14} /> : <Copy size={14} />}
-                      <span>{isCopied ? '¡Copiado!' : 'Copiar'}</span>
-                    </button>
-                  </div>
-                )}
-
-                {/* Pie de la tarjeta: Estado de IP y Selección de interfaces */}
-                <div className="sync-card-footer">
-                  <div className="sync-ip-status-badge">
-                    <span className="sync-ip-status-dot" />
-                    <span className="sync-ip-status-text">
-                      IP Wi-Fi en uso: <strong>{localIp}</strong>
-                    </span>
-                  </div>
-
-                  {availableInterfaces.length > 1 && (
-                    <div className="sync-interfaces-section">
-                      <span className="sync-interfaces-label">Cambiar a otra red detectada:</span>
-                      <div className="sync-interfaces-pills">
-                        {availableInterfaces.map((iface) => {
-                          const isSelected = localIp === iface.address;
-                          const cleanName = getCleanInterfaceLabel(iface.name, iface.address);
-                          return (
-                            <button
-                              key={iface.address}
-                              type="button"
-                              className={`network-iface-pill ${isSelected ? 'selected' : ''}`}
-                              onClick={() => handleUpdateIp(iface.address)}
-                              title={`${iface.name}: ${iface.address}`}
-                            >
-                              <span className="pill-dot" />
-                              <span className="pill-name">{cleanName}:</span>
-                              <span className="pill-address">{iface.address}</span>
-                              {isSelected && <Check size={11} className="pill-check-icon" />}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Footer */}
+        {/* Pie del modal */}
         <div className="modal-footer">
           <button type="button" className="btn-cancel" onClick={onClose}>
             Entendido / Cerrar

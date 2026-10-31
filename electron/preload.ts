@@ -24,6 +24,8 @@ const api = {
   // Wi-Fi Local Server & Comandero Móvil API
   getServerInfo: () => ipcRenderer.invoke('server:getInfo'),
   broadcastState: (state: any) => ipcRenderer.send('server:broadcastState', state),
+  openApkFolder: () => ipcRenderer.invoke('apk:openFolder'),
+  copyApkToClipboard: () => ipcRenderer.invoke('apk:copyToClipboard'),
   onMobileOrder: (callback: (order: any) => void) => {
     const listener = (_event: any, order: any) => callback(order);
     ipcRenderer.on('mobile:new-order', listener);

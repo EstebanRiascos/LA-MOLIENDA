@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   LayoutGrid,
   ShoppingBag,
@@ -95,6 +95,30 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
   };
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userCardRef = useRef<HTMLDivElement>(null);
+
+  // Cerrar menú de usuario al hacer clic fuera
+  useEffect(() => {
+    if (!isUserMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (userCardRef.current && !userCardRef.current.contains(e.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isUserMenuOpen]);
+
+  // Al hacer clic en el botón de usuario: Si el sidebar está colapsado, expandirlo obligatoriamente
+  const handleUserCardClick = () => {
+    if (!isExpanded) {
+      setIsExpanded(true);
+      localStorage.setItem('lamolienda_sidebar_expanded', 'true');
+      setIsUserMenuOpen(true);
+    } else {
+      setIsUserMenuOpen((prev) => !prev);
+    }
+  };
 
   const getSectionTitle = () => {
     switch (activeSection) {
@@ -127,12 +151,10 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
             <div className="sidebar-logo-frame">
               <img src={laMoliendaLogo} alt="La Molienda" className="sidebar-logo-img" />
             </div>
-            {isExpanded && (
-              <div className="sidebar-brand-text">
-                <span className="brand-name">La Molienda</span>
-                <span className="brand-sub">Café & Bar</span>
-              </div>
-            )}
+            <div className="sidebar-brand-text sidebar-collapsible-text">
+              <span className="brand-name">La Molienda</span>
+              <span className="brand-sub">Café & Bar</span>
+            </div>
           </div>
 
           <button
@@ -141,7 +163,10 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
             onClick={handleToggleExpand}
             title={isExpanded ? 'Colapsar barra lateral' : 'Expandir barra lateral'}
           >
-            {isExpanded ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+            <ChevronRight
+              size={16}
+              className={`sidebar-toggle-icon ${isExpanded ? 'expanded' : ''}`}
+            />
           </button>
         </div>
 
@@ -159,7 +184,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
             <div className="nav-item-icon">
               <LayoutGrid size={20} />
             </div>
-            {isExpanded && <span className="nav-item-label">Mesas & Cuentas</span>}
+            <span className="nav-item-label sidebar-collapsible-text">Mesas & Cuentas</span>
             {activeTablesCount > 0 && (
               <span className="sidebar-badge active-tables">{activeTablesCount}</span>
             )}
@@ -177,7 +202,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
             <div className="nav-item-icon">
               <ShoppingBag size={20} />
             </div>
-            {isExpanded && <span className="nav-item-label">Punto de Venta</span>}
+            <span className="nav-item-label sidebar-collapsible-text">Punto de Venta</span>
           </button>
 
           {/* 3. Inventario (Oculto para meseros) */}
@@ -193,7 +218,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
               <div className="nav-item-icon">
                 <Package size={20} />
               </div>
-              {isExpanded && <span className="nav-item-label">Inventario</span>}
+              <span className="nav-item-label sidebar-collapsible-text">Inventario</span>
               {lowStockCount > 0 && (
                 <span className="sidebar-badge alert-stock">{lowStockCount}</span>
               )}
@@ -213,7 +238,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
               <div className="nav-item-icon">
                 <Receipt size={20} />
               </div>
-              {isExpanded && <span className="nav-item-label">Caja & Ventas</span>}
+              <span className="nav-item-label sidebar-collapsible-text">Caja & Ventas</span>
               {todaySalesCount > 0 && (
                 <span className="sidebar-badge secondary-sales">{todaySalesCount}</span>
               )}
@@ -223,32 +248,21 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
 
         {/* Bloque Inferior: Comandero + Nube + Usuario */}
         <div className="sidebar-footer-box">
-          {/* Botón Meseros Wi-Fi */}
+          {/* Botón Compartir APK Meseros por WhatsApp */}
           {onOpenMobileSync && (
             <button
               type="button"
-              className={`sidebar-footer-item mobile-sync-btn ${
-                connectedClientsCount > 0 ? 'has-clients' : ''
-              }`}
+              className="sidebar-footer-item mobile-sync-btn"
               onClick={onOpenMobileSync}
-              title={`Comandero Móvil: ${connectedClientsCount} conectados`}
+              title="Compartir App APK para celulares de meseros por WhatsApp"
             >
               <div className="footer-item-icon">
                 <Smartphone size={18} />
               </div>
-              {isExpanded && (
-                <div className="footer-item-texts">
-                  <span className="footer-item-title">Meseros</span>
-                  <span className="footer-item-sub">
-                    {connectedClientsCount > 0
-                      ? `${connectedClientsCount} activos`
-                      : 'Código QR'}
-                  </span>
-                </div>
-              )}
-              {connectedClientsCount > 0 && !isExpanded && (
-                <span className="sidebar-dot-badge">{connectedClientsCount}</span>
-              )}
+              <div className="footer-item-texts sidebar-collapsible-text">
+                <span className="footer-item-title">App Meseros</span>
+                <span className="footer-item-sub">APK WhatsApp</span>
+              </div>
             </button>
           )}
 
@@ -269,16 +283,14 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
               <div className="footer-item-icon">
                 {isServiceOpen ? <Unlock size={17} /> : <Lock size={17} />}
               </div>
-              {isExpanded && (
-                <div className="footer-item-texts">
-                  <span className="footer-item-title">
-                    {isServiceOpen ? 'Comandas ON' : 'Comandas OFF'}
-                  </span>
-                  <span className="footer-item-sub">
-                    {isServiceOpen ? 'Servicio activo' : 'Suspendido'}
-                  </span>
-                </div>
-              )}
+              <div className="footer-item-texts sidebar-collapsible-text">
+                <span className="footer-item-title">
+                  {isServiceOpen ? 'Comandas ON' : 'Comandas OFF'}
+                </span>
+                <span className="footer-item-sub">
+                  {isServiceOpen ? 'Servicio activo' : 'Suspendido'}
+                </span>
+              </div>
             </button>
           )}
 
@@ -293,41 +305,48 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
               <div className="footer-item-icon">
                 <Cloud size={17} />
               </div>
-              {isExpanded && (
-                <div className="footer-item-texts">
-                  <span className="footer-item-title">Nube Firebase</span>
-                  <span className="footer-item-sub">
-                    {firebaseStatus === 'connected' ? 'Sincronizado' : firebaseStatus}
-                  </span>
-                </div>
-              )}
+              <div className="footer-item-texts sidebar-collapsible-text">
+                <span className="footer-item-title">Nube Firebase</span>
+                <span className="footer-item-sub">
+                  {firebaseStatus === 'connected' ? 'Sincronizado' : firebaseStatus}
+                </span>
+              </div>
               <span className={`sidebar-status-dot dot-${firebaseStatus}`} />
             </button>
           )}
 
           {/* Tarjeta de Usuario / Perfil */}
-          <div className="sidebar-user-card">
+          <div className="sidebar-user-card" ref={userCardRef}>
             <div
-              className="sidebar-user-header"
-              onClick={() => setIsUserMenuOpen((prev) => !prev)}
+              className={`sidebar-user-header ${isUserMenuOpen ? 'menu-open' : ''}`}
+              onClick={handleUserCardClick}
               title={`Sesión activa: ${currentUser?.name || currentStaff}`}
             >
               <div className={`sidebar-avatar role-${currentUser?.role || 'admin'}`}>
                 {currentUser?.role === 'admin' ? (
-                  <ShieldCheck size={16} />
+                  <ShieldCheck size={17} strokeWidth={2.3} />
                 ) : (
-                  <UserCheck size={16} />
+                  <UserCheck size={17} strokeWidth={2.3} />
                 )}
               </div>
-              {isExpanded && (
-                <div className="sidebar-user-info">
-                  <span className="user-name">{currentUser?.name || currentStaff}</span>
-                  <span className="user-role">
-                    {currentUser?.role?.toUpperCase() || 'TURNO ACTIVO'}
+              <div className="sidebar-user-info sidebar-collapsible-text">
+                <span className="user-name">{currentUser?.name || currentStaff}</span>
+                <div className="user-role-row">
+                  <span className={`user-role-pill role-${currentUser?.role || 'admin'}`}>
+                    {currentUser?.role === 'admin'
+                      ? 'ADMINISTRADOR'
+                      : currentUser?.role === 'cajero'
+                      ? 'CAJERO'
+                      : currentUser?.role === 'mesero'
+                      ? 'MESERO'
+                      : 'TURNO ACTIVO'}
                   </span>
                 </div>
-              )}
-              {isExpanded && <ChevronDown size={14} className="user-chevron" />}
+              </div>
+              <ChevronDown
+                size={14}
+                className={`user-chevron sidebar-collapsible-text ${isUserMenuOpen ? 'chevron-rotated' : ''}`}
+              />
             </div>
 
             {/* Menú flotante / Desplegable de usuario */}
@@ -344,6 +363,19 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
                   >
                     <Users size={14} />
                     <span>Gestión de Usuarios</span>
+                  </button>
+                )}
+                {currentUser?.role === 'admin' && onOpenMobileSync && (
+                  <button
+                    type="button"
+                    className="dropdown-item"
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      onOpenMobileSync();
+                    }}
+                  >
+                    <Smartphone size={14} />
+                    <span>App Meseros (APK / WhatsApp)</span>
                   </button>
                 )}
                 {onLogout && (
@@ -367,77 +399,87 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
 
       {/* ================= CONTENEDOR DERECHO ================= */}
       <div className="pos-main-wrapper">
-        {/* Header Superior Minimalista (Solo 46px) */}
+        {/* Header Superior Minimalista (Solo 58px) */}
         <header className="pos-top-bar">
-          <div className="top-bar-left">
-            <div className="breadcrumb-box">
-              <span className="breadcrumb-section">{currentInfo.title}</span>
-              <span className="breadcrumb-sep">•</span>
-              <span className="breadcrumb-sub">{currentInfo.subtitle}</span>
-            </div>
-          </div>
-
-          <div className="top-bar-right">
-            {/* Micro-indicador de Firebase */}
-            <div
-              className="top-micro-cloud"
-              onClick={onOpenFirebaseSync}
-              title={`Nube: ${firebaseStatus === 'connected' ? 'En línea' : firebaseStatus}`}
-            >
-              <span className={`micro-dot dot-${firebaseStatus}`} />
-              <span className="micro-text">Nube OK</span>
+          <div className="pos-top-bar-inner">
+            <div className="top-bar-left">
+              <div className="breadcrumb-box">
+                <span className="breadcrumb-section">{currentInfo.title}</span>
+                <span className="breadcrumb-sep">•</span>
+                <span className="breadcrumb-sub">{currentInfo.subtitle}</span>
+              </div>
             </div>
 
-            {/* Notificaciones */}
-            {onOpenNotifications && (
+            <div className="top-bar-right">
+              {/* Micro-indicador de Firebase */}
               <button
                 type="button"
-                className={`top-icon-btn notifications-btn ${
-                  unreadNotificationsCount > 0 ? 'has-unread' : ''
+                className={`top-micro-cloud status-${firebaseStatus}`}
+                onClick={onOpenFirebaseSync}
+                title={`Base de Datos en la Nube (${firebaseProjectId || 'Firebase'}): ${
+                  firebaseStatus === 'connected'
+                    ? 'Sincronizado en tiempo real'
+                    : firebaseStatus === 'syncing'
+                    ? 'Sincronizando...'
+                    : 'Desconectado'
                 }`}
-                onClick={onOpenNotifications}
-                title={`Notificaciones (${unreadNotificationsCount} sin leer)`}
               >
-                <Bell size={16} />
-                {unreadNotificationsCount > 0 && (
-                  <span className="notifications-badge">
-                    {unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount}
-                  </span>
-                )}
+                <Cloud size={14} className="micro-cloud-icon" />
+                <span className="micro-text">Nube OK</span>
+                <span className={`micro-dot dot-${firebaseStatus}`} />
               </button>
-            )}
 
-            {/* Sonido */}
-            <button
-              type="button"
-              className="top-icon-btn"
-              onClick={handleToggleSound}
-              title={soundOn ? 'Silenciar sonidos' : 'Activar sonidos'}
-            >
-              {soundOn ? <Volume2 size={16} /> : <VolumeX size={16} />}
-            </button>
+              {/* Notificaciones */}
+              {onOpenNotifications && (
+                <button
+                  type="button"
+                  className={`top-icon-btn notifications-btn ${
+                    unreadNotificationsCount > 0 ? 'has-unread' : ''
+                  }`}
+                  onClick={onOpenNotifications}
+                  title={`Notificaciones (${unreadNotificationsCount} sin leer)`}
+                >
+                  <Bell size={19} />
+                  {unreadNotificationsCount > 0 && (
+                    <span className="notifications-badge">
+                      {unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount}
+                    </span>
+                  )}
+                </button>
+              )}
 
-            {/* Tema */}
-            <button
-              type="button"
-              className="top-icon-btn"
-              onClick={onToggleTheme}
-              title={`Modo ${theme === 'dark' ? 'claro' : 'oscuro'}`}
-            >
-              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-            </button>
-
-            {/* Salida Rápida */}
-            {onLogout && (
+              {/* Sonido */}
               <button
                 type="button"
-                className="top-icon-btn logout-quick-btn"
-                onClick={onLogout}
-                title="Cerrar Sesión"
+                className="top-icon-btn"
+                onClick={handleToggleSound}
+                title={soundOn ? 'Silenciar sonidos' : 'Activar sonidos'}
               >
-                <LogOut size={15} />
+                {soundOn ? <Volume2 size={19} /> : <VolumeX size={19} />}
               </button>
-            )}
+
+              {/* Tema */}
+              <button
+                type="button"
+                className="top-icon-btn"
+                onClick={onToggleTheme}
+                title={`Modo ${theme === 'dark' ? 'claro' : 'oscuro'}`}
+              >
+                {theme === 'dark' ? <Sun size={19} /> : <Moon size={19} />}
+              </button>
+
+              {/* Salida Rápida */}
+              {onLogout && (
+                <button
+                  type="button"
+                  className="top-icon-btn logout-quick-btn"
+                  onClick={onLogout}
+                  title="Cerrar Sesión"
+                >
+                  <LogOut size={18} />
+                </button>
+              )}
+            </div>
           </div>
         </header>
 

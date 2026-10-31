@@ -62,11 +62,12 @@ import { LoginModal } from './components/LoginModal';
 import { UserManagementModal } from './components/UserManagementModal';
 import { AboutModal } from './components/AboutModal';
 import { ExitConfirmModal } from './components/ExitConfirmModal';
+import { ConfirmModal } from './components/ConfirmModal';
 import { MobileSyncModal } from './components/MobileSyncModal';
 import { FirebaseSyncModal } from './components/FirebaseSyncModal';
 import { NotificationsPanel } from './components/NotificationsPanel';
 import { WaiterView } from './components/WaiterView';
-import { Info } from 'lucide-react';
+import { Info, Check, X } from 'lucide-react';
 
 export const App: React.FC = () => {
   // Theme state
@@ -220,6 +221,18 @@ export const App: React.FC = () => {
 
   // Notification state
   const [notification, setNotification] = useState<string | null>(null);
+
+  // Global Confirm Dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+    variant?: 'danger' | 'warning' | 'info';
+    icon?: 'trash' | 'warning' | 'info';
+    onConfirm: () => void;
+  } | null>(null);
 
   // Modal states
   const [activeTableDetail, setActiveTableDetail] = useState<Table | null>(() => {
@@ -525,13 +538,24 @@ export const App: React.FC = () => {
 
   const handleClearAllNotifications = () => {
     if (notifications.length === 0) return;
-    if (window.confirm('¿Deseas vaciar todo el historial de notificaciones?')) {
-      playSound('delete');
-      setNotifications([]);
-      try {
-        localStorage.removeItem('lamolienda_notifications_history');
-      } catch {}
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: '¿Vaciar historial de notificaciones?',
+      message: 'Se borrarán todos los avisos y alertas acumulados. Esta acción no se puede deshacer.',
+      confirmText: 'Sí, vaciar historial',
+      cancelText: 'Cancelar',
+      variant: 'danger',
+      icon: 'trash',
+      onConfirm: () => {
+        playSound('delete');
+        setNotifications([]);
+        try {
+          localStorage.removeItem('lamolienda_notifications_history');
+        } catch {}
+        setConfirmDialog(null);
+        showNotification('Historial de notificaciones vaciado.');
+      },
+    });
   };
 
   const handleDeleteNotification = (id: string) => {
@@ -1574,12 +1598,22 @@ export const App: React.FC = () => {
   const handleDeleteProduct = (productId: string) => {
     const target = products.find((p) => p.id === productId);
     if (!target) return;
-    if (window.confirm(`¿Estás seguro de eliminar el producto "${target.name}"?`)) {
-      const updated = products.filter((p) => p.id !== productId);
-      setProducts(updated);
-      saveStoredProducts(updated);
-      showNotification(`Producto "${target.name}" eliminado del catálogo.`);
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: '¿Eliminar producto del catálogo?',
+      message: `¿Estás seguro de que deseas eliminar permanentemente "${target.name}"?`,
+      confirmText: 'Sí, eliminar',
+      cancelText: 'Cancelar',
+      variant: 'danger',
+      icon: 'trash',
+      onConfirm: () => {
+        const updated = products.filter((p) => p.id !== productId);
+        setProducts(updated);
+        saveStoredProducts(updated);
+        showNotification(`Producto "${target.name}" eliminado del catálogo.`);
+        setConfirmDialog(null);
+      },
+    });
   };
 
   const handleQuickUpdatePrice = (productId: string, newPrice: number) => {
@@ -1739,9 +1773,23 @@ export const App: React.FC = () => {
       <main className="app-main">
         {/* Floating Toast Notification */}
         {notification && (
-          <div className="toast-notification">
-            <span className="toast-check">✓</span>
-            <span>{notification}</span>
+          <div className="toast-notification" role="status" aria-live="polite">
+            <div className="toast-icon-badge">
+              <Check className="toast-icon" strokeWidth={3} />
+            </div>
+            <div className="toast-content">
+              <span className="toast-message">{notification}</span>
+            </div>
+            <button
+              type="button"
+              className="toast-close-btn"
+              onClick={() => setNotification(null)}
+              title="Cerrar notificación"
+              aria-label="Cerrar notificación"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+            <div className="toast-progress-bar" />
           </div>
         )}
 
@@ -2050,6 +2098,21 @@ export const App: React.FC = () => {
         onDeleteNotification={handleDeleteNotification}
         onSelectTable={handleSelectTableFromNotification}
       />
+
+      {/* Modal de confirmación global estilizado (reemplazo de window.confirm) */}
+      {confirmDialog && (
+        <ConfirmModal
+          isOpen={confirmDialog.isOpen}
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          confirmText={confirmDialog.confirmText}
+          cancelText={confirmDialog.cancelText}
+          variant={confirmDialog.variant}
+          icon={confirmDialog.icon}
+          onConfirm={confirmDialog.onConfirm}
+          onCancel={() => setConfirmDialog(null)}
+        />
+      )}
     </>
   );
 };

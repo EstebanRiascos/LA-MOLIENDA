@@ -1,0 +1,621 @@
+/* ============================================================================
+   LA MOLIENDA - ESTILOS ADICIONALES Y PERSONALIZACIONES
+   Archivo modular para evitar colisiones y truncamientos en index.css
+   ============================================================================ */
+
+/* ----------------------------------------------------------------------------
+   MICRO-INDICADOR DE NUBE (TOPBAR)
+   ---------------------------------------------------------------------------- */
+.top-micro-cloud {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  padding: 0.4rem 0.85rem !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  font-family: inherit !important;
+  color: var(--text-primary) !important;
+  user-select: none !important;
+}
+
+.top-micro-cloud .micro-cloud-icon {
+  flex-shrink: 0 !important;
+  color: #38bdf8 !important;
+  transition: transform 0.2s ease !important;
+}
+
+.top-micro-cloud .micro-text {
+  font-size: 0.8rem !important;
+  font-weight: 750 !important;
+  letter-spacing: -0.01em !important;
+  color: var(--text-primary) !important;
+}
+
+.top-micro-cloud .micro-dot {
+  width: 7px !important;
+  height: 7px !important;
+  border-radius: 50% !important;
+  background: #94a3b8 !important;
+  flex-shrink: 0 !important;
+}
+
+.top-micro-cloud .micro-dot.dot-connected {
+  background: #10b981 !important;
+  box-shadow: 0 0 8px #10b981 !important;
+}
+
+.top-micro-cloud .micro-dot.dot-syncing,
+.top-micro-cloud .micro-dot.dot-connecting {
+  background: #38bdf8 !important;
+  box-shadow: 0 0 8px #38bdf8 !important;
+  animation: pulseDot 1.2s infinite ease-in-out !important;
+}
+
+.top-micro-cloud .micro-dot.dot-error,
+.top-micro-cloud .micro-dot.dot-disconnected {
+  background: #ef4444 !important;
+  box-shadow: 0 0 8px #ef4444 !important;
+}
+
+.top-micro-cloud:hover {
+  transform: translateY(-1px) !important;
+  border-color: rgba(217, 119, 6, 0.5) !important;
+}
+
+.top-micro-cloud:hover .micro-cloud-icon {
+  transform: scale(1.12) !important;
+}
+
+/* Modo Claro: Nube OK */
+[data-theme='light'] .top-micro-cloud {
+  background: #ffffff !important;
+  border: 1.5px solid #ebd9c8 !important;
+  box-shadow: 0 1px 4px rgba(45, 30, 18, 0.06) !important;
+}
+
+[data-theme='light'] .top-micro-cloud .micro-text {
+  color: #3e2615 !important;
+}
+
+[data-theme='light'] .top-micro-cloud .micro-cloud-icon {
+  color: #0284c7 !important;
+}
+
+/* Estado Conectado en Modo Claro */
+[data-theme='light'] .top-micro-cloud.status-connected {
+  background: #f0fdf4 !important;
+  border-color: #a7f3d0 !important;
+  box-shadow: 0 1px 4px rgba(16, 185, 129, 0.12) !important;
+}
+
+[data-theme='light'] .top-micro-cloud.status-connected .micro-cloud-icon {
+  color: #059669 !important;
+}
+
+[data-theme='light'] .top-micro-cloud.status-connected .micro-text {
+  color: #065f46 !important;
+}
+
+[data-theme='light'] .top-micro-cloud.status-connected:hover {
+  background: #dcfce7 !important;
+  border-color: #10b981 !important;
+  box-shadow: 0 3px 8px rgba(16, 185, 129, 0.2) !important;
+}
+
+[data-theme='light'] .top-micro-cloud:hover {
+  border-color: #d97706 !important;
+  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.15) !important;
+}
+
+/* ----------------------------------------------------------------------------
+   MODAL DE CONFIRMACIÓN TRASLÚCIDO (CONFIRM MODAL)
+   ---------------------------------------------------------------------------- */
+.custom-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(40, 25, 15, 0.32);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  animation: confirmFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme='light'] .custom-confirm-backdrop {
+  background: rgba(45, 30, 18, 0.22) !important;
+  backdrop-filter: blur(5px) !important;
+  -webkit-backdrop-filter: blur(5px) !important;
+}
+
+.custom-confirm-card {
+  width: 100%;
+  max-width: 480px;
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  position: relative;
+  border: 1.5px solid var(--border-color);
+  box-shadow: 0 20px 45px -8px rgba(33, 22, 13, 0.18), 0 4px 14px rgba(0, 0, 0, 0.05);
+  animation: confirmPopIn 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.15);
+}
+
+[data-theme='light'] .custom-confirm-card {
+  background: #ffffff;
+  border-color: #ead6c3;
+  box-shadow: 0 24px 50px -10px rgba(45, 26, 14, 0.22), 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.confirm-modal-header {
+  padding: 1rem 1.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: #faf5ee;
+  border-bottom: 1px solid #ead6c3;
+}
+
+[data-theme='dark'] .confirm-modal-header {
+  background: rgba(26, 19, 14, 0.95);
+  border-bottom-color: var(--border-color);
+}
+
+.confirm-header-box {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.confirm-badge-danger {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fef2f2;
+  color: #ef4444;
+  border: 1.5px solid #fca5a5;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
+}
+
+.confirm-badge-warning {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fffbeb;
+  color: #f59e0b;
+  border: 1.5px solid #fcd34d;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
+}
+
+.confirm-badge-info {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eff6ff;
+  color: #3b82f6;
+  border: 1.5px solid #93c5fd;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+}
+
+.confirm-title-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.confirm-title-col .modal-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 750;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+[data-theme='light'] .confirm-title-col .modal-title {
+  color: #21160d;
+}
+
+.confirm-title-col .modal-subtitle {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+[data-theme='light'] .confirm-title-col .modal-subtitle {
+  color: #786555;
+}
+
+.confirm-modal-body {
+  padding: 1.25rem 1.35rem;
+}
+
+.confirm-section-card {
+  padding: 1rem 1.15rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+}
+
+[data-theme='light'] .confirm-section-card {
+  background: #fbf8f3;
+  border-color: #ebdacf;
+}
+
+.confirm-section-card.section-card-danger {
+  border-left: 4px solid #ef4444;
+}
+
+.confirm-section-card.section-card-warning {
+  border-left: 4px solid #f59e0b;
+}
+
+.confirm-section-card.section-card-info {
+  border-left: 4px solid #3b82f6;
+}
+
+.confirm-message-text {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+[data-theme='light'] .confirm-message-text {
+  color: #3e2e20;
+}
+
+.confirm-modal-footer {
+  padding: 0.95rem 1.35rem 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-top: 1px solid var(--border-color);
+}
+
+[data-theme='light'] .confirm-modal-footer {
+  background: #faf6f0;
+  border-top-color: #ead6c3;
+}
+
+.confirm-modal-footer .btn-cancel {
+  padding: 0.65rem 1.25rem;
+  border-radius: 999px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: transparent;
+  border: 1.5px solid #d97706;
+  color: #b45309;
+  transition: all 0.2s ease;
+}
+
+[data-theme='light'] .confirm-modal-footer .btn-cancel {
+  background: #ffffff;
+  border: 1.5px solid #d97706;
+  color: #78350f;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.confirm-modal-footer .btn-cancel:hover {
+  background: rgba(16, 185, 129, 0.15) !important;
+  border-color: #10b981 !important;
+  color: #34d399 !important;
+  transform: translateY(-1px);
+}
+
+[data-theme='light'] .confirm-modal-footer .btn-cancel:hover {
+  background: #ecfdf5 !important;
+  border-color: #10b981 !important;
+  color: #065f46 !important;
+  box-shadow: 0 3px 10px rgba(16, 185, 129, 0.2) !important;
+}
+
+.btn-confirm-submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.65rem 1.35rem;
+  border-radius: 999px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  color: #ffffff;
+  transition: all 0.2s ease;
+}
+
+.btn-confirm-submit.btn-variant-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+}
+
+.btn-confirm-submit.btn-variant-danger:hover {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.45);
+}
+
+.btn-confirm-submit.btn-variant-warning {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);
+}
+
+.btn-confirm-submit.btn-variant-warning:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.45);
+}
+
+.btn-confirm-submit.btn-variant-info {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+}
+
+.btn-confirm-submit.btn-variant-info:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.45);
+}
+
+@keyframes confirmFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes confirmPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   BOTONES INFERIORES DEL SIDEBAR (TONOS DISTINTIVOS)
+   ---------------------------------------------------------------------------- */
+
+/* Base compartida */
+.sidebar-footer-item {
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.sidebar-footer-item .footer-item-icon {
+  width: 32px !important;
+  min-width: 32px !important;
+  height: 32px !important;
+  border-radius: 9px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease !important;
+}
+
+.sidebar-footer-item:hover .footer-item-icon {
+  transform: scale(1.08) !important;
+}
+
+/* 1. APP MESEROS (VERDE ESMERALDA / WHATSAPP) */
+.sidebar-footer-item.mobile-sync-btn {
+  background: rgba(16, 185, 129, 0.14) !important;
+  border: 1.5px solid rgba(16, 185, 129, 0.45) !important;
+}
+
+.sidebar-footer-item.mobile-sync-btn .footer-item-icon {
+  background: rgba(16, 185, 129, 0.25) !important;
+  color: #34d399 !important;
+}
+
+.sidebar-footer-item.mobile-sync-btn .footer-item-title {
+  color: #ecfdf5 !important;
+}
+
+.sidebar-footer-item.mobile-sync-btn .footer-item-sub {
+  color: #6ee7b7 !important;
+  font-weight: 600 !important;
+}
+
+.sidebar-footer-item.mobile-sync-btn:hover {
+  background: rgba(16, 185, 129, 0.22) !important;
+  border-color: #10b981 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.28) !important;
+}
+
+/* App Meseros Modo Claro: Tono más oscuro y definido */
+[data-theme='light'] .sidebar-footer-item.mobile-sync-btn {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%) !important;
+  border: 1.5px solid #4ade80 !important;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.16) !important;
+}
+
+[data-theme='light'] .sidebar-footer-item.mobile-sync-btn .footer-item-icon {
+  background: #86efac !important;
+  color: #064e3b !important;
+}
+
+[data-theme='light'] .sidebar-footer-item.mobile-sync-btn .footer-item-title {
+  color: #064e3b !important;
+  font-weight: 800 !important;
+}
+
+[data-theme='light'] .sidebar-footer-item.mobile-sync-btn .footer-item-sub {
+  color: #047857 !important;
+  font-weight: 700 !important;
+}
+
+[data-theme='light'] .sidebar-footer-item.mobile-sync-btn:hover {
+  background: #bbf7d0 !important;
+  border-color: #16a34a !important;
+  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.24) !important;
+}
+
+/* 2. COMANDAS ON / OFF (ÁMBAR DORADO / ORO MIEL) */
+.sidebar-footer-item.lock-btn {
+  background: rgba(217, 119, 6, 0.15) !important;
+  border: 1.5px solid rgba(245, 158, 11, 0.45) !important;
+}
+
+.sidebar-footer-item.lock-btn .footer-item-icon {
+  background: rgba(217, 119, 6, 0.25) !important;
+  color: #fbbf24 !important;
+}
+
+.sidebar-footer-item.lock-btn .footer-item-title {
+  color: #fffbeb !important;
+}
+
+.sidebar-footer-item.lock-btn .footer-item-sub {
+  color: #fcd34d !important;
+  font-weight: 600 !important;
+}
+
+.sidebar-footer-item.lock-btn:hover {
+  background: rgba(217, 119, 6, 0.22) !important;
+  border-color: #f59e0b !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.28) !important;
+}
+
+/* Comandas ON Modo Claro: Tono más oscuro y definido */
+[data-theme='light'] .sidebar-footer-item.lock-btn {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+  border: 1.5px solid #f59e0b !important;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.18) !important;
+}
+
+[data-theme='light'] .sidebar-footer-item.lock-btn .footer-item-icon {
+  background: #fcd34d !important;
+  color: #78350f !important;
+}
+
+[data-theme='light'] .sidebar-footer-item.lock-btn .footer-item-title {
+  color: #78350f !important;
+  font-weight: 800 !important;
+}
+
+[data-theme='light'] .sidebar-footer-item.lock-btn .footer-item-sub {
+  color: #92400e !important;
+  font-weight: 700 !important;
+}
+
+[data-theme='light'] .sidebar-footer-item.lock-btn:hover {
+  background: #fde68a !important;
+  border-color: #d97706 !important;
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.26) !important;
+}
+
+/* Comandas OFF cuando el servicio está suspendido */
+.sidebar-footer-item.lock-btn.service-closed {
+  background: rgba(239, 68, 68, 0.14) !important;
+  border-color: rgba(239, 68, 68, 0.45) !important;
+}
+
+.sidebar-footer-item.lock-btn.service-closed .footer-item-icon {
+  background: rgba(239, 68, 68, 0.25) !important;
+  color: #f87171 !important;
+}
+
+[data-theme='light'] .sidebar-footer-item.lock-btn.service-closed {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%) !important;
+  border-color: #f87171 !important;
+}
+
+[data-theme='light'] .sidebar-footer-item.lock-btn.service-closed .footer-item-icon {
+  background: #fca5a5 !important;
+  color: #991b1b !important;
+}
+
+[data-theme='light'] .sidebar-footer-item.lock-btn.service-closed .footer-item-title {
+  color: #7f1d1d !important;
+}
+
+[data-theme='light'] .sidebar-footer-item.lock-btn.service-closed .footer-item-sub {
+  color: #991b1b !important;
+}
+
+/* 3. NUBE FIREBASE (AZUL CIELO / CIELITO FRESCO) */
+.sidebar-footer-item.cloud-btn {
+  background: rgba(14, 165, 233, 0.14) !important;
+  border: 1.5px solid rgba(14, 165, 233, 0.45) !important;
+}
+
+.sidebar-footer-item.cloud-btn .footer-item-icon {
+  background: rgba(14, 165, 233, 0.25) !important;
+  color: #38bdf8 !important;
+}
+
+.sidebar-footer-item.cloud-btn .footer-item-title {
+  color: #f0f9ff !important;
+}
+
+.sidebar-footer-item.cloud-btn .footer-item-sub {
+  color: #7dd3fc !important;
+  font-weight: 600 !important;
+}
+
+.sidebar-footer-item.cloud-btn .sidebar-status-dot.dot-connected {
+  background: #38bdf8 !important;
+  box-shadow: 0 0 8px #38bdf8 !important;
+}
+
+.sidebar-footer-item.cloud-btn:hover {
+  background: rgba(14, 165, 233, 0.22) !important;
+  border-color: #0ea5e9 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.28) !important;
+}
+
+/* Nube Firebase Modo Claro: Tono más oscuro y definido */
+[data-theme='light'] .sidebar-footer-item.cloud-btn {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%) !important;
+  border: 1.5px solid #38bdf8 !important;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.16) !important;
+}
+
+[data-theme='light'] .sidebar-footer-item.cloud-btn .footer-item-icon {
+  background: #7dd3fc !important;
+  color: #0369a1 !important;
+}
+
+[data-theme='light'] .sidebar-footer-item.cloud-btn .footer-item-title {
+  color: #0c4a6e !important;
+  font-weight: 800 !important;
+}
+
+[data-theme='light'] .sidebar-footer-item.cloud-btn .footer-item-sub {
+  color: #0369a1 !important;
+  font-weight: 700 !important;
+}
+
+[data-theme='light'] .sidebar-footer-item.cloud-btn .sidebar-status-dot.dot-connected {
+  background: #0284c7 !important;
+  box-shadow: 0 0 6px rgba(2, 132, 199, 0.8) !important;
+}
+
+[data-theme='light'] .sidebar-footer-item.cloud-btn:hover {
+  background: #bae6fd !important;
+  border-color: #0284c7 !important;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.24) !important;
+}
+

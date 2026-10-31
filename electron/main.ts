@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { exec } from 'node:child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -108,6 +109,56 @@ app.whenReady().then(() => {
 
   ipcMain.on('server:broadcastState', (_event, state) => {
     updateServerState(state);
+  });
+
+  // Abrir carpeta del archivo APK para compartir por WhatsApp
+  ipcMain.handle('apk:openFolder', async () => {
+    const candidatePaths = [
+      path.join(process.cwd(), 'release', 'LaMolienda_Comandero.apk'),
+      path.join(__dirname, '../../release/LaMolienda_Comandero.apk'),
+      path.join(__dirname, '../release/LaMolienda_Comandero.apk'),
+      path.join(process.cwd(), 'release'),
+    ];
+    for (const p of candidatePaths) {
+      try {
+        await fs.access(p);
+        shell.showItemInFolder(p);
+        return { success: true };
+      } catch {}
+    }
+    shell.openPath(path.join(process.cwd(), 'release'));
+    return { success: true };
+  });
+
+  // Copiar archivo APK al portapapeles de Windows para pegar en WhatsApp con Ctrl + V
+  ipcMain.handle('apk:copyToClipboard', async () => {
+    const candidatePaths = [
+      path.join(process.cwd(), 'release', 'LaMolienda_Comandero.apk'),
+      path.join(__dirname, '../../release/LaMolienda_Comandero.apk'),
+      path.join(__dirname, '../release/LaMolienda_Comandero.apk'),
+    ];
+    let foundPath = '';
+    for (const p of candidatePaths) {
+      try {
+        await fs.access(p);
+        foundPath = p;
+        break;
+      } catch {}
+    }
+    if (!foundPath) {
+      return { success: false, error: 'Archivo APK no encontrado en carpeta release' };
+    }
+
+    return new Promise((resolve) => {
+      exec(`powershell -NoProfile -Command "Set-Clipboard -Path '${foundPath}'"`, (err) => {
+        if (err) {
+          console.error('Error al copiar APK a portapapeles:', err);
+          resolve({ success: false, error: err.message });
+        } else {
+          resolve({ success: true, filePath: foundPath });
+        }
+      });
+    });
   });
 
   // Guardar y abrir reporte de Excel inmediatamente en la computadora

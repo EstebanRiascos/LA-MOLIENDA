@@ -244,6 +244,32 @@ export function startLocalServer(win: BrowserWindow | null, port: number = 4545)
         return;
       }
 
+      // 0. ENDPOINT: Descarga directa del instalador APK para meseros
+      if ((pathname === '/download/apk' || pathname === '/apk' || pathname === '/LaMolienda_Comandero.apk') && req.method === 'GET') {
+        const candidatePaths = [
+          path.join(process.cwd(), 'release', 'LaMolienda_Comandero.apk'),
+          path.join(__dirname, '../../release/LaMolienda_Comandero.apk'),
+          path.join(__dirname, '../release/LaMolienda_Comandero.apk'),
+          path.join(process.cwd(), 'android', 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk'),
+        ];
+        const apkPath = candidatePaths.find((p) => fs.existsSync(p));
+        if (apkPath) {
+          const stat = fs.statSync(apkPath);
+          res.writeHead(200, {
+            'Content-Type': 'application/vnd.android.package-archive',
+            'Content-Disposition': 'attachment; filename="LaMolienda_Comandero.apk"',
+            'Content-Length': stat.size,
+          });
+          const stream = fs.createReadStream(apkPath);
+          stream.pipe(res);
+          return;
+        } else {
+          res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+          res.end('Archivo APK no encontrado en el servidor.');
+          return;
+        }
+      }
+
       // 1. ENDPOINT: Información del servidor local
       if (pathname === '/api/info' && req.method === 'GET') {
         const ip = getLocalIpAddress();

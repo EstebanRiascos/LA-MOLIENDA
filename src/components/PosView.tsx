@@ -12,11 +12,14 @@ import {
   CheckCircle2,
   AlertTriangle,
   ArrowRight,
+  ChevronDown,
+  Check,
 } from 'lucide-react';
 import { Product, Table, ProductCategory, OrderItem, UserRole } from '../types';
 import { CATEGORIES } from '../utils/defaults';
 import { formatCurrency } from '../utils/storage';
 import laMoliendaLogo from '../assets/la_molienda_logo.png';
+import { ConfirmModal } from './ConfirmModal';
 
 interface PosViewProps {
   products: Product[];
@@ -71,6 +74,29 @@ export const PosView: React.FC<PosViewProps> = ({
   const [internalPatronNote, setInternalPatronNote] = useState<string>('');
   const patronNote = propsPatronNote !== undefined ? propsPatronNote : internalPatronNote;
   const setPatronNote = propsSetPatronNote !== undefined ? propsSetPatronNote : setInternalPatronNote;
+
+  const [showClearCartModal, setShowClearCartModal] = useState(false);
+
+  // Custom Target Dropdown state
+  const [isTargetDropdownOpen, setIsTargetDropdownOpen] = useState(false);
+  const targetDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        targetDropdownRef.current &&
+        !targetDropdownRef.current.contains(e.target as Node)
+      ) {
+        setIsTargetDropdownOpen(false);
+      }
+    };
+    if (isTargetDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isTargetDropdownOpen]);
 
   // Horizontal scroll with mouse wheel for category pills
   const categoryPillsRef = useRef<HTMLDivElement>(null);
@@ -161,10 +187,16 @@ export const PosView: React.FC<PosViewProps> = ({
   };
 
   const handleClearCart = () => {
-    if (cartItems.length > 0 && window.confirm('¿Vaciar la comanda actual?')) {
-      setCartItems([]);
-      setTipPercentage(0);
+    if (cartItems.length > 0) {
+      setShowClearCartModal(true);
     }
+  };
+
+  const handleConfirmClearCart = () => {
+    setCartItems([]);
+    setTipPercentage(0);
+    setShowClearCartModal(false);
+    onShowNotification('🗑️ Comanda vaciada');
   };
 
   // Calculations
@@ -175,7 +207,7 @@ export const PosView: React.FC<PosViewProps> = ({
   // Dispatch cart: to Table or to Direct Checkout
   const handleDispatchOrder = () => {
     if (cartItems.length === 0) {
-      alert('La comanda está vacía. Selecciona productos del menú primero.');
+      onShowNotification('⚠️ La comanda está vacía. Selecciona productos del menú primero.');
       return;
     }
 
@@ -356,23 +388,121 @@ export const PosView: React.FC<PosViewProps> = ({
         </div>
 
         {/* Target Destination Selector (Mesa / Takeaway) */}
-        <div className="ticket-target-box">
+        <div className="ticket-target-box" ref={targetDropdownRef}>
           <label className="target-label">Destino de la Comanda:</label>
-          <select
-            value={targetTableId}
-            onChange={(e) => setTargetTableId(e.target.value)}
-            className="target-select-input"
-          >
-            <option value="direct_takeaway">⚡ Venta Rápida / Para Llevar</option>
-            <optgroup label="Mesas y Salón">
-              {tables.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.number} ({t.zone.toUpperCase()}) -{' '}
-                  {t.status === 'libre' ? 'Libre' : `Ocupada (${formatCurrency(t.total || 0)})`}
-                </option>
-              ))}
-            </optgroup>
-          </select>
+
+          <div className="custom-target-select-container">
+            <button
+              type="button"
+              className={`custom-target-trigger ${isTargetDropdownOpen ? 'open' : ''}`}
+              onClick={() => setIsTargetDropdownOpen((prev) => !prev)}
+            >
+              <div className="trigger-content-row">
+                {targetTableId === 'direct_takeaway' ? (
+                  <div className="trigger-label-group">
+                    <span className="trigger-icon zap-icon">⚡</span>
+                    <span className="trigger-text-primary">Venta Rápida / Para Llevar</span>
+                  </div>
+                ) : (
+                  (() => {
+                    const selTable = tables.find((t) => t.id === targetTableId);
+                    if (!selTable) {
+                      return <span className="trigger-text-primary">Seleccionar destino...</span>;
+                    }
+                    return (
+                      <div className="trigger-label-group">
+                        <span className="trigger-text-primary">{selTable.number}</span>
+                        <span className="trigger-zone-tag">{selTable.zone.toUpperCase()}</span>
+                        <span
+                          className={`trigger-status-badge status-${selTable.status}`}
+                        >
+                          {selTable.status === 'libre' ? 'Libre' : 'Ocupada'}
+                        </span>
+                      </div>
+                    );
+                  })()
+                )}
+              </div>
+              <ChevronDown
+                size={16}
+                className={`trigger-chevron ${isTargetDropdownOpen ? 'rotated' : ''}`}
+              />
+            </button>
+
+            {/* Custom Dropdown Menu Panel */}
+            {isTargetDropdownOpen && (
+              <div className="custom-target-dropdown-menu">
+                {/* 1. Opción Venta Rápida */}
+                <div
+                  className={`target-dropdown-item direct-option ${
+                    targetTableId === 'direct_takeaway' ? 'selected' : ''
+                  }`}
+                  onClick={() => {
+                    setTargetTableId('direct_takeaway');
+                    setIsTargetDropdownOpen(false);
+                  }}
+                >
+                  <div className="item-main-col">
+                    <div className="item-headline">
+                      <span className="item-icon-zap">⚡</span>
+                      <span className="item-title">Venta Rápida / Para Llevar</span>
+                    </div>
+                    <span className="item-sub">Cobro directo sin asignar mesa</span>
+                  </div>
+                  {targetTableId === 'direct_takeaway' && (
+                    <Check size={16} className="item-check" />
+                  )}
+                </div>
+
+                {/* Separador de Sección */}
+                <div className="target-dropdown-divider">
+                  <span>MESAS Y SALÓN</span>
+                </div>
+
+                {/* 2. Lista de Mesas */}
+                <div className="target-dropdown-tables-list">
+                  {tables.map((t) => {
+                    const isSelected = targetTableId === t.id;
+                    const isOccupied = t.status !== 'libre';
+                    return (
+                      <div
+                        key={t.id}
+                        className={`target-dropdown-item table-option ${
+                          isSelected ? 'selected' : ''
+                        } ${isOccupied ? 'is-occupied' : 'is-free'}`}
+                        onClick={() => {
+                          setTargetTableId(t.id);
+                          setIsTargetDropdownOpen(false);
+                        }}
+                      >
+                        <div className="item-main-col">
+                          <div className="item-headline">
+                            <span className="item-title">{t.number}</span>
+                            <span className="item-zone-tag">{t.zone.toUpperCase()}</span>
+                          </div>
+                          {isOccupied ? (
+                            <span className="item-table-total">
+                              Cuenta: {formatCurrency(t.total || 0)}
+                            </span>
+                          ) : (
+                            <span className="item-sub">Disponible</span>
+                          )}
+                        </div>
+
+                        <div className="item-right-col">
+                          <span className={`table-status-pill status-${t.status}`}>
+                            <span className="status-dot" />
+                            {isOccupied ? 'Ocupada' : 'Libre'}
+                          </span>
+                          {isSelected && <Check size={15} className="item-check" />}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
 
           <input
             type="text"
@@ -487,6 +617,19 @@ export const PosView: React.FC<PosViewProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Modal de confirmación estilizado para Vaciar Comanda */}
+      <ConfirmModal
+        isOpen={showClearCartModal}
+        title="¿Vaciar la comanda actual?"
+        message={`Se descartarán los ${cartItems.reduce((acc, i) => acc + i.quantity, 0)} productos agregados a esta orden. Esta acción no se puede deshacer.`}
+        confirmText="Sí, vaciar comanda"
+        cancelText="Mantener productos"
+        variant="danger"
+        icon="trash"
+        onConfirm={handleConfirmClearCart}
+        onCancel={() => setShowClearCartModal(false)}
+      />
     </div>
   );
 };

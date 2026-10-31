@@ -18,6 +18,7 @@ import {
 import { Table, Product, OrderItem, ProductCategory, UserRole } from '../types';
 import { CATEGORIES } from '../utils/defaults';
 import { formatCurrency } from '../utils/storage';
+import { ConfirmModal } from './ConfirmModal';
 
 interface TableDetailModalProps {
   isOpen: boolean;
@@ -52,6 +53,7 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [editingNoteItemId, setEditingNoteItemId] = useState<string | null>(null);
   const [tempNoteText, setTempNoteText] = useState('');
+  const [itemToDelete, setItemToDelete] = useState<OrderItem | null>(null);
 
   // Horizontal scroll with mouse wheel for category chips
   const categoryChipsRef = useRef<HTMLDivElement>(null);
@@ -92,7 +94,7 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
   // Add product to table
   const handleAddProduct = (product: Product) => {
     if (product.stock <= 0) {
-      alert(`El producto "${product.name}" no tiene existencias disponibles en inventario.`);
+      onShowNotification(`⚠️ El producto "${product.name}" no tiene existencias disponibles.`);
       return;
     }
 
@@ -150,10 +152,17 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
   // Remove item
   const handleRemoveItem = (itemId: string) => {
     const item = table.items.find((i) => i.id === itemId);
-    if (item && window.confirm(`¿Quitar "${item.productName}" de la comanda?`)) {
-      const newItems = table.items.filter((i) => i.id !== itemId);
-      onUpdateTable(recalculateTable(newItems));
+    if (item) {
+      setItemToDelete(item);
     }
+  };
+
+  const handleConfirmDeleteItem = () => {
+    if (!itemToDelete) return;
+    const newItems = table.items.filter((i) => i.id !== itemToDelete.id);
+    onUpdateTable(recalculateTable(newItems));
+    onShowNotification(`🗑️ "${itemToDelete.productName}" retirado`);
+    setItemToDelete(null);
   };
 
   // Save item note
@@ -652,6 +661,18 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
           </div>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={Boolean(itemToDelete)}
+        title="¿Quitar producto de la comanda?"
+        message={`¿Deseas retirar "${itemToDelete?.productName}" (${itemToDelete?.quantity} un.) de la mesa ${table?.number}?`}
+        confirmText="Sí, quitar producto"
+        cancelText="Conservar en comanda"
+        variant="danger"
+        icon="trash"
+        onConfirm={handleConfirmDeleteItem}
+        onCancel={() => setItemToDelete(null)}
+      />
     </div>
   );
 };
