@@ -39,6 +39,7 @@ import { exportLaMoliendaReport, ExportReportOptions } from './utils/excelExport
 import { playSound, soundForNotification } from './utils/sounds';
 
 import { Header, ActiveSection } from './components/Header';
+import { SidebarLayout } from './components/SidebarLayout';
 import { StatsCards } from './components/StatsCards';
 import { TablesView } from './components/TablesView';
 import { PosView } from './components/PosView';
@@ -1703,41 +1704,36 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div className="app-container">
+    <>
+      <SidebarLayout
+      theme={theme}
+      onToggleTheme={handleToggleTheme}
+      activeSection={activeSection}
+      onChangeSection={handleSectionChange}
+      activeTablesCount={stats.activeTablesCount}
+      lowStockCount={stats.lowStockAlertCount}
+      todaySalesCount={stats.todayOrdersCount}
+      currentStaff={currentStaff}
+      staffList={staffList}
+      onChangeStaff={handleChangeStaff}
+      currentUser={currentUser}
+      onOpenUserManagement={() => setIsUserManagementOpen(true)}
+      onOpenMobileSync={() => setIsMobileSyncOpen(true)}
+      connectedClientsCount={connectedClientsCount}
+      isServiceOpen={isServiceOpen}
+      onToggleServiceLock={handleToggleServiceLock}
+      onOpenFirebaseSync={() => setIsFirebaseSyncOpen(true)}
+      firebaseStatus={firebaseStatusSnap.status}
+      firebaseProjectId={firebaseStatusSnap.projectId}
+      unreadNotificationsCount={unreadNotificationsCount}
+      onOpenNotifications={() => {
+        playSound('click');
+        setIsNotificationsOpen((prev) => !prev);
+      }}
+      onLogout={handleLogout}
+    >
       {/* Multi-logo ambient background canvas across the entire system */}
       <AmbientBackgroundCanvas />
-
-      {/* Header */}
-      <Header
-        theme={theme}
-        onToggleTheme={handleToggleTheme}
-        activeSection={activeSection}
-        onChangeSection={handleSectionChange}
-        onOpenNewTable={() => handleOpenTableModal()}
-        onOpenNewProduct={handleOpenNewProduct}
-        onExportExcel={handleExportExcel}
-        activeTablesCount={stats.activeTablesCount}
-        lowStockCount={stats.lowStockAlertCount}
-        todaySalesCount={stats.todayOrdersCount}
-        currentStaff={currentStaff}
-        staffList={staffList}
-        onChangeStaff={handleChangeStaff}
-        currentUser={currentUser}
-        onOpenUserManagement={() => setIsUserManagementOpen(true)}
-        onOpenMobileSync={() => setIsMobileSyncOpen(true)}
-        connectedClientsCount={connectedClientsCount}
-        isServiceOpen={isServiceOpen}
-        onToggleServiceLock={handleToggleServiceLock}
-        onOpenFirebaseSync={() => setIsFirebaseSyncOpen(true)}
-        firebaseStatus={firebaseStatusSnap.status}
-        firebaseProjectId={firebaseStatusSnap.projectId}
-        unreadNotificationsCount={unreadNotificationsCount}
-        onOpenNotifications={() => {
-          playSound('click');
-          setIsNotificationsOpen((prev) => !prev);
-        }}
-        onLogout={handleLogout}
-      />
 
       {/* Main Content Area */}
       <main className="app-main">
@@ -1876,6 +1872,7 @@ export const App: React.FC = () => {
           </div>
         </div>
       </footer>
+    </SidebarLayout>
 
       {/* MODALS */}
 
@@ -2053,7 +2050,7 @@ export const App: React.FC = () => {
         onDeleteNotification={handleDeleteNotification}
         onSelectTable={handleSelectTableFromNotification}
       />
-    </div>
+    </>
   );
 };
 
