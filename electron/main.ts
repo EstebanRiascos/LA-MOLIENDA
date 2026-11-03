@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, shell, Menu } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import path from 'node:path';
 import fs from 'node:fs/promises';
@@ -18,6 +18,8 @@ const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL'];
 let isQuitConfirmed = false;
 
 function createWindow() {
+  Menu.setApplicationMenu(null);
+
   win = new BrowserWindow({
     width: 1440,
     height: 920,
@@ -28,6 +30,7 @@ function createWindow() {
     icon: path.join(__dirname, '../build/icon.ico'),
     show: false,
     frame: true,
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       nodeIntegration: false,
@@ -36,6 +39,9 @@ function createWindow() {
       webSecurity: false,
     },
   });
+
+  win.removeMenu();
+  win.setMenuBarVisibility(false);
 
   win.webContents.on('console-message', (_event, level, message, line, sourceId) => {
     console.log(`[Renderer Console ${level}] ${message} (${sourceId}:${line})`);
@@ -110,6 +116,22 @@ app.whenReady().then(() => {
 
   ipcMain.on('server:broadcastState', (_event, state) => {
     updateServerState(state);
+  });
+
+  // Obtener ruta física del archivo APK
+  ipcMain.handle('apk:getPath', async () => {
+    const candidatePaths = [
+      path.join(process.cwd(), 'release', 'LaMolienda_Comandero.apk'),
+      path.join(__dirname, '../../release/LaMolienda_Comandero.apk'),
+      path.join(__dirname, '../release/LaMolienda_Comandero.apk'),
+    ];
+    for (const p of candidatePaths) {
+      try {
+        await fs.access(p);
+        return { success: true, filePath: p };
+      } catch {}
+    }
+    return { success: false, filePath: path.join(process.cwd(), 'release', 'LaMolienda_Comandero.apk') };
   });
 
   // Abrir carpeta del archivo APK para compartir por WhatsApp

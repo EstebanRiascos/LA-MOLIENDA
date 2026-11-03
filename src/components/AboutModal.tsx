@@ -112,7 +112,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
           </div>
           <h2 id="about-system-title" className="about-title">La Molienda POS</h2>
           <span className="about-subtitle">Sistema Integral de Gestión Gastronómica & Punto de Venta</span>
-          <span className="about-version-badge">Versión 1.1.1 &bull; Release Estable</span>
+          <span className="about-version-badge">Versión 1.1.2 &bull; Release Estable</span>
         </div>
 
         {/* Auto-Updater Panel */}
@@ -164,12 +164,12 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
                 {updateState.status === 'checking'
                   ? 'Verificando repositorio en GitHub...'
                   : updateState.status === 'not-available'
-                  ? 'El sistema está al día con la última versión oficial.'
-                  : updateState.status === 'available'
-                  ? `Nueva versión v${updateState.version || ''} detectada. Descargando...`
-                  : updateState.status === 'error' || updateState.status === 'dev'
-                  ? (updateState.message || 'Sistema preparado para actualizaciones automáticas.')
-                  : 'Sincronizado con releases oficiales de GitHub.'}
+                    ? 'El sistema está al día con la última versión oficial.'
+                    : updateState.status === 'available'
+                      ? `Nueva versión v${updateState.version || ''} detectada. Descargando...`
+                      : updateState.status === 'error' || updateState.status === 'dev'
+                        ? (updateState.message || 'Sistema preparado para actualizaciones automáticas.')
+                        : 'Sincronizado con releases oficiales de GitHub.'}
               </span>
 
               <button

@@ -1930,7 +1930,7 @@ export const App: React.FC = () => {
             <span className="footer-status-indicator" title="Sistema operando normalmente" />
             <span className="footer-app-label">La Molienda POS</span>
             <span className="footer-sep">&bull;</span>
-            <span className="footer-version-tag">v1.1.1</span>
+            <span className="footer-version-tag">v1.1.2</span>
           </div>
 
           <div className="footer-center">

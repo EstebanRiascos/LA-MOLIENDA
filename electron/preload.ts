@@ -25,6 +25,7 @@ const api = {
   getServerInfo: () => ipcRenderer.invoke('server:getInfo'),
   broadcastState: (state: any) => ipcRenderer.send('server:broadcastState', state),
   openApkFolder: () => ipcRenderer.invoke('apk:openFolder'),
+  getApkPath: () => ipcRenderer.invoke('apk:getPath'),
   copyApkToClipboard: () => ipcRenderer.invoke('apk:copyToClipboard'),
   onMobileOrder: (callback: (order: any) => void) => {
     const listener = (_event: any, order: any) => callback(order);
