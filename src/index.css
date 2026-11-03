@@ -22818,11 +22818,9 @@ body.mobile-waiter-active {
 }
 
 .mobile-service-closed-content strong {
-  font-size: 0.82rem;
+  font-size: 0.84rem;
   letter-spacing: 0.02em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.25;
 }
 
 .mobile-service-closed-content span {

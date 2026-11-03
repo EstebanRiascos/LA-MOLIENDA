@@ -217,29 +217,7 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
       window.removeEventListener('lamolienda:service-status-changed', handleServiceStatusChange);
   }, []);
 
-  const handleReopenService = async () => {
-    try {
-      playSound('success');
-      await updateServiceLockStatus(true, 'Servicio reabierto desde comandero móvil');
-      setServiceStatus({ isOpen: true, reason: 'Servicio reabierto' });
-      setIsServiceBannerDismissed(true);
-    } catch (err) {
-      console.error('Error reabriendo servicio desde móvil:', err);
-    }
-  };
 
-  const handleToggleServiceStatusFromMobile = async () => {
-    const nextState = !serviceStatus.isOpen;
-    try {
-      playSound(nextState ? 'success' : 'warning');
-      const reason = nextState ? 'Servicio reabierto' : 'Local cerrado por administración';
-      await updateServiceLockStatus(nextState, reason);
-      setServiceStatus({ isOpen: nextState, reason });
-      if (nextState) setIsServiceBannerDismissed(false);
-    } catch (err) {
-      console.error('Error alternando servicio desde móvil:', err);
-    }
-  };
   const [isOpenTableModalOpen, setIsOpenTableModalOpen] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('modal') === 'opentable';
@@ -1112,40 +1090,28 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
         </div>
       </header>
 
-      {/* BANNER DE SERVICIO CERRADO / BLOQUEADO POR CIERRE DE CAJA */}
+      {/* BANNER DE SERVICIO CERRADO / BLOQUEADO POR CIERRE DE CAJA (Solo PC puede abrir o cerrar) */}
       {!serviceStatus.isOpen && !isServiceBannerDismissed && (
         <div className="mobile-service-closed-banner">
           <div className="mobile-service-closed-content">
             <Lock size={16} />
             <div>
               <strong>Servicio Suspendido por Administración</strong>
-              <span>{serviceStatus.reason || 'Turno cerrado. Las comandas están deshabilitadas hasta la próxima apertura.'}</span>
+              <span>{serviceStatus.reason || 'Turno cerrado. Las comandas están deshabilitadas hasta la próxima apertura desde la caja.'}</span>
             </div>
           </div>
-          <div className="mobile-service-closed-actions">
-            {(currentUser?.role === 'admin' || currentUser?.role === 'cajero') && (
-              <button
-                type="button"
-                className="mobile-service-reopen-btn"
-                onClick={handleReopenService}
-                title="Habilitar comandas inmediatamente"
-              >
-                Habilitar
-              </button>
-            )}
-            <button
-              type="button"
-              className="mobile-service-dismiss-btn"
-              onClick={() => {
-                playSound('click');
-                setIsServiceBannerDismissed(true);
-              }}
-              title="Cerrar aviso"
-              aria-label="Cerrar aviso"
-            >
-              <X size={15} />
-            </button>
-          </div>
+          <button
+            type="button"
+            className="mobile-service-dismiss-btn"
+            onClick={() => {
+              playSound('click');
+              setIsServiceBannerDismissed(true);
+            }}
+            title="Cerrar aviso"
+            aria-label="Cerrar aviso"
+          >
+            <X size={15} />
+          </button>
         </div>
       )}
 
@@ -1913,17 +1879,6 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
             </div>
 
             <div className="mobile-profile-modal-actions">
-              {(currentUser?.role === 'admin' || currentUser?.role === 'cajero') && (
-                <button
-                  type="button"
-                  className={`btn-mobile-service-toggle ${serviceStatus.isOpen ? 'is-open' : 'is-closed'}`}
-                  onClick={handleToggleServiceStatusFromMobile}
-                >
-                  <Lock size={15} />
-                  <span>{serviceStatus.isOpen ? 'Suspender Comandero Móvil' : 'Habilitar Comandero Móvil'}</span>
-                </button>
-              )}
-
               {!isStandalone && !isNative && (
                 <button
                   type="button"
