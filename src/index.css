@@ -22785,37 +22785,127 @@ body.mobile-waiter-active {
 .mobile-service-closed-banner {
   background: linear-gradient(135deg, rgba(185, 28, 28, 0.95), rgba(127, 29, 29, 0.95));
   color: #ffffff;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 0.9rem;
   margin: 0.65rem 0.85rem;
   border-radius: 12px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.75rem;
   box-shadow: 0 4px 15px rgba(185, 28, 28, 0.35);
   border: 1px solid rgba(248, 113, 113, 0.4);
   animation: slide-in-top 0.3s ease;
 }
 
-.mobile-service-closed-banner svg {
+.mobile-service-closed-content {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.mobile-service-closed-content svg {
   flex-shrink: 0;
   color: #fca5a5;
 }
 
-.mobile-service-closed-banner div {
+.mobile-service-closed-content div {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
+  min-width: 0;
 }
 
-.mobile-service-closed-banner strong {
+.mobile-service-closed-content strong {
   font-size: 0.82rem;
   letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.mobile-service-closed-banner span {
+.mobile-service-closed-content span {
   font-size: 0.73rem;
   color: #fee2e2;
   line-height: 1.3;
+}
+
+.mobile-service-closed-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.mobile-service-reopen-btn {
+  background: #10b981;
+  color: #ffffff;
+  border: none;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.1s ease, background 0.15s ease;
+}
+
+.mobile-service-reopen-btn:active {
+  transform: scale(0.95);
+  background: #059669;
+}
+
+.mobile-service-dismiss-btn {
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s ease;
+}
+
+.mobile-service-dismiss-btn:active {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+/* Botón de control de comandero en el modal de perfil de mesero */
+.btn-mobile-service-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.btn-mobile-service-toggle.is-open {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #f87171;
+}
+
+.btn-mobile-service-toggle.is-closed {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #10b981;
+}
+
+.btn-mobile-service-toggle:active {
+  transform: scale(0.98);
 }
 
 

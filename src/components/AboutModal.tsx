@@ -112,7 +112,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
           </div>
           <h2 id="about-system-title" className="about-title">La Molienda POS</h2>
           <span className="about-subtitle">Sistema Integral de Gestión Gastronómica & Punto de Venta</span>
-          <span className="about-version-badge">Versión 1.1.2 &bull; Release Estable</span>
+          <span className="about-version-badge">Versión 1.1.3 &bull; Release Estable</span>
         </div>
 
         {/* Auto-Updater Panel */}

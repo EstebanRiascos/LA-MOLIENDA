@@ -43,7 +43,16 @@ import { playSound } from '../utils/sounds';
 import laMoliendaLogo from '../assets/la_molienda_logo.png';
 import { OpenTableModal } from './OpenTableModal';
 import { TicketModal } from './TicketModal';
-import { sendOrderDirectToCloud, getStoredServiceStatus } from '../utils/firebaseSync';
+import { Capacitor } from '@capacitor/core';
+import {
+  sendOrderDirectToCloud,
+  getStoredServiceStatus,
+  subscribeFirebaseStatus,
+  getFirebaseStatus,
+  updateServiceLockStatus,
+  pullAllCloudDataToLocal,
+  FirebaseSyncStatus,
+} from '../utils/firebaseSync';
 
 interface WaiterViewProps {
   initialTables?: Table[];
@@ -74,7 +83,35 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
     return stored && stored.length > 0 ? stored : DEFAULT_PRODUCTS;
   });
   const [staffList, setStaffList] = useState<string[]>(initialStaffList);
-  const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [isSseConnected, setIsSseConnected] = useState<boolean>(false);
+  const [firebaseStatus, setFirebaseStatus] = useState<FirebaseSyncStatus>(() => getFirebaseStatus().status);
+  const [isNetworkOnline, setIsNetworkOnline] = useState<boolean>(() =>
+    typeof navigator !== 'undefined' ? navigator.onLine : true
+  );
+
+  useEffect(() => {
+    const unsub = subscribeFirebaseStatus((snap) => {
+      setFirebaseStatus(snap.status);
+    });
+    const handleOnline = () => setIsNetworkOnline(true);
+    const handleOffline = () => setIsNetworkOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      unsub();
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  const isConnected = useMemo(() => {
+    if (!isNetworkOnline) return false;
+    if (isSseConnected) return true;
+    if (firebaseStatus === 'connected' || firebaseStatus === 'syncing') return true;
+    if (firebaseStatus === 'connecting') return true;
+    return firebaseStatus !== 'error' && firebaseStatus !== 'offline';
+  }, [isNetworkOnline, isSseConnected, firebaseStatus]);
+
   const [activeZone, setActiveZone] = useState<TableZone>('salon');
 
   useEffect(() => {
@@ -164,17 +201,45 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
   const [serviceStatus, setServiceStatus] = useState<{ isOpen: boolean; reason?: string }>(() =>
     getStoredServiceStatus()
   );
+  const [isServiceBannerDismissed, setIsServiceBannerDismissed] = useState<boolean>(false);
 
   useEffect(() => {
     const handleServiceStatusChange = (e: any) => {
       if (e.detail) {
         setServiceStatus(e.detail);
+        if (e.detail.isOpen) {
+          setIsServiceBannerDismissed(false);
+        }
       }
     };
     window.addEventListener('lamolienda:service-status-changed', handleServiceStatusChange);
     return () =>
       window.removeEventListener('lamolienda:service-status-changed', handleServiceStatusChange);
   }, []);
+
+  const handleReopenService = async () => {
+    try {
+      playSound('success');
+      await updateServiceLockStatus(true, 'Servicio reabierto desde comandero móvil');
+      setServiceStatus({ isOpen: true, reason: 'Servicio reabierto' });
+      setIsServiceBannerDismissed(true);
+    } catch (err) {
+      console.error('Error reabriendo servicio desde móvil:', err);
+    }
+  };
+
+  const handleToggleServiceStatusFromMobile = async () => {
+    const nextState = !serviceStatus.isOpen;
+    try {
+      playSound(nextState ? 'success' : 'warning');
+      const reason = nextState ? 'Servicio reabierto' : 'Local cerrado por administración';
+      await updateServiceLockStatus(nextState, reason);
+      setServiceStatus({ isOpen: nextState, reason });
+      if (nextState) setIsServiceBannerDismissed(false);
+    } catch (err) {
+      console.error('Error alternando servicio desde móvil:', err);
+    }
+  };
   const [isOpenTableModalOpen, setIsOpenTableModalOpen] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('modal') === 'opentable';
@@ -198,13 +263,34 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
     saveStoredTheme(effectiveTheme);
   }, [effectiveTheme]);
 
-  // Detección de PWA instalada y prompt nativo de instalación
+  // Detección de aplicación nativa (APK Android Capacitor / Cordova / WebView)
+  const isNative = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      if (Capacitor.isNativePlatform()) return true;
+      if (Capacitor.getPlatform() !== 'web') return true;
+    } catch {}
+    if ((window as any).Capacitor?.isNativePlatform?.()) return true;
+    if ((window as any).Capacitor?.getPlatform?.() && (window as any).Capacitor.getPlatform() !== 'web') return true;
+    if (window.location.protocol === 'capacitor:' || window.location.protocol === 'ionic:') return true;
+    if (document.referrer && document.referrer.includes('android-app://')) return true;
+    return false;
+  }, []);
+
+  // Detección de si ya está instalada (APK nativa o PWA standalone)
   const [isStandalone, setIsStandalone] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
+    try {
+      if (Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'web') return true;
+    } catch {}
+    if ((window as any).Capacitor?.isNativePlatform?.()) return true;
+    if (window.location.protocol === 'capacitor:' || window.location.protocol === 'ionic:') return true;
+    if (document.referrer && document.referrer.includes('android-app://')) return true;
     return (
       window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as any).standalone === true ||
-      document.referrer.includes('android-app://')
+      window.matchMedia('(display-mode: fullscreen)').matches ||
+      window.matchMedia('(display-mode: minimal-ui)').matches ||
+      (window.navigator as any).standalone === true
     );
   });
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<any>(null);
@@ -321,7 +407,7 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
 
         eventSource.onopen = () => {
           if (!isMounted) return;
-          setIsConnected(true);
+          setIsSseConnected(true);
         };
 
         eventSource.addEventListener('init', (e: any) => {
@@ -373,7 +459,7 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
 
         eventSource.onerror = () => {
           if (!isMounted) return;
-          setIsConnected(false);
+          setIsSseConnected(false);
           // Si la conexión se cayó (p. ej. pantalla bloqueada o reinicio de dev server), programar reintento
           if (!reconnectTimeout) {
             reconnectTimeout = setTimeout(() => {
@@ -382,7 +468,7 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
           }
         };
       } catch (err) {
-        setIsConnected(false);
+        setIsSseConnected(false);
         if (!reconnectTimeout) {
           reconnectTimeout = setTimeout(() => {
             if (isMounted) connectSSE();
@@ -944,8 +1030,8 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
         </div>
 
         <div className="mobile-header-right">
-          {/* Botón Instalar App PWA (solo visible si no está ya instalada) */}
-          {!isStandalone && (
+          {/* Botón Instalar App PWA (solo visible en navegador web si no es APK ni está instalada) */}
+          {!isStandalone && !isNative && (
             <button
               type="button"
               className="mobile-install-pwa-btn"
@@ -969,14 +1055,25 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
             {effectiveTheme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
           </button>
 
-          {/* Conexión Wi-Fi */}
+          {/* Conexión Wi-Fi / Nube en tiempo real */}
           <button
             type="button"
             className={`mobile-conn-badge ${isConnected ? 'online' : 'offline'}`}
-            title={isConnected ? 'Conectado a la caja en tiempo real' : 'Toca para reconectar con la caja'}
+            title={
+              !isNetworkOnline
+                ? 'Sin conexión a Internet en este dispositivo'
+                : isSseConnected
+                ? 'Conectado a la caja local (Red Wi-Fi)'
+                : (firebaseStatus === 'connected' || firebaseStatus === 'syncing')
+                ? 'Conectado a la nube en tiempo real'
+                : isConnected
+                ? 'En línea'
+                : 'Sin conexión: Toca para reconectar con el servidor o la nube'
+            }
             onClick={() => {
               playSound('click');
               setReconnectCounter((c) => c + 1);
+              pullAllCloudDataToLocal().catch(() => {});
             }}
             aria-label={isConnected ? 'En Línea' : 'Desconectado'}
           >
@@ -1016,12 +1113,38 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
       </header>
 
       {/* BANNER DE SERVICIO CERRADO / BLOQUEADO POR CIERRE DE CAJA */}
-      {!serviceStatus.isOpen && (
+      {!serviceStatus.isOpen && !isServiceBannerDismissed && (
         <div className="mobile-service-closed-banner">
-          <Lock size={16} />
-          <div>
-            <strong>Servicio Suspendido por Administración</strong>
-            <span>{serviceStatus.reason || 'Turno cerrado. Las comandas están deshabilitadas hasta la próxima apertura.'}</span>
+          <div className="mobile-service-closed-content">
+            <Lock size={16} />
+            <div>
+              <strong>Servicio Suspendido por Administración</strong>
+              <span>{serviceStatus.reason || 'Turno cerrado. Las comandas están deshabilitadas hasta la próxima apertura.'}</span>
+            </div>
+          </div>
+          <div className="mobile-service-closed-actions">
+            {(currentUser?.role === 'admin' || currentUser?.role === 'cajero') && (
+              <button
+                type="button"
+                className="mobile-service-reopen-btn"
+                onClick={handleReopenService}
+                title="Habilitar comandas inmediatamente"
+              >
+                Habilitar
+              </button>
+            )}
+            <button
+              type="button"
+              className="mobile-service-dismiss-btn"
+              onClick={() => {
+                playSound('click');
+                setIsServiceBannerDismissed(true);
+              }}
+              title="Cerrar aviso"
+              aria-label="Cerrar aviso"
+            >
+              <X size={15} />
+            </button>
           </div>
         </div>
       )}
@@ -1240,8 +1363,8 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
             )}
           </div>
 
-          {/* Banner de Instalación PWA en pantalla de login si aún no está en standalone */}
-          {!isStandalone && (
+          {/* Banner de Instalación PWA en pantalla de login (solo en navegador web si no es APK) */}
+          {!isStandalone && !isNative && (
             <div
               className="mobile-login-pwa-banner"
               onClick={handleInstallPwa}
@@ -1790,7 +1913,18 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
             </div>
 
             <div className="mobile-profile-modal-actions">
-              {!isStandalone && (
+              {(currentUser?.role === 'admin' || currentUser?.role === 'cajero') && (
+                <button
+                  type="button"
+                  className={`btn-mobile-service-toggle ${serviceStatus.isOpen ? 'is-open' : 'is-closed'}`}
+                  onClick={handleToggleServiceStatusFromMobile}
+                >
+                  <Lock size={15} />
+                  <span>{serviceStatus.isOpen ? 'Suspender Comandero Móvil' : 'Habilitar Comandero Móvil'}</span>
+                </button>
+              )}
+
+              {!isStandalone && !isNative && (
                 <button
                   type="button"
                   className="btn-mobile-install-sheet"
