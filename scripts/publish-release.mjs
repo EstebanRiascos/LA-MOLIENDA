@@ -78,6 +78,11 @@ async function main() {
       filePath: path.resolve('release', `La Molienda POS Setup ${TAG.replace('v', '')}.exe.blockmap`),
       contentType: 'application/octet-stream',
     },
+    {
+      name: 'LaMolienda_Comandero.apk',
+      filePath: path.resolve('release', 'LaMolienda_Comandero.apk'),
+      contentType: 'application/vnd.android.package-archive',
+    },
   ];
 
   const existingAssets = release.assets || [];
