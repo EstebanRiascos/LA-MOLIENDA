@@ -33,6 +33,7 @@ import {
   FirebaseStatusSnapshot,
   getStoredServiceStatus,
   updateServiceLockStatus,
+  pushAllLocalDataToCloud,
 } from './utils/firebaseSync';
 import { DEFAULT_TABLES, DEFAULT_PRODUCTS } from './utils/defaults';
 import { exportLaMoliendaReport, ExportReportOptions } from './utils/excelExporter';
@@ -895,6 +896,18 @@ export const App: React.FC = () => {
         cashClosings: getCashClosingHistory(),
       }),
       onRemoteProducts: (remoteProducts) => {
+        const localProds = productsRef.current;
+        // Si la nube solo tiene datos viejos de prueba (<= 2) y en local está el inventario real (> 5)
+        if (localProds && localProds.length > 5 && remoteProducts.length <= 2) {
+          console.warn(
+            `[Firebase Auto-Seed] Nube con datos de prueba (${remoteProducts.length} items vs ${localProds.length} locales). Subiendo catálogo local a Firestore...`
+          );
+          pushAllLocalDataToCloud().catch((err: any) => {
+            console.error('[Firebase Auto-Seed Error]', err);
+          });
+          return;
+        }
+
         const synced = syncCompositeProductsStock(remoteProducts);
         setProducts(synced);
         saveStoredProducts(synced);
@@ -1917,7 +1930,7 @@ export const App: React.FC = () => {
             <span className="footer-status-indicator" title="Sistema operando normalmente" />
             <span className="footer-app-label">La Molienda POS</span>
             <span className="footer-sep">&bull;</span>
-            <span className="footer-version-tag">v1.1.0</span>
+            <span className="footer-version-tag">v1.1.1</span>
           </div>
 
           <div className="footer-center">

@@ -340,12 +340,20 @@ function initAutoUpdater(targetWin: BrowserWindow | null) {
     });
   });
 
-  // Chequeo diferido en producción al abrir la aplicación
+  // Chequeo en segundo plano en producción
   if (app.isPackaged) {
+    // Chequeo inicial suave 6 segundos después de iniciar
     setTimeout(() => {
       autoUpdater.checkForUpdates().catch((err) => {
-        console.warn('[AutoUpdater] Falló chequeo automático:', err?.message);
+        console.warn('[AutoUpdater] Falló chequeo inicial:', err?.message);
       });
     }, 6000);
+
+    // Chequeo periódico cada 45 minutos sin interrumpir al personal
+    setInterval(() => {
+      autoUpdater.checkForUpdates().catch((err) => {
+        console.warn('[AutoUpdater] Falló chequeo periódico:', err?.message);
+      });
+    }, 45 * 60 * 1000);
   }
 }

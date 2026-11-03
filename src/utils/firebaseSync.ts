@@ -558,9 +558,9 @@ function attachRealtimeListeners(db: Firestore, cb: FirebaseSyncCallbacks): void
   const unsubProducts = onSnapshot(
     collection(db, COLLECTIONS.products),
     (snapshot) => {
-      if (snapshot.empty && !initialSnapshotHandled.products) {
+      const local = cb.getLocalData().products;
+      if (!initialSnapshotHandled.products && (snapshot.empty || (snapshot.docs.length <= 2 && local.length > 5))) {
         initialSnapshotHandled.products = true;
-        const local = cb.getLocalData().products;
         if (local.length > 0) {
           syncCollectionDiff('products', local, true, true);
         }
