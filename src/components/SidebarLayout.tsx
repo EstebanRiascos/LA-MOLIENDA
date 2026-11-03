@@ -248,24 +248,6 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
 
         {/* Bloque Inferior: Comandero + Nube + Usuario */}
         <div className="sidebar-footer-box">
-          {/* Botón Compartir APK Meseros por WhatsApp */}
-          {onOpenMobileSync && (
-            <button
-              type="button"
-              className="sidebar-footer-item mobile-sync-btn"
-              onClick={onOpenMobileSync}
-              title="Compartir App APK para celulares de meseros por WhatsApp"
-            >
-              <div className="footer-item-icon">
-                <Smartphone size={18} />
-              </div>
-              <div className="footer-item-texts sidebar-collapsible-text">
-                <span className="footer-item-title">App Meseros</span>
-                <span className="footer-item-sub">APK WhatsApp</span>
-              </div>
-            </button>
-          )}
-
           {/* Botón Bloqueo de Comandas Móviles */}
           {currentUser?.role === 'admin' && onToggleServiceLock && (
             <button

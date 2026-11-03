@@ -1055,7 +1055,7 @@ export const WaiterView: React.FC<WaiterViewProps> = ({
                 }}
               >
                 <KeyRound size={15} />
-                <span>PIN Rápido</span>
+                <span>PIN</span>
               </button>
               <button
                 type="button"

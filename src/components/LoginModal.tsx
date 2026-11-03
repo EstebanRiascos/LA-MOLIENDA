@@ -37,6 +37,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
   // PIN keypad state
   const [pin, setPin] = useState('');
+  const [availableUsers, setAvailableUsers] = useState<SystemUser[]>([]);
+  const [selectedPinUserId, setSelectedPinUserId] = useState<string>('');
 
   // UI status
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -51,6 +53,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       setErrorMessage(null);
       setIsSuccess(false);
       setPin('');
+
+      const users = getStoredUsers().filter((u) => u.active);
+      setAvailableUsers(users);
+      if (users.length === 1 && !selectedPinUserId) {
+        setSelectedPinUserId(users[0].id);
+      }
+
       if (authMode === 'admin') {
         setTimeout(() => passwordInputRef.current?.focus(), 150);
       }
@@ -112,6 +121,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
   const handlePinDigit = (digit: string) => {
     if (pin.length >= 4) return;
+    if (!selectedPinUserId) {
+      triggerError('Por favor selecciona tu usuario antes de ingresar el PIN.');
+      return;
+    }
     const newPin = pin + digit;
     setPin(newPin);
     setErrorMessage(null);
@@ -119,7 +132,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     // Auto submit upon 4 digits
     if (newPin.length === 4) {
       setTimeout(() => {
-        const res = authenticateWithPin(newPin);
+        const res = authenticateWithPin(newPin, selectedPinUserId);
         if (res.success && res.user) {
           setIsSuccess(true);
           setTimeout(() => {
@@ -178,7 +191,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             }}
           >
             <KeyRound size={16} />
-            <span>PIN Rápido</span>
+            <span>PIN</span>
           </button>
         </div>
 
@@ -257,6 +270,31 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         {/* Quick PIN Keypad Form */}
         {authMode === 'pin' && (
           <div className="login-pin-container">
+            {/* Campo Selector de Usuario */}
+            <div className="login-pin-user-box">
+              <label className="login-label">Usuario</label>
+              <div className="login-input-wrapper">
+                <UserIcon size={17} className="login-input-icon" />
+                <select
+                  value={selectedPinUserId}
+                  onChange={(e) => {
+                    setSelectedPinUserId(e.target.value);
+                    setPin('');
+                    setErrorMessage(null);
+                  }}
+                  className="login-input login-select"
+                  disabled={isSuccess}
+                >
+                  <option value="">-- Selecciona tu usuario --</option>
+                  {availableUsers.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} ({u.role === 'admin' ? 'Administrador' : u.role === 'cajero' ? 'Cajero' : 'Mesero'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             <p className="login-pin-instructions">
               Digita tu PIN de 4 dígitos para ingresar a tu turno
             </p>

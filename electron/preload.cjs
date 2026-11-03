@@ -23,6 +23,8 @@ const api = {
   // Wi-Fi Local Server & Comandero Móvil API
   getServerInfo: () => ipcRenderer.invoke('server:getInfo'),
   broadcastState: (state) => ipcRenderer.send('server:broadcastState', state),
+  openApkFolder: () => ipcRenderer.invoke('apk:openFolder'),
+  copyApkToClipboard: () => ipcRenderer.invoke('apk:copyToClipboard'),
   onMobileOrder: (callback) => {
     const listener = (_event, order) => callback(order);
     ipcRenderer.on('mobile:new-order', listener);
@@ -42,6 +44,15 @@ const api = {
     const listener = (_event, count) => callback(count);
     ipcRenderer.on('server:clients-changed', listener);
     return () => ipcRenderer.removeListener('server:clients-changed', listener);
+  },
+
+  // Auto-Updater con GitHub Releases
+  checkForUpdates: () => ipcRenderer.invoke('updater:check'),
+  installUpdate: () => ipcRenderer.invoke('updater:quitAndInstall'),
+  onUpdateStatus: (callback) => {
+    const listener = (_event, data) => callback(data);
+    ipcRenderer.on('updater:status', listener);
+    return () => ipcRenderer.removeListener('updater:status', listener);
   },
   isElectron: true,
 };

@@ -525,6 +525,28 @@ export const App: React.FC = () => {
     });
   };
 
+  // Escuchar eventos globales del Auto-Updater de Electron
+  useEffect(() => {
+    const api = (window as any).electronAPI;
+    if (!api || !api.onUpdateStatus) return;
+
+    const unsub = api.onUpdateStatus((data: any) => {
+      if (data?.status === 'available') {
+        showNotification(
+          `Nueva versión v${data.version || ''} detectada. Descargando en segundo plano...`,
+          'system'
+        );
+      } else if (data?.status === 'downloaded') {
+        showNotification(
+          `¡Actualización v${data.version || ''} lista! Abre "Acerca de" o reinicia el sistema para aplicar.`,
+          'system'
+        );
+      }
+    });
+
+    return unsub;
+  }, []);
+
   const handleMarkAllAsRead = () => {
     playSound('click');
     setNotifications((prev) => {
@@ -1895,7 +1917,7 @@ export const App: React.FC = () => {
             <span className="footer-status-indicator" title="Sistema operando normalmente" />
             <span className="footer-app-label">La Molienda POS</span>
             <span className="footer-sep">&bull;</span>
-            <span className="footer-version-tag">v1.0.0</span>
+            <span className="footer-version-tag">v1.1.0</span>
           </div>
 
           <div className="footer-center">

@@ -193,9 +193,11 @@ export function authenticateWithPassword(
 
 /**
  * Autenticación mediante PIN numérico de 4 dígitos (Meseros, Cajeros y acceso rápido)
+ * Permite validar opcionalmente contra un usuario específico
  */
 export function authenticateWithPin(
-  pinInput: string
+  pinInput: string,
+  userIdOrUsername?: string
 ): { success: boolean; user?: SystemUser; error?: string } {
   const users = getStoredUsers();
   const cleanPin = pinInput.trim();
@@ -204,10 +206,26 @@ export function authenticateWithPin(
     return { success: false, error: 'El PIN debe ser exactamente de 4 dígitos.' };
   }
 
-  const found = users.find((u) => u.pin === cleanPin && u.active);
+  let found: SystemUser | undefined;
 
-  if (!found) {
-    return { success: false, error: 'PIN incorrecto o usuario no asignado.' };
+  if (userIdOrUsername) {
+    const cleanIdOrUser = userIdOrUsername.trim().toLowerCase();
+    found = users.find(
+      (u) =>
+        (u.id === userIdOrUsername || u.username.toLowerCase() === cleanIdOrUser) &&
+        u.active
+    );
+    if (!found) {
+      return { success: false, error: 'Usuario no encontrado o inactivo.' };
+    }
+    if (found.pin !== cleanPin) {
+      return { success: false, error: `PIN incorrecto para ${found.name}.` };
+    }
+  } else {
+    found = users.find((u) => u.pin === cleanPin && u.active);
+    if (!found) {
+      return { success: false, error: 'PIN incorrecto o usuario no asignado.' };
+    }
   }
 
   // Actualizar lastLoginAt

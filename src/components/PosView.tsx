@@ -126,7 +126,8 @@ export const PosView: React.FC<PosViewProps> = ({
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStock = !onlyInStock || p.stock > 0;
+    // Evita saltos intermitentes de la grilla si un producto agota su stock mientras se selecciona en la comanda
+    const matchesStock = !onlyInStock || (p.originalStock !== undefined ? p.originalStock > 0 : p.stock > 0);
     return matchesCategory && matchesSearch && matchesStock;
   });
 
@@ -356,6 +357,8 @@ export const PosView: React.FC<PosViewProps> = ({
                       type="button"
                       className={`btn-pos-add ${isOutOfStock ? 'disabled' : ''}`}
                       disabled={isOutOfStock}
+                      tabIndex={-1}
+                      style={{ pointerEvents: 'none' }}
                     >
                       <PlusCircle size={15} />
                       <span>Añadir a Comanda</span>

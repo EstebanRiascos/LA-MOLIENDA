@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   X,
   Smartphone,
-  Wifi,
   Copy,
   Check,
   Download,
@@ -312,30 +311,6 @@ export const MobileSyncModal: React.FC<MobileSyncModalProps> = ({ isOpen, onClos
                       <span>{isCopied ? '¡Texto Copiado!' : 'Copiar Texto'}</span>
                     </button>
                   </div>
-                </div>
-              </div>
-
-              {/* Tarjeta con enlace directo al APK */}
-              <div className="sync-network-card">
-                <div className="sync-card-header">
-                  <div className="sync-card-title-group">
-                    <Wifi size={15} className="sync-card-wifi-icon" />
-                    <span className="sync-card-title">Enlace Wi-Fi de Descarga Directa</span>
-                  </div>
-                  <span className="apk-pill-badge">APK Android</span>
-                </div>
-
-                <div className="url-copy-box">
-                  <span className="url-display-text">{apkDownloadUrl}</span>
-                  <button
-                    type="button"
-                    className="btn-copy-url"
-                    onClick={handleCopyWhatsAppMessage}
-                    title="Copiar enlace"
-                  >
-                    {isCopied ? <Check size={14} /> : <Copy size={14} />}
-                    <span>{isCopied ? 'Copiado' : 'Copiar'}</span>
-                  </button>
                 </div>
               </div>
 

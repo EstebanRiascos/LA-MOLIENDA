@@ -651,6 +651,8 @@ export const TableDetailModal: React.FC<TableDetailModalProps> = ({
                     <button
                       type="button"
                       className={`btn-quick-add ${prod.stock <= prod.minStock ? 'btn-low-stock' : ''}`}
+                      tabIndex={-1}
+                      style={{ pointerEvents: 'none' }}
                     >
                       <Plus size={13} /> Añadir
                     </button>

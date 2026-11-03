@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
+import { autoUpdater } from 'electron-updater';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -249,7 +250,31 @@ app.whenReady().then(() => {
     }
   });
 
+  // Auto-Updater con GitHub Releases
+  ipcMain.handle('updater:check', async () => {
+    if (!app.isPackaged) {
+      return { status: 'dev', message: 'Las actualizaciones automáticas solo funcionan en la app empaquetada.' };
+    }
+    try {
+      const res = await autoUpdater.checkForUpdates();
+      return { status: 'success', updateInfo: res?.updateInfo };
+    } catch (err: any) {
+      return { status: 'error', error: err?.message || String(err) };
+    }
+  });
+
+  ipcMain.handle('updater:quitAndInstall', () => {
+    isQuitConfirmed = true;
+    setImmediate(() => {
+      autoUpdater.quitAndInstall(false, true);
+    });
+    return { success: true };
+  });
+
   createWindow();
+
+  // Inicializar listeners del Auto-Updater
+  initAutoUpdater(win);
 
   // Iniciar servidor local Wi-Fi
   startLocalServer(win, 4545)
@@ -260,3 +285,67 @@ app.whenReady().then(() => {
       console.error('Error al iniciar servidor local Wi-Fi:', err);
     });
 });
+
+function initAutoUpdater(targetWin: BrowserWindow | null) {
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on('checking-for-update', () => {
+    targetWin?.webContents.send('updater:status', {
+      status: 'checking',
+      message: 'Buscando actualizaciones...',
+    });
+  });
+
+  autoUpdater.on('update-available', (info) => {
+    targetWin?.webContents.send('updater:status', {
+      status: 'available',
+      version: info.version,
+      releaseDate: info.releaseDate,
+      message: `¡Nueva versión v${info.version} disponible! Descargando en segundo plano...`,
+    });
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    targetWin?.webContents.send('updater:status', {
+      status: 'not-available',
+      message: 'El sistema está actualizado a la última versión.',
+    });
+  });
+
+  autoUpdater.on('error', (err) => {
+    console.error('[AutoUpdater Error]', err);
+    targetWin?.webContents.send('updater:status', {
+      status: 'error',
+      message: err?.message || 'Error al verificar actualizaciones.',
+    });
+  });
+
+  autoUpdater.on('download-progress', (progress) => {
+    targetWin?.webContents.send('updater:status', {
+      status: 'downloading',
+      percent: Math.round(progress.percent),
+      transferred: progress.transferred,
+      total: progress.total,
+      bytesPerSecond: progress.bytesPerSecond,
+      message: `Descargando actualización: ${Math.round(progress.percent)}%`,
+    });
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    targetWin?.webContents.send('updater:status', {
+      status: 'downloaded',
+      version: info.version,
+      message: `¡Versión v${info.version} lista para instalar!`,
+    });
+  });
+
+  // Chequeo diferido en producción al abrir la aplicación
+  if (app.isPackaged) {
+    setTimeout(() => {
+      autoUpdater.checkForUpdates().catch((err) => {
+        console.warn('[AutoUpdater] Falló chequeo automático:', err?.message);
+      });
+    }, 6000);
+  }
+}

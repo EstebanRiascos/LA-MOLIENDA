@@ -46,6 +46,15 @@ const api = {
     ipcRenderer.on('server:clients-changed', listener);
     return () => ipcRenderer.removeListener('server:clients-changed', listener);
   },
+
+  // Auto-Updater con GitHub Releases
+  checkForUpdates: () => ipcRenderer.invoke('updater:check'),
+  installUpdate: () => ipcRenderer.invoke('updater:quitAndInstall'),
+  onUpdateStatus: (callback: (data: any) => void) => {
+    const listener = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('updater:status', listener);
+    return () => ipcRenderer.removeListener('updater:status', listener);
+  },
   isElectron: true,
 };
 
