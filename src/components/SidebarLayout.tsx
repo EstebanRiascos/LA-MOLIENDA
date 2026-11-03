@@ -252,9 +252,8 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
           {currentUser?.role === 'admin' && onToggleServiceLock && (
             <button
               type="button"
-              className={`sidebar-footer-item lock-btn ${
-                isServiceOpen ? 'service-open' : 'service-closed'
-              }`}
+              className={`sidebar-footer-item lock-btn ${isServiceOpen ? 'service-open' : 'service-closed'
+                }`}
               onClick={onToggleServiceLock}
               title={
                 isServiceOpen
@@ -318,10 +317,10 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
                     {currentUser?.role === 'admin'
                       ? 'ADMINISTRADOR'
                       : currentUser?.role === 'cajero'
-                      ? 'CAJERO'
-                      : currentUser?.role === 'mesero'
-                      ? 'MESERO'
-                      : 'TURNO ACTIVO'}
+                        ? 'CAJERO'
+                        : currentUser?.role === 'mesero'
+                          ? 'MESERO'
+                          : 'TURNO ACTIVO'}
                   </span>
                 </div>
               </div>
@@ -398,13 +397,12 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
                 type="button"
                 className={`top-micro-cloud status-${firebaseStatus}`}
                 onClick={onOpenFirebaseSync}
-                title={`Base de Datos en la Nube (${firebaseProjectId || 'Firebase'}): ${
-                  firebaseStatus === 'connected'
+                title={`Base de Datos en la Nube (${firebaseProjectId || 'Firebase'}): ${firebaseStatus === 'connected'
                     ? 'Sincronizado en tiempo real'
                     : firebaseStatus === 'syncing'
-                    ? 'Sincronizando...'
-                    : 'Desconectado'
-                }`}
+                      ? 'Sincronizando...'
+                      : 'Desconectado'
+                  }`}
               >
                 <Cloud size={14} className="micro-cloud-icon" />
                 <span className="micro-text">Nube OK</span>
@@ -415,9 +413,8 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
               {onOpenNotifications && (
                 <button
                   type="button"
-                  className={`top-icon-btn notifications-btn ${
-                    unreadNotificationsCount > 0 ? 'has-unread' : ''
-                  }`}
+                  className={`top-icon-btn notifications-btn ${unreadNotificationsCount > 0 ? 'has-unread' : ''
+                    }`}
                   onClick={onOpenNotifications}
                   title={`Notificaciones (${unreadNotificationsCount} sin leer)`}
                 >

@@ -350,6 +350,28 @@ export const FirebaseSyncModal: React.FC<FirebaseSyncModalProps> = ({
               <div className="firebase-actions-grid">
                 <button
                   type="button"
+                  className="btn-fb-action btn-fb-push"
+                  onClick={handlePushLocal}
+                  disabled={busyAction !== null}
+                  style={{
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: '#ffffff',
+                    fontWeight: 600,
+                    border: 'none',
+                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+                  }}
+                  title="Sube los 27 productos, mesas, ventas e inventario del computador a Firebase Firestore"
+                >
+                  {busyAction === 'push' ? (
+                    <RefreshCw size={15} className="animate-spin" />
+                  ) : (
+                    <UploadCloud size={15} />
+                  )}
+                  <span>Subir datos locales a la nube</span>
+                </button>
+
+                <button
+                  type="button"
                   className="btn-fb-action"
                   onClick={handlePullCloud}
                   disabled={busyAction !== null}
