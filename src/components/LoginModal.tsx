@@ -38,8 +38,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const [authMode, setAuthMode] = useState<'admin' | 'pin'>('admin');
   const [targetSystem, setTargetSystem] = useState<SystemDestination>('pos');
 
-  // Admin form state
-  const [username, setUsername] = useState('admin');
+  // User/Password form state
+  const [selectedPasswordUserId, setSelectedPasswordUserId] = useState<string>('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
@@ -75,7 +75,14 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         if (!isCurrentAdmin) {
           setSelectedPinUserId(admins.length > 0 ? admins[0].id : '');
         }
+        const isCurrentPasswordAdmin = admins.some((u) => u.id === selectedPasswordUserId);
+        if (!isCurrentPasswordAdmin) {
+          setSelectedPasswordUserId(admins.length > 0 ? admins[0].id : '');
+        }
       } else {
+        if (!selectedPasswordUserId && users.length > 0) {
+          setSelectedPasswordUserId(users[0].id);
+        }
         if (users.length === 1 && !selectedPinUserId) {
           setSelectedPinUserId(users[0].id);
         }
@@ -120,8 +127,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     e.preventDefault();
     setErrorMessage(null);
 
-    if (!username.trim()) {
-      triggerError('Por favor ingresa el nombre de usuario.');
+    if (!selectedPasswordUserId) {
+      triggerError(
+        targetSystem === 'nomina'
+          ? 'Por favor selecciona el Administrador.'
+          : 'Por favor selecciona tu usuario.'
+      );
       return;
     }
     if (!password) {
@@ -129,7 +140,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       return;
     }
 
-    const res = authenticateWithPassword(username, password);
+    const selectedUser = availableUsers.find((u) => u.id === selectedPasswordUserId);
+    if (!selectedUser) {
+      triggerError('Usuario no encontrado.');
+      return;
+    }
+
+    const res = authenticateWithPassword(selectedUser.id, password);
     if (res.success && res.user) {
       if (res.user.role === 'admin') {
         // If the admin explicitly selected the destination tab upfront, proceed directly
@@ -317,19 +334,34 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         {authMode === 'admin' && (
           <form onSubmit={handleAdminSubmit} className="login-form">
             <div className="login-input-group">
-              <label className="login-label">Usuario Administrador</label>
+              <label className="login-label">
+                {targetSystem === 'nomina' ? 'Usuario Administrador' : 'Usuario'}
+              </label>
               <div className="login-input-wrapper">
                 <UserIcon size={17} className="login-input-icon" />
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="ej: admin"
-                  className="login-input"
-                  autoCapitalize="none"
-                  autoCorrect="off"
+                <select
+                  value={selectedPasswordUserId}
+                  onChange={(e) => {
+                    setSelectedPasswordUserId(e.target.value);
+                    setErrorMessage(null);
+                  }}
+                  className="login-input login-select"
                   disabled={isSuccess}
-                />
+                >
+                  <option value="">
+                    {targetSystem === 'nomina'
+                      ? '-- Selecciona el Administrador --'
+                      : '-- Selecciona tu usuario --'}
+                  </option>
+                  {(targetSystem === 'nomina'
+                    ? availableUsers.filter((u) => u.role === 'admin')
+                    : availableUsers
+                  ).map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} ({u.role === 'admin' ? 'Administrador' : u.role === 'cajero' ? 'Cajero' : 'Mesero'})
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 

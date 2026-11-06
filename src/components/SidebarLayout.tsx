@@ -17,8 +17,6 @@ import {
   Unlock,
   Volume2,
   VolumeX,
-  ChevronLeft,
-  ChevronRight,
   ChevronDown,
   Building2,
 } from 'lucide-react';
@@ -142,12 +140,20 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
     <div className={`pos-sidebar-shell ${isExpanded ? 'sidebar-expanded' : 'sidebar-collapsed'}`}>
       {/* ================= SIDEBAR LATERAL ================= */}
       <aside className="pos-sidebar-aside">
-        {/* Bloque Superior: Marca y Toggle */}
+        {/* Bloque Superior: Marca y Toggle al hacer click en el logo */}
         <div className="sidebar-brand-box">
           <div
             className="sidebar-brand-clickable"
-            onClick={() => onChangeSection('mesas')}
-            title="Ir a Mesas"
+            onClick={handleToggleExpand}
+            title={isExpanded ? 'Colapsar barra lateral' : 'Expandir barra lateral'}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleToggleExpand();
+              }
+            }}
           >
             <div className="sidebar-logo-frame">
               <img src={laMoliendaLogo} alt="La Molienda" className="sidebar-logo-img" />
@@ -157,18 +163,6 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
               <span className="brand-sub">Café & Bar</span>
             </div>
           </div>
-
-          <button
-            type="button"
-            className="sidebar-toggle-btn"
-            onClick={handleToggleExpand}
-            title={isExpanded ? 'Colapsar barra lateral' : 'Expandir barra lateral'}
-          >
-            <ChevronRight
-              size={16}
-              className={`sidebar-toggle-icon ${isExpanded ? 'expanded' : ''}`}
-            />
-          </button>
         </div>
 
         {/* Navegación Principal */}

@@ -369,11 +369,11 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
               </div>
               <button
                 type="button"
-                className="pos-modal-close-btn"
+                className="modal-close-btn pos-modal-close-btn"
                 onClick={() => setIsModalOpen(false)}
                 title="Cerrar modal"
               >
-                <X size={16} />
+                <X size={18} />
               </button>
             </div>
 

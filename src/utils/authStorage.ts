@@ -172,7 +172,8 @@ export function authenticateWithPassword(
 
   const found = users.find(
     (u) =>
-      (u.username.toLowerCase() === cleanUsername ||
+      (u.id === usernameInput ||
+        u.username.toLowerCase() === cleanUsername ||
         u.name.toLowerCase() === cleanUsername) &&
       u.active
   );

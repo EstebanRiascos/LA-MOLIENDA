@@ -518,11 +518,11 @@ export const RentView: React.FC<RentViewProps> = ({
               </div>
               <button
                 type="button"
-                className="pos-modal-close-btn"
+                className="modal-close-btn pos-modal-close-btn"
                 onClick={() => setIsModalOpen(false)}
                 title="Cerrar modal"
               >
-                <X size={16} />
+                <X size={18} />
               </button>
             </div>
 
@@ -681,7 +681,7 @@ export const RentView: React.FC<RentViewProps> = ({
               </div>
               <button
                 type="button"
-                className="icon-btn"
+                className="modal-close-btn pos-modal-close-btn"
                 onClick={() => setIsEditContractOpen(false)}
                 title="Cerrar ventana"
               >
@@ -1020,7 +1020,7 @@ export const RentView: React.FC<RentViewProps> = ({
               </div>
               <button
                 type="button"
-                className="icon-btn"
+                className="modal-close-btn pos-modal-close-btn"
                 onClick={() => setReceiptToPrint(null)}
                 title="Cerrar ventana"
               >
