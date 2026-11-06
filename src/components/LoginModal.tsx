@@ -215,38 +215,38 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             Ingresar al sistema
           </label>
           <div className="login-mode-pills" role="tablist" style={{ marginBottom: 0 }}>
-            {/* Opción 1: POS / Restaurante */}
+            {/* Opción 1: POS / Restaurante (Ámbar / Naranja) */}
             <button
               type="button"
-              className={`login-mode-pill ${targetSystem === 'pos' ? 'active' : ''}`}
+              className={`login-mode-pill login-system-pill-pos ${targetSystem === 'pos' ? 'active' : ''}`}
               onClick={() => {
                 setTargetSystem('pos');
                 setErrorMessage(null);
               }}
             >
-              <Coffee size={16} />
+              <Coffee size={16} className="pos-pill-icon" />
               <span>POS / Ventas</span>
             </button>
 
-            {/* Opción 2: Nómina & Arriendos (Solo Admin) */}
+            {/* Opción 2: Nómina & Arriendos (Verde Esmeralda) */}
             <button
               type="button"
-              className={`login-mode-pill ${targetSystem === 'nomina' ? 'active' : ''}`}
+              className={`login-mode-pill login-system-pill-nomina ${targetSystem === 'nomina' ? 'active' : ''}`}
               onClick={() => {
                 setTargetSystem('nomina');
                 setErrorMessage(null);
               }}
             >
-              <Users size={16} />
+              <Users size={16} className="nomina-pill-icon" />
               <span>Nómina</span>
               <span
                 style={{
                   fontSize: '0.62rem',
                   padding: '1px 6px',
                   borderRadius: '999px',
-                  background: 'rgba(245, 158, 11, 0.15)',
-                  color: '#b45309',
-                  border: '1px solid rgba(245, 158, 11, 0.35)',
+                  background: targetSystem === 'nomina' ? 'rgba(5, 150, 105, 0.25)' : 'rgba(5, 150, 105, 0.12)',
+                  color: targetSystem === 'nomina' ? '#064e3b' : '#059669',
+                  border: '1px solid rgba(16, 185, 129, 0.45)',
                   fontWeight: 800,
                   marginLeft: '2px',
                 }}
