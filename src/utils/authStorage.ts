@@ -171,14 +171,21 @@ export function authenticateWithPassword(
   const cleanUsername = usernameInput.trim().toLowerCase();
 
   const found = users.find(
-    (u) => u.username.toLowerCase() === cleanUsername && u.active
+    (u) =>
+      (u.username.toLowerCase() === cleanUsername ||
+        u.name.toLowerCase() === cleanUsername) &&
+      u.active
   );
 
   if (!found) {
     return { success: false, error: 'Usuario no encontrado o inactivo.' };
   }
 
-  if (found.password !== passwordInput) {
+  const isValidPass =
+    (found.password && found.password === passwordInput) ||
+    (found.pin && found.pin === passwordInput);
+
+  if (!isValidPass) {
     return { success: false, error: 'Contraseña incorrecta.' };
   }
 

@@ -13,7 +13,7 @@ import {
   Firestore,
   Unsubscribe,
 } from 'firebase/firestore';
-import { Product, Table, SaleRecord, SystemUser, CashClosingSummary, OrderItem } from '../types';
+import { Product, Table, SaleRecord, SystemUser, CashClosingSummary, OrderItem, Employee, PayrollRecord, RentContract, RentPayment } from '../types';
 
 export interface FirebaseConnectionConfig {
   apiKey: string;
@@ -47,6 +47,10 @@ export interface FirebaseSyncCallbacks {
     sales: SaleRecord[];
     users: SystemUser[];
     cashClosings: CashClosingSummary[];
+    employees?: Employee[];
+    payrollRecords?: PayrollRecord[];
+    rentContracts?: RentContract[];
+    rentPayments?: RentPayment[];
   };
   onRemoteProducts: (products: Product[]) => void;
   onRemoteTables: (tables: Table[]) => void;
@@ -54,6 +58,10 @@ export interface FirebaseSyncCallbacks {
   onRemoteUsers: (users: SystemUser[]) => void;
   onRemoteCashClosings: (closings: CashClosingSummary[]) => void;
   onRemoteServiceStatus?: (isOpen: boolean, reason?: string) => void;
+  onRemoteEmployees?: (employees: Employee[]) => void;
+  onRemotePayrollRecords?: (records: PayrollRecord[]) => void;
+  onRemoteRentContracts?: (contracts: RentContract[]) => void;
+  onRemoteRentPayments?: (payments: RentPayment[]) => void;
 }
 
 const FIREBASE_CONFIG_STORAGE_KEY = 'lamolienda_firebase_config_v1';
@@ -80,10 +88,23 @@ const COLLECTIONS = {
   sales: 'lamolienda_sales',
   users: 'lamolienda_users',
   cashClosings: 'lamolienda_cash_closings',
+  employees: 'lamolienda_employees',
+  payrollRecords: 'lamolienda_payroll_records',
+  rentContracts: 'lamolienda_rent_contracts',
+  rentPayments: 'lamolienda_rent_payments',
   health: 'lamolienda_meta',
 } as const;
 
-type CollectionKey = 'products' | 'tables' | 'sales' | 'users' | 'cashClosings';
+type CollectionKey =
+  | 'products'
+  | 'tables'
+  | 'sales'
+  | 'users'
+  | 'cashClosings'
+  | 'employees'
+  | 'payrollRecords'
+  | 'rentContracts'
+  | 'rentPayments';
 
 let firebaseAppInstance: FirebaseApp | null = null;
 let firestoreInstance: Firestore | null = null;
@@ -98,6 +119,10 @@ const syncedDocHashes: Record<CollectionKey, Map<string, string>> = {
   sales: new Map(),
   users: new Map(),
   cashClosings: new Map(),
+  employees: new Map(),
+  payrollRecords: new Map(),
+  rentContracts: new Map(),
+  rentPayments: new Map(),
 };
 
 // Control de primera carga por colección para sembrar datos locales si Firestore está vacío
@@ -107,6 +132,10 @@ const initialSnapshotHandled: Record<CollectionKey, boolean> = {
   sales: false,
   users: false,
   cashClosings: false,
+  employees: false,
+  payrollRecords: false,
+  rentContracts: false,
+  rentPayments: false,
 };
 
 // Timers de debounce por colección para agrupar cambios rápidos (ej: clics seguidos de +1 stock)
@@ -477,6 +506,22 @@ export function syncCashClosingsToCloud(closings: CashClosingSummary[]): void {
   scheduleCollectionSync('cashClosings', closings, false, false, 250);
 }
 
+export function syncEmployeesToCloud(employees: Employee[]): void {
+  scheduleCollectionSync('employees', employees, true, true, 250);
+}
+
+export function syncPayrollRecordsToCloud(records: PayrollRecord[]): void {
+  scheduleCollectionSync('payrollRecords', records, true, false, 250);
+}
+
+export function syncRentContractsToCloud(contracts: RentContract[]): void {
+  scheduleCollectionSync('rentContracts', contracts, true, true, 250);
+}
+
+export function syncRentPaymentsToCloud(payments: RentPayment[]): void {
+  scheduleCollectionSync('rentPayments', payments, true, false, 250);
+}
+
 /**
  * Inicializa o reinicia la sincronización en tiempo real con Firebase Firestore (Offline-First)
  */
@@ -827,13 +872,163 @@ function attachRealtimeListeners(db: Firestore, cb: FirebaseSyncCallbacks): void
     () => {}
   );
 
+  // 7. EMPLEADOS (NÓMINA)
+  const unsubEmployees = onSnapshot(
+    collection(db, COLLECTIONS.employees),
+    (snapshot) => {
+      if (snapshot.empty && !initialSnapshotHandled.employees) {
+        initialSnapshotHandled.employees = true;
+        const local = cb.getLocalData().employees;
+        if (local && local.length > 0) {
+          syncCollectionDiff('employees', local, true, true);
+        }
+        return;
+      }
+      initialSnapshotHandled.employees = true;
+
+      const rawDocs = snapshot.docs.map((d) => ({ raw: d.data(), id: d.id }));
+      rawDocs.sort((a, b) => (a.raw._sortIndex ?? 9999) - (b.raw._sortIndex ?? 9999));
+
+      const nextMap = new Map<string, string>();
+      const remoteEmployees: Employee[] = rawDocs.map(({ raw, id }) => {
+        const cleanDoc = { ...raw, id: raw.id || id };
+        nextMap.set(cleanDoc.id, computeDocHash(cleanDoc));
+        return stripInternalFields<Employee>(cleanDoc);
+      });
+
+      syncedDocHashes.employees = nextMap;
+
+      if (!snapshot.metadata.hasPendingWrites && remoteEmployees.length > 0 && cb.onRemoteEmployees) {
+        isApplyingRemoteUpdate = true;
+        try {
+          cb.onRemoteEmployees(remoteEmployees);
+        } finally {
+          isApplyingRemoteUpdate = false;
+        }
+      }
+    },
+    () => {}
+  );
+
+  // 8. REGISTROS DE NÓMINA
+  const unsubPayrollRecords = onSnapshot(
+    collection(db, COLLECTIONS.payrollRecords),
+    (snapshot) => {
+      if (snapshot.empty && !initialSnapshotHandled.payrollRecords) {
+        initialSnapshotHandled.payrollRecords = true;
+        const local = cb.getLocalData().payrollRecords;
+        if (local && local.length > 0) {
+          syncCollectionDiff('payrollRecords', local, true, false);
+        }
+        return;
+      }
+      initialSnapshotHandled.payrollRecords = true;
+
+      const nextMap = new Map<string, string>();
+      const remotePayroll: PayrollRecord[] = snapshot.docs.map((d) => {
+        const raw = d.data();
+        const cleanDoc = { ...raw, id: raw.id || d.id };
+        nextMap.set(cleanDoc.id, computeDocHash(cleanDoc));
+        return stripInternalFields<PayrollRecord>(cleanDoc);
+      });
+
+      syncedDocHashes.payrollRecords = nextMap;
+
+      if (!snapshot.metadata.hasPendingWrites && remotePayroll.length > 0 && cb.onRemotePayrollRecords) {
+        isApplyingRemoteUpdate = true;
+        try {
+          cb.onRemotePayrollRecords(remotePayroll);
+        } finally {
+          isApplyingRemoteUpdate = false;
+        }
+      }
+    },
+    () => {}
+  );
+
+  // 9. CONTRATOS DE ARRIENDO
+  const unsubRentContracts = onSnapshot(
+    collection(db, COLLECTIONS.rentContracts),
+    (snapshot) => {
+      if (snapshot.empty && !initialSnapshotHandled.rentContracts) {
+        initialSnapshotHandled.rentContracts = true;
+        const local = cb.getLocalData().rentContracts;
+        if (local && local.length > 0) {
+          syncCollectionDiff('rentContracts', local, true, true);
+        }
+        return;
+      }
+      initialSnapshotHandled.rentContracts = true;
+
+      const nextMap = new Map<string, string>();
+      const remoteContracts: RentContract[] = snapshot.docs.map((d) => {
+        const raw = d.data();
+        const cleanDoc = { ...raw, id: raw.id || d.id };
+        nextMap.set(cleanDoc.id, computeDocHash(cleanDoc));
+        return stripInternalFields<RentContract>(cleanDoc);
+      });
+
+      syncedDocHashes.rentContracts = nextMap;
+
+      if (!snapshot.metadata.hasPendingWrites && remoteContracts.length > 0 && cb.onRemoteRentContracts) {
+        isApplyingRemoteUpdate = true;
+        try {
+          cb.onRemoteRentContracts(remoteContracts);
+        } finally {
+          isApplyingRemoteUpdate = false;
+        }
+      }
+    },
+    () => {}
+  );
+
+  // 10. PAGOS DE ARRIENDO
+  const unsubRentPayments = onSnapshot(
+    collection(db, COLLECTIONS.rentPayments),
+    (snapshot) => {
+      if (snapshot.empty && !initialSnapshotHandled.rentPayments) {
+        initialSnapshotHandled.rentPayments = true;
+        const local = cb.getLocalData().rentPayments;
+        if (local && local.length > 0) {
+          syncCollectionDiff('rentPayments', local, true, false);
+        }
+        return;
+      }
+      initialSnapshotHandled.rentPayments = true;
+
+      const nextMap = new Map<string, string>();
+      const remotePayments: RentPayment[] = snapshot.docs.map((d) => {
+        const raw = d.data();
+        const cleanDoc = { ...raw, id: raw.id || d.id };
+        nextMap.set(cleanDoc.id, computeDocHash(cleanDoc));
+        return stripInternalFields<RentPayment>(cleanDoc);
+      });
+
+      syncedDocHashes.rentPayments = nextMap;
+
+      if (!snapshot.metadata.hasPendingWrites && remotePayments.length > 0 && cb.onRemoteRentPayments) {
+        isApplyingRemoteUpdate = true;
+        try {
+          cb.onRemoteRentPayments(remotePayments);
+        } finally {
+          isApplyingRemoteUpdate = false;
+        }
+      }
+    },
+    () => {}
+  );
+
   activeUnsubscribers.push(
     unsubProducts,
     unsubTables,
     unsubSales,
     unsubUsers,
     unsubCashClosings,
-    unsubServiceStatus
+    unsubServiceStatus,
+    unsubEmployees,
+    unsubPayrollRecords,
+    unsubRentContracts,
+    unsubRentPayments
   );
 }
 
@@ -940,6 +1135,19 @@ export async function pushAllLocalDataToCloud(): Promise<{
     await syncCollectionDiff('users', local.users, true, true);
     await syncCollectionDiff('cashClosings', local.cashClosings, false, false);
 
+    if (local.employees) {
+      await syncCollectionDiff('employees', local.employees, true, true);
+    }
+    if (local.payrollRecords) {
+      await syncCollectionDiff('payrollRecords', local.payrollRecords, true, false);
+    }
+    if (local.rentContracts) {
+      await syncCollectionDiff('rentContracts', local.rentContracts, true, true);
+    }
+    if (local.rentPayments) {
+      await syncCollectionDiff('rentPayments', local.rentPayments, true, false);
+    }
+
     if (currentStatus.status === 'error') {
       return {
         success: false,
@@ -978,12 +1186,16 @@ export async function pullAllCloudDataToLocal(): Promise<{
     emitStatus({ status: 'syncing', errorMessage: null });
     const db = firestoreInstance;
 
-    const [prodSnap, tblSnap, salesSnap, usersSnap, closeSnap] = await Promise.all([
+    const [prodSnap, tblSnap, salesSnap, usersSnap, closeSnap, empSnap, paySnap, rentSnap, rentPaySnap] = await Promise.all([
       getDocs(collection(db, COLLECTIONS.products)),
       getDocs(collection(db, COLLECTIONS.tables)),
       getDocs(collection(db, COLLECTIONS.sales)),
       getDocs(collection(db, COLLECTIONS.users)),
       getDocs(collection(db, COLLECTIONS.cashClosings)),
+      getDocs(collection(db, COLLECTIONS.employees)),
+      getDocs(collection(db, COLLECTIONS.payrollRecords)),
+      getDocs(collection(db, COLLECTIONS.rentContracts)),
+      getDocs(collection(db, COLLECTIONS.rentPayments)),
     ]);
 
     const parseSorted = <T>(snap: typeof prodSnap): T[] => {
@@ -995,6 +1207,14 @@ export async function pullAllCloudDataToLocal(): Promise<{
     const products = parseSorted<Product>(prodSnap);
     const tables = parseSorted<Table>(tblSnap);
     const users = parseSorted<SystemUser>(usersSnap);
+    const employees = parseSorted<Employee>(empSnap);
+    const rentContracts = parseSorted<RentContract>(rentSnap);
+    const payrollRecords = paySnap.docs.map((d) =>
+      stripInternalFields<PayrollRecord>({ ...d.data(), id: d.data().id || d.id })
+    );
+    const rentPayments = rentPaySnap.docs.map((d) =>
+      stripInternalFields<RentPayment>({ ...d.data(), id: d.data().id || d.id })
+    );
     const sales = salesSnap.docs
       .map((d) => stripInternalFields<SaleRecord>({ ...d.data(), id: d.data().id || d.id }))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -1011,6 +1231,18 @@ export async function pullAllCloudDataToLocal(): Promise<{
       if (sales.length > 0) registeredCallbacks.onRemoteSales(sales);
       if (users.length > 0) registeredCallbacks.onRemoteUsers(users);
       if (cashClosings.length > 0) registeredCallbacks.onRemoteCashClosings(cashClosings);
+      if (employees.length > 0 && registeredCallbacks.onRemoteEmployees) {
+        registeredCallbacks.onRemoteEmployees(employees);
+      }
+      if (payrollRecords.length > 0 && registeredCallbacks.onRemotePayrollRecords) {
+        registeredCallbacks.onRemotePayrollRecords(payrollRecords);
+      }
+      if (rentContracts.length > 0 && registeredCallbacks.onRemoteRentContracts) {
+        registeredCallbacks.onRemoteRentContracts(rentContracts);
+      }
+      if (rentPayments.length > 0 && registeredCallbacks.onRemoteRentPayments) {
+        registeredCallbacks.onRemoteRentPayments(rentPayments);
+      }
     } finally {
       isApplyingRemoteUpdate = false;
     }

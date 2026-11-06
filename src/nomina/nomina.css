@@ -1,0 +1,1012 @@
+/* ============================================================================
+   LA MOLIENDA - SISTEMA DE NÓMINA & ARRIENDO (DISEÑO IDÉNTICO AL POS)
+   ============================================================================ */
+
+.icon-amber {
+  background: rgba(245, 158, 11, 0.15) !important;
+  color: #f59e0b !important;
+}
+
+/* Badges de Estado */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.74rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  text-transform: capitalize;
+}
+
+.status-badge.paid {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.12);
+}
+
+.status-badge.pending {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.12);
+}
+
+.status-badge.overdue {
+  background: rgba(244, 63, 94, 0.15);
+  color: #fb7185;
+  border: 1px solid rgba(244, 63, 94, 0.4);
+  box-shadow: 0 0 10px rgba(244, 63, 94, 0.15);
+}
+
+[data-theme='light'] .status-badge.paid {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+[data-theme='light'] .status-badge.pending {
+  background: #fffbeb;
+  color: #b45309;
+  border-color: #fde68a;
+}
+
+[data-theme='light'] .status-badge.overdue {
+  background: #fff1f2;
+  color: #be123c;
+  border-color: #fecdd3;
+}
+
+/* Etiquetas de Método de Pago */
+.method-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  text-transform: capitalize;
+}
+
+.method-pill.transferencia {
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.method-pill.nequi {
+  background: rgba(168, 85, 247, 0.12);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.method-pill.daviplata {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.method-pill.efectivo {
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+[data-theme='light'] .method-pill.transferencia {
+  background: #f0f9ff;
+  color: #0369a1;
+  border-color: #bae6fd;
+}
+
+[data-theme='light'] .method-pill.nequi {
+  background: #faf5ff;
+  color: #7e22ce;
+  border-color: #e9d5ff;
+}
+
+[data-theme='light'] .method-pill.daviplata {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+[data-theme='light'] .method-pill.efectivo {
+  background: #f0fdf4;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+
+/* Botones de Acción en Tablas */
+.action-buttons-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.table-action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.table-action-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.table-action-btn.btn-pay-toggle:hover {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #34d399;
+}
+
+.table-action-btn.btn-print {
+  color: var(--accent-amber);
+}
+
+.table-action-btn.btn-print:hover {
+  background: rgba(245, 158, 11, 0.18);
+  border-color: rgba(245, 158, 11, 0.5);
+  color: #fbbf24;
+}
+
+[data-theme='light'] .table-action-btn.btn-print {
+  color: #b45309;
+}
+
+[data-theme='light'] .table-action-btn.btn-print:hover {
+  background: #fdf5ec;
+  border-color: #d97706;
+  color: #92400e;
+}
+
+.table-action-btn.btn-delete:hover {
+  background: rgba(244, 63, 94, 0.18);
+  border-color: rgba(244, 63, 94, 0.5);
+  color: #fb7185;
+}
+
+/* Modales Estilo La Molienda POS */
+.pos-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(7, 5, 3, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  animation: fadeInModal 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pos-modal-box {
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 620px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 24px rgba(245, 158, 11, 0.12);
+  display: flex;
+  flex-direction: column;
+  animation: scaleUpModal 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeInModal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleUpModal {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.pos-modal-header {
+  padding: 1.15rem 1.45rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-color);
+  background: rgba(14, 11, 8, 0.4);
+}
+
+[data-theme='light'] .pos-modal-header {
+  background: #fdfaf7;
+}
+
+.pos-modal-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.pos-modal-icon-badge {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.1));
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: var(--accent-amber);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pos-modal-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.pos-modal-subtitle {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.pos-modal-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pos-modal-close-btn:hover {
+  background: rgba(244, 63, 94, 0.15);
+  border-color: rgba(244, 63, 94, 0.4);
+  color: #fb7185;
+  transform: rotate(90deg);
+}
+
+.pos-modal-body {
+  padding: 1.45rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.pos-modal-footer {
+  padding: 1.15rem 1.45rem;
+  border-top: 1px solid var(--border-color);
+  background: rgba(14, 11, 8, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+[data-theme='light'] .pos-modal-footer {
+  background: #fdfaf7;
+}
+
+/* Formularios POS */
+.pos-form-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 600px) {
+  .pos-form-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pos-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.pos-form-group.full-width {
+  grid-column: span 2;
+}
+
+@media (max-width: 600px) {
+  .pos-form-group.full-width {
+    grid-column: span 1;
+  }
+}
+
+.pos-form-label {
+  font-size: 0.74rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
+.pos-form-input,
+.pos-form-select,
+.pos-form-textarea {
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 0.85rem;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.85rem;
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.pos-form-input:focus,
+.pos-form-select:focus,
+.pos-form-textarea:focus {
+  border-color: var(--accent-amber);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.18);
+  background: var(--bg-input-focus);
+}
+
+/* Botones Principales y Secundarios */
+.pos-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #1a0f05;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0.65rem 1.25rem;
+  font-size: 0.85rem;
+  font-weight: 750;
+  cursor: pointer;
+  box-shadow: 0 3px 12px rgba(245, 158, 11, 0.35);
+  transition: all var(--transition-fast);
+}
+
+.pos-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(245, 158, 11, 0.5);
+  background: linear-gradient(135deg, #fbbf24 0%, #ea580c 100%);
+}
+
+.pos-btn-primary:active {
+  transform: translateY(1px);
+}
+
+.pos-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 1.15rem;
+  font-size: 0.85rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.pos-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Grilla de Empleados */
+.employees-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.25rem;
+}
+
+.employee-card-item {
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.15rem;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal);
+}
+
+.employee-card-item:hover {
+  transform: translateY(-2px);
+  border-color: rgba(245, 158, 11, 0.45);
+  box-shadow: var(--shadow-md), 0 0 20px rgba(245, 158, 11, 0.1);
+}
+
+.employee-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.employee-avatar-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.1));
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: var(--accent-amber);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+
+.employee-card-name {
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.employee-card-role-pill {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 750;
+  color: var(--accent-amber);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 0.2rem;
+}
+
+.employee-card-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  padding: 0.75rem 0.85rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+[data-theme='light'] .employee-card-details {
+  background: #fcf9f5;
+  border-color: #ede2d5;
+}
+
+.employee-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--border-color);
+  padding-top: 0.85rem;
+}
+
+.employee-card-salary-val {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--accent-emerald);
+}
+
+/* Ficha del Arrendamiento */
+.rent-contract-hero-card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.35rem 1.65rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.rent-hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.rent-hero-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+
+.rent-hero-details-grid:hover {
+  background: rgba(245, 158, 11, 0.04);
+  border-color: rgba(245, 158, 11, 0.35);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme='light'] .rent-hero-details-grid {
+  background: #fdfbf8;
+  border-color: #ede2d5;
+}
+
+[data-theme='light'] .rent-hero-details-grid:hover {
+  background: #fdf5ec !important;
+  border-color: #f3d1a8 !important;
+  box-shadow: 0 4px 16px rgba(217, 119, 6, 0.08) !important;
+}
+
+/* Reportes & Barras de Distribución */
+.reports-consolidated-card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.45rem 1.65rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+}
+
+.reports-distribution-bar-wrap {
+  width: 100%;
+  height: 14px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+  display: flex;
+  border: 1px solid var(--border-color);
+}
+
+.report-bar-fill-payroll {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  height: 100%;
+  transition: width 0.4s ease;
+}
+
+.report-bar-fill-rent {
+  background: linear-gradient(90deg, #0284c7, #38bdf8);
+  height: 100%;
+  transition: width 0.4s ease;
+}
+
+/* ============================================================================
+   AUMENTO DE TAMAÑO Y ESCALA DE LA BARRA LATERAL (SIDEBAR)
+   ============================================================================ */
+
+/* Ancho del sidebar expandido y colapsado */
+.sidebar-collapsed .pos-sidebar-aside {
+  width: 96px !important;
+  padding: 0 0.75rem 1.15rem 0.75rem !important;
+}
+
+.sidebar-expanded .pos-sidebar-aside {
+  width: 280px !important;
+  padding: 0 1rem 1.15rem 1rem !important;
+}
+
+/* Marca superior y logotipo */
+.sidebar-logo-frame {
+  width: 56px !important;
+  height: 56px !important;
+  min-width: 56px !important;
+  min-height: 56px !important;
+  border-radius: 16px !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  overflow: visible !important;
+  transform-origin: center center !important;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), filter 0.2s ease !important;
+}
+
+/* Cabecera del sidebar (alineada con la barra superior/navbar con espacio generoso) */
+.sidebar-brand-box {
+  height: 96px !important;
+  min-height: 96px !important;
+  max-height: 96px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  margin: 0 -1rem !important;
+  padding: 0 1.25rem !important;
+  width: calc(100% + 2rem) !important;
+}
+
+[data-theme='light'] .sidebar-brand-box {
+  border-bottom: 1px solid #ebd9c8 !important;
+}
+
+.sidebar-collapsed .sidebar-brand-box {
+  height: 96px !important;
+  min-height: 96px !important;
+  max-height: 96px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 -0.75rem !important;
+  padding: 0 !important;
+  width: calc(100% + 1.5rem) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+}
+
+[data-theme='light'] .sidebar-collapsed .sidebar-brand-box {
+  border-bottom: 1px solid #ebd9c8 !important;
+}
+
+/* Barra superior (Navbar) alineada a 96px con espacio cómodo */
+.pos-top-bar {
+  height: 96px !important;
+  min-height: 96px !important;
+  max-height: 96px !important;
+  box-sizing: border-box !important;
+  border-bottom: 1px solid var(--border-color) !important;
+}
+
+[data-theme='light'] .pos-top-bar {
+  border-bottom: 1px solid #ebd9c8 !important;
+}
+
+.sidebar-brand-clickable {
+  cursor: pointer !important;
+  user-select: none !important;
+  outline: none !important;
+  overflow: visible !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease !important;
+}
+
+.sidebar-brand-clickable:hover .sidebar-logo-frame {
+  transform: scale(1.04) !important;
+  filter: brightness(1.08) !important;
+  box-shadow: none !important;
+  border: none !important;
+  outline: none !important;
+}
+
+.sidebar-brand-clickable:active .sidebar-logo-frame {
+  transform: scale(0.96) !important;
+}
+
+.brand-name {
+  font-size: 1.1rem !important;
+  font-weight: 850 !important;
+}
+
+.brand-sub {
+  font-size: 0.75rem !important;
+  letter-spacing: 0.06em !important;
+}
+
+/* Lista de botones de navegación */
+.sidebar-nav-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.65rem !important;
+  margin-top: 1.15rem !important;
+}
+
+.sidebar-nav-item {
+  padding: 0.75rem 0.85rem !important;
+  border-radius: 14px !important;
+  font-size: 0.92rem !important;
+  font-weight: 700 !important;
+  gap: 1rem !important;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+}
+
+.sidebar-collapsed .sidebar-nav-item {
+  padding: 0.75rem 0.5rem !important;
+  justify-content: center !important;
+  height: 54px !important;
+}
+
+.nav-item-icon {
+  width: 42px !important;
+  min-width: 42px !important;
+  height: 42px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+}
+
+.nav-item-label {
+  font-size: 0.92rem !important;
+  font-weight: 750 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.sidebar-nav-item.active::before {
+  width: 4.5px !important;
+  border-radius: 0 5px 5px 0 !important;
+}
+
+/* Badges de notificación en sidebar */
+.sidebar-badge {
+  font-size: 0.75rem !important;
+  font-weight: 800 !important;
+  padding: 0.15rem 0.5rem !important;
+  border-radius: 8px !important;
+}
+
+.sidebar-collapsed .sidebar-badge {
+  top: 4px !important;
+  right: 8px !important;
+  font-size: 0.68rem !important;
+  padding: 0.12rem 0.42rem !important;
+}
+
+/* Pie del sidebar (botones de tema y base de datos) */
+.sidebar-footer-box {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.55rem !important;
+  padding-top: 0.85rem !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-theme='light'] .sidebar-footer-box {
+  border-top-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+.sidebar-footer-item {
+  padding: 0.75rem 0.85rem !important;
+  border-radius: 14px !important;
+  gap: 0.85rem !important;
+  border: 1px solid var(--border-color) !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+.sidebar-collapsed .sidebar-footer-item {
+  padding: 0.75rem 0.5rem !important;
+  justify-content: center !important;
+  height: 54px !important;
+}
+
+.footer-item-icon {
+  width: 38px !important;
+  min-width: 38px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.footer-item-title {
+  font-size: 0.85rem !important;
+  font-weight: 750 !important;
+}
+
+.footer-item-sub {
+  font-size: 0.74rem !important;
+}
+
+/* ============================================================================
+   CENTRADOR EXACTO DE ICONOS EN BARRA LATERAL (SIDEBAR COLAPSADO)
+   ============================================================================ */
+
+/* 1. Ocultar totalmente el texto colapsable para que el flexbox no deje espacio ni gap residual */
+.sidebar-collapsed .sidebar-collapsible-text {
+  display: none !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* 2. Botones de Navegación perfectamente centrados */
+.sidebar-collapsed .sidebar-nav-item {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  margin: 0 auto !important;
+  height: 56px !important;
+  position: relative !important;
+  text-align: center !important;
+}
+
+.sidebar-collapsed .nav-item-icon {
+  margin: 0 auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  flex: 1 !important;
+}
+
+.sidebar-collapsed .nav-item-icon svg {
+  margin: 0 auto !important;
+  display: block !important;
+  transform: none !important;
+}
+
+/* 3. Indicador de badge de notificaciones en la esquina superior derecha sin mover el icono */
+.sidebar-collapsed .sidebar-badge {
+  position: absolute !important;
+  top: 7px !important;
+  right: 12px !important;
+  margin: 0 !important;
+  z-index: 10 !important;
+  pointer-events: none !important;
+}
+
+/* 4. Botones del pie de barra (Tema visual y Base de Datos) centrados */
+.sidebar-collapsed .sidebar-footer-item {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  margin: 0 auto !important;
+  height: 56px !important;
+  position: relative !important;
+}
+
+.sidebar-collapsed .footer-item-icon {
+  margin: 0 auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  flex: 1 !important;
+}
+
+.sidebar-collapsed .footer-item-icon svg {
+  margin: 0 auto !important;
+  display: block !important;
+}
+
+/* 5. Cabecera y logo centrados en el eje vertical cuando colapsado */
+.sidebar-collapsed .sidebar-brand-box {
+  height: 96px !important;
+  min-height: 96px !important;
+  max-height: 96px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: calc(100% + 1.5rem) !important;
+  margin: 0 -0.75rem !important;
+  padding: 0 !important;
+  border-bottom: 1px solid var(--border-color) !important;
+}
+
+[data-theme='light'] .sidebar-collapsed .sidebar-brand-box {
+  border-bottom: 1px solid #ebd9c8 !important;
+}
+
+.sidebar-collapsed .sidebar-brand-clickable {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: visible !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+}
+
+.sidebar-collapsed .sidebar-logo-frame {
+  margin: 0 auto !important;
+}
+
+/* ============================================================================
+   ESTILOS DE IMPRESIÓN PARA COMPROBANTES DE ARRIENDO Y RECIBOS TÉRMICOS
+   ============================================================================ */
+@media print {
+  @page {
+    size: auto;
+    margin: 4mm 6mm;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .pos-sidebar-shell,
+  .pos-sidebar-aside,
+  .pos-top-bar,
+  .app-system-footer,
+  .inventory-header,
+  .kpi-row,
+  .rent-contract-hero-card,
+  .inventory-table-container,
+  .ticket-modal-header,
+  .ticket-modal-actions,
+  .pos-modal-header,
+  .pos-modal-footer {
+    display: none !important;
+  }
+
+  .pos-modal-overlay {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+  }
+
+  .pos-modal-box,
+  .ticket-modal-wrapper {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  #printable-rent-receipt,
+  #printable-rent-receipt * {
+    visibility: visible !important;
+  }
+
+  #printable-rent-receipt {
+    display: block !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 100% !important;
+    max-width: 420px !important;
+    padding: 10px 14px !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: none !important;
+    box-shadow: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+    font-size: 0.72rem !important;
+    line-height: 1.3 !important;
+    page-break-inside: avoid !important;
+  }
+
+  #printable-rent-receipt .receipt-company {
+    color: #000000 !important;
+  }
+
+  #printable-rent-receipt .receipt-divider-dashed {
+    border-bottom: 1px dashed #000000 !important;
+  }
+
+  #printable-rent-receipt .receipt-divider-solid {
+    border-bottom: 1px solid #000000 !important;
+  }
+}

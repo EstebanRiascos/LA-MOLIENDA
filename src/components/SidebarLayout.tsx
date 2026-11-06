@@ -20,6 +20,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  Building2,
 } from 'lucide-react';
 import laMoliendaLogo from '../assets/la_molienda_logo.png';
 import { isSoundEnabled, setSoundEnabled } from '../utils/sounds';
@@ -275,27 +276,6 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
             </button>
           )}
 
-          {/* Botón Nube Firebase */}
-          {currentUser?.role === 'admin' && onOpenFirebaseSync && (
-            <button
-              type="button"
-              className={`sidebar-footer-item cloud-btn status-${firebaseStatus}`}
-              onClick={onOpenFirebaseSync}
-              title={`Base de Datos en la Nube (${firebaseProjectId || 'Firebase'})`}
-            >
-              <div className="footer-item-icon">
-                <Cloud size={17} />
-              </div>
-              <div className="footer-item-texts sidebar-collapsible-text">
-                <span className="footer-item-title">Nube Firebase</span>
-                <span className="footer-item-sub">
-                  {firebaseStatus === 'connected' ? 'Sincronizado' : firebaseStatus}
-                </span>
-              </div>
-              <span className={`sidebar-status-dot dot-${firebaseStatus}`} />
-            </button>
-          )}
-
           {/* Tarjeta de Usuario / Perfil */}
           <div className="sidebar-user-card" ref={userCardRef}>
             <div
@@ -398,10 +378,10 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
                 className={`top-micro-cloud status-${firebaseStatus}`}
                 onClick={onOpenFirebaseSync}
                 title={`Base de Datos en la Nube (${firebaseProjectId || 'Firebase'}): ${firebaseStatus === 'connected'
-                    ? 'Sincronizado en tiempo real'
-                    : firebaseStatus === 'syncing'
-                      ? 'Sincronizando...'
-                      : 'Desconectado'
+                  ? 'Sincronizado en tiempo real'
+                  : firebaseStatus === 'syncing'
+                    ? 'Sincronizando...'
+                    : 'Desconectado'
                   }`}
               >
                 <Cloud size={14} className="micro-cloud-icon" />

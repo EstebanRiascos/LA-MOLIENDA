@@ -10,6 +10,11 @@ import {
   Delete,
   Coffee,
   CheckCircle2,
+  Users,
+  Building2,
+  ArrowRight,
+  ArrowLeft,
+  Sparkles,
 } from 'lucide-react';
 import laMoliendaLogo from '../assets/la_molienda_logo.png';
 import { SystemUser } from '../types';
@@ -19,9 +24,11 @@ import {
   getStoredUsers,
 } from '../utils/authStorage';
 
+export type SystemDestination = 'pos' | 'nomina';
+
 interface LoginModalProps {
   isOpen: boolean;
-  onLoginSuccess: (user: SystemUser) => void;
+  onLoginSuccess: (user: SystemUser, selectedSystem?: SystemDestination) => void;
 }
 
 export const LoginModal: React.FC<LoginModalProps> = ({
@@ -29,6 +36,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   onLoginSuccess,
 }) => {
   const [authMode, setAuthMode] = useState<'admin' | 'pin'>('admin');
+  const [targetSystem, setTargetSystem] = useState<SystemDestination>('pos');
 
   // Admin form state
   const [username, setUsername] = useState('admin');
@@ -45,6 +53,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const [isSuccess, setIsSuccess] = useState(false);
   const [shake, setShake] = useState(false);
 
+  // Post-auth selector state for admin when choosing dynamically
+  const [authenticatedAdmin, setAuthenticatedAdmin] = useState<SystemUser | null>(null);
+
   const passwordInputRef = useRef<HTMLInputElement>(null);
 
   // Reset states when opening modal or changing mode
@@ -53,6 +64,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       setErrorMessage(null);
       setIsSuccess(false);
       setPin('');
+      setAuthenticatedAdmin(null);
 
       const users = getStoredUsers().filter((u) => u.active);
       setAvailableUsers(users);
@@ -68,7 +80,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
   // Support physical numeric keyboard for PIN entry
   useEffect(() => {
-    if (!isOpen || authMode !== 'pin' || isSuccess) return;
+    if (!isOpen || authMode !== 'pin' || isSuccess || authenticatedAdmin) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key >= '0' && e.key <= '9') {
@@ -85,7 +97,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, authMode, pin, isSuccess]);
+  }, [isOpen, authMode, pin, isSuccess, authenticatedAdmin]);
 
   if (!isOpen) return null;
 
@@ -110,10 +122,23 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
     const res = authenticateWithPassword(username, password);
     if (res.success && res.user) {
-      setIsSuccess(true);
-      setTimeout(() => {
-        onLoginSuccess(res.user!);
-      }, 500);
+      if (res.user.role === 'admin') {
+        // If the admin explicitly selected the destination tab upfront, proceed directly
+        setIsSuccess(true);
+        setTimeout(() => {
+          onLoginSuccess(res.user!, targetSystem);
+        }, 450);
+      } else {
+        // Non-admin user can only enter POS
+        if (targetSystem === 'nomina') {
+          triggerError('⚠️ Acceso denegado: El sistema de nómina es exclusivo para Administradores.');
+          return;
+        }
+        setIsSuccess(true);
+        setTimeout(() => {
+          onLoginSuccess(res.user!, 'pos');
+        }, 450);
+      }
     } else {
       triggerError(res.error || 'Credenciales incorrectas.');
     }
@@ -134,10 +159,24 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       setTimeout(() => {
         const res = authenticateWithPin(newPin, selectedPinUserId);
         if (res.success && res.user) {
-          setIsSuccess(true);
-          setTimeout(() => {
-            onLoginSuccess(res.user!);
-          }, 450);
+          if (res.user.role === 'admin') {
+            // Admin entering via PIN
+            setIsSuccess(true);
+            setTimeout(() => {
+              onLoginSuccess(res.user!, targetSystem);
+            }, 450);
+          } else {
+            // Waiter / Cashier entering via PIN
+            if (targetSystem === 'nomina') {
+              triggerError('⚠️ Los colaboradores (meseros/cajeros) solo tienen acceso al Sistema POS.');
+              setPin('');
+              return;
+            }
+            setIsSuccess(true);
+            setTimeout(() => {
+              onLoginSuccess(res.user!, 'pos');
+            }, 450);
+          }
         } else {
           triggerError(res.error || 'PIN no válido.');
           setPin('');
@@ -158,17 +197,105 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
   return (
     <div className="login-backdrop">
-      <div className={`login-card ${shake ? 'login-card-shake' : ''}`}>
+      <div className={`login-card ${shake ? 'login-card-shake' : ''}`} style={{ maxWidth: '480px' }}>
         {/* Brand Header */}
         <div className="login-header">
           <div className="login-logo-ring">
             <img src={laMoliendaLogo} alt="La Molienda" className="login-logo-img" />
           </div>
           <h2 className="login-title">La Molienda</h2>
-          <span className="login-subtitle">Café & Bar &bull; Sistema POS y Control de Operaciones</span>
+          <span className="login-subtitle">Café & Bar &bull; Sistema de Gestión Integral</span>
         </div>
 
-        {/* Mode Switcher */}
+        {/* =========================================================================
+            SELECTOR DE SISTEMA AL QUE DESEA INGRESAR
+            ========================================================================= */}
+        <div style={{ marginBottom: '1.15rem' }}>
+          <label className="login-label" style={{ textAlign: 'center', marginBottom: '0.45rem' }}>
+            Ingresar al sistema:
+          </label>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '0.65rem',
+              background: 'rgba(0, 0, 0, 0.25)',
+              padding: '0.35rem',
+              borderRadius: '12px',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+            }}
+          >
+            {/* Opción 1: POS / Restaurante */}
+            <button
+              type="button"
+              onClick={() => {
+                setTargetSystem('pos');
+                setErrorMessage(null);
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                padding: '0.65rem 0.5rem',
+                borderRadius: '9px',
+                border: targetSystem === 'pos' ? '1.5px solid #d97706' : '1px solid transparent',
+                background: targetSystem === 'pos' ? 'rgba(217, 119, 6, 0.25)' : 'transparent',
+                color: targetSystem === 'pos' ? '#fbbf24' : 'var(--text-muted)',
+                fontWeight: targetSystem === 'pos' ? 800 : 600,
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <Coffee size={18} style={{ color: targetSystem === 'pos' ? '#fbbf24' : '#94a3b8' }} />
+              <span>POS / Ventas</span>
+            </button>
+
+            {/* Opción 2: Nómina & Arriendos (Solo Admin) */}
+            <button
+              type="button"
+              onClick={() => {
+                setTargetSystem('nomina');
+                setErrorMessage(null);
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                padding: '0.65rem 0.5rem',
+                borderRadius: '9px',
+                border: targetSystem === 'nomina' ? '1.5px solid #10b981' : '1px solid transparent',
+                background: targetSystem === 'nomina' ? 'rgba(16, 185, 129, 0.22)' : 'transparent',
+                color: targetSystem === 'nomina' ? '#34d399' : 'var(--text-muted)',
+                fontWeight: targetSystem === 'nomina' ? 800 : 600,
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                position: 'relative',
+              }}
+            >
+              <Users size={18} style={{ color: targetSystem === 'nomina' ? '#34d399' : '#94a3b8' }} />
+              <span>Nómina</span>
+              <span
+                style={{
+                  fontSize: '0.62rem',
+                  padding: '0.1rem 0.35rem',
+                  borderRadius: '999px',
+                  background: 'rgba(245, 158, 11, 0.2)',
+                  color: '#fbbf24',
+                  border: '1px solid rgba(245, 158, 11, 0.4)',
+                  fontWeight: 800,
+                }}
+              >
+                Admin
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Mode Switcher: Administrador vs PIN */}
         <div className="login-mode-pills" role="tablist">
           <button
             type="button"
@@ -179,7 +306,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             }}
           >
             <ShieldCheck size={16} />
-            <span>Administrador</span>
+            <span>Usuario / Clave</span>
           </button>
           <button
             type="button"
@@ -189,9 +316,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               setErrorMessage(null);
               setPin('');
             }}
+            title="Acceso rápido por PIN de 4 dígitos"
           >
             <KeyRound size={16} />
-            <span>PIN</span>
+            <span>PIN Personal</span>
           </button>
         </div>
 
@@ -207,7 +335,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         {isSuccess && (
           <div className="login-success-alert">
             <CheckCircle2 size={18} />
-            <span>¡Acceso concedido! Iniciando turno...</span>
+            <span>
+              ¡Acceso concedido! Abriendo{' '}
+              {targetSystem === 'nomina' ? 'Sistema de Nómina & Arriendos' : 'Sistema POS & Restaurante'}...
+            </span>
           </div>
         )}
 
@@ -260,9 +391,17 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               type="submit"
               className="login-submit-btn"
               disabled={isSuccess}
+              style={{
+                background:
+                  targetSystem === 'nomina'
+                    ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)'
+                    : undefined,
+              }}
             >
               <ShieldCheck size={18} />
-              <span>Ingresar al Sistema</span>
+              <span>
+                {targetSystem === 'nomina' ? 'Ingresar a Nómina & Arriendos' : 'Ingresar al POS'}
+              </span>
             </button>
           </form>
         )}
@@ -296,7 +435,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             </div>
 
             <p className="login-pin-instructions">
-              Digita tu PIN de 4 dígitos para ingresar a tu turno
+              Digita tu PIN de 4 dígitos para ingresar al Sistema POS
             </p>
 
             {/* 4 PIN Dots */}

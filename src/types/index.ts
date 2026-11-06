@@ -155,3 +155,7 @@ export interface AppNotification {
   tableId?: string;
 }
 
+// Re-export Nomina and Arriendo types
+export * from '../nomina/types';
+
+

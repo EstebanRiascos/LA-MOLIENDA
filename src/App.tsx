@@ -59,7 +59,18 @@ import { CashClosingModal } from './components/CashClosingModal';
 import { CashClosingHistoryModal } from './components/CashClosingHistoryModal';
 import { TableFormModal } from './components/TableFormModal';
 import { ReserveTableModal } from './components/ReserveTableModal';
-import { LoginModal } from './components/LoginModal';
+import { LoginModal, SystemDestination } from './components/LoginModal';
+import { NominaApp } from './nomina/NominaApp';
+import {
+  getStoredEmployees,
+  saveStoredEmployees,
+  getStoredPayrollRecords,
+  saveStoredPayrollRecords,
+  getStoredRentContracts,
+  saveStoredRentContracts,
+  getStoredRentPayments,
+  saveStoredRentPayments,
+} from './nomina/utils/nominaStorage';
 import { UserManagementModal } from './components/UserManagementModal';
 import { AboutModal } from './components/AboutModal';
 import { ExitConfirmModal } from './components/ExitConfirmModal';
@@ -120,6 +131,12 @@ export const App: React.FC = () => {
       return { id: 'admin-1', username: 'admin', name: 'Administrador Principal', role: 'admin', active: true, createdAt: new Date().toISOString() };
     }
     return getStoredSessionUser();
+  });
+  const [currentSystem, setCurrentSystem] = useState<SystemDestination>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sys = params.get('system') as SystemDestination;
+    if (sys === 'nomina' || sys === 'pos') return sys;
+    return 'pos';
   });
   const [isLoginOpen, setIsLoginOpen] = useState<boolean>(() => {
     const params = new URLSearchParams(window.location.search);
@@ -894,6 +911,10 @@ export const App: React.FC = () => {
         sales: salesRef.current,
         users: systemUsersRef.current,
         cashClosings: getCashClosingHistory(),
+        employees: getStoredEmployees(),
+        payrollRecords: getStoredPayrollRecords(),
+        rentContracts: getStoredRentContracts(),
+        rentPayments: getStoredRentPayments(),
       }),
       onRemoteProducts: (remoteProducts) => {
         const localProds = productsRef.current;
@@ -937,6 +958,22 @@ export const App: React.FC = () => {
       },
       onRemoteServiceStatus: (isOpen) => {
         setIsServiceOpen(isOpen);
+      },
+      onRemoteEmployees: (remoteEmployees) => {
+        saveStoredEmployees(remoteEmployees);
+        window.dispatchEvent(new CustomEvent('lamolienda:nomina-synced'));
+      },
+      onRemotePayrollRecords: (remotePayroll) => {
+        saveStoredPayrollRecords(remotePayroll);
+        window.dispatchEvent(new CustomEvent('lamolienda:nomina-synced'));
+      },
+      onRemoteRentContracts: (remoteContracts) => {
+        saveStoredRentContracts(remoteContracts);
+        window.dispatchEvent(new CustomEvent('lamolienda:nomina-synced'));
+      },
+      onRemoteRentPayments: (remotePayments) => {
+        saveStoredRentPayments(remotePayments);
+        window.dispatchEvent(new CustomEvent('lamolienda:nomina-synced'));
       },
     });
 
@@ -1734,11 +1771,18 @@ export const App: React.FC = () => {
   };
 
   // Auth Handlers
-  const handleLoginSuccess = (user: SystemUser) => {
+  const handleLoginSuccess = (user: SystemUser, selectedSystem?: SystemDestination) => {
     setCurrentUser(user);
     setIsLoginOpen(false);
     setCurrentStaff(user.name);
     saveStoredCurrentStaff(user.name);
+
+    if (user.role === 'admin' && selectedSystem === 'nomina') {
+      setCurrentSystem('nomina');
+    } else {
+      setCurrentSystem('pos');
+    }
+
     // Si el usuario es mesero y estaba en inventario o caja, devolverlo a mesas
     if (user.role === 'mesero' && (activeSection === 'inventario' || activeSection === 'caja')) {
       setActiveSection('mesas');
@@ -1749,6 +1793,7 @@ export const App: React.FC = () => {
   const handleLogout = () => {
     logoutSession();
     setCurrentUser(null);
+    setCurrentSystem('pos');
     setIsLoginOpen(true);
     showNotification('Sesión cerrada. Hasta pronto.');
   };
@@ -1769,6 +1814,34 @@ export const App: React.FC = () => {
         theme={theme}
         onToggleTheme={handleToggleTheme}
       />
+    );
+  }
+
+  // Si el usuario es administrador y seleccionó el sistema de nómina
+  if (currentUser?.role === 'admin' && currentSystem === 'nomina') {
+    return (
+      <>
+        <NominaApp
+          theme={theme}
+          onToggleTheme={handleToggleTheme}
+          onLogout={handleLogout}
+          onOpenFirebaseSync={() => setIsFirebaseSyncOpen(true)}
+          firebaseStatus={firebaseStatusSnap.status}
+        />
+
+        {/* Modal de autenticación si se requiere login */}
+        <LoginModal
+          isOpen={isLoginOpen}
+          onLoginSuccess={handleLoginSuccess}
+        />
+
+        {/* Modal de Firebase */}
+        <FirebaseSyncModal
+          isOpen={isFirebaseSyncOpen}
+          onClose={() => setIsFirebaseSyncOpen(false)}
+          onShowNotification={showNotification}
+        />
+      </>
     );
   }
 
