@@ -58,7 +58,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
   const passwordInputRef = useRef<HTMLInputElement>(null);
 
-  // Reset states when opening modal or changing mode
+  // Reset states when opening modal or changing mode or target system
   useEffect(() => {
     if (isOpen) {
       setErrorMessage(null);
@@ -68,15 +68,24 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
       const users = getStoredUsers().filter((u) => u.active);
       setAvailableUsers(users);
-      if (users.length === 1 && !selectedPinUserId) {
-        setSelectedPinUserId(users[0].id);
+
+      const admins = users.filter((u) => u.role === 'admin');
+      if (targetSystem === 'nomina') {
+        const isCurrentAdmin = admins.some((u) => u.id === selectedPinUserId);
+        if (!isCurrentAdmin) {
+          setSelectedPinUserId(admins.length > 0 ? admins[0].id : '');
+        }
+      } else {
+        if (users.length === 1 && !selectedPinUserId) {
+          setSelectedPinUserId(users[0].id);
+        }
       }
 
       if (authMode === 'admin') {
         setTimeout(() => passwordInputRef.current?.focus(), 150);
       }
     }
-  }, [isOpen, authMode]);
+  }, [isOpen, authMode, targetSystem]);
 
   // Support physical numeric keyboard for PIN entry
   useEffect(() => {
@@ -373,7 +382,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           <div className="login-pin-container">
             {/* Campo Selector de Usuario */}
             <div className="login-pin-user-box">
-              <label className="login-label">Usuario</label>
+              <label className="login-label">
+                {targetSystem === 'nomina' ? 'Administrador' : 'Usuario'}
+              </label>
               <div className="login-input-wrapper">
                 <UserIcon size={17} className="login-input-icon" />
                 <select
@@ -386,8 +397,15 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   className="login-input login-select"
                   disabled={isSuccess}
                 >
-                  <option value="">-- Selecciona tu usuario --</option>
-                  {availableUsers.map((u) => (
+                  <option value="">
+                    {targetSystem === 'nomina'
+                      ? '-- Selecciona el Administrador --'
+                      : '-- Selecciona tu usuario --'}
+                  </option>
+                  {(targetSystem === 'nomina'
+                    ? availableUsers.filter((u) => u.role === 'admin')
+                    : availableUsers
+                  ).map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.name} ({u.role === 'admin' ? 'Administrador' : u.role === 'cajero' ? 'Cajero' : 'Mesero'})
                     </option>
@@ -397,7 +415,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             </div>
 
             <p className="login-pin-instructions">
-              Digita tu PIN de 4 dígitos para ingresar al Sistema POS
+              {targetSystem === 'nomina'
+                ? 'Digita tu PIN de 4 dígitos de Administrador'
+                : 'Digita tu PIN de 4 dígitos para ingresar al Sistema POS'}
             </p>
 
             {/* 4 PIN Dots */}
