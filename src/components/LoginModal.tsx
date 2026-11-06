@@ -210,83 +210,45 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         {/* =========================================================================
             SELECTOR DE SISTEMA AL QUE DESEA INGRESAR
             ========================================================================= */}
-        <div style={{ marginBottom: '1.15rem' }}>
-          <label className="login-label" style={{ textAlign: 'center', marginBottom: '0.45rem' }}>
-            Ingresar al sistema:
+        <div style={{ marginBottom: '14px' }}>
+          <label className="login-label" style={{ marginBottom: '6px', display: 'block' }}>
+            Ingresar al sistema
           </label>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '0.65rem',
-              background: 'rgba(0, 0, 0, 0.25)',
-              padding: '0.35rem',
-              borderRadius: '12px',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-            }}
-          >
+          <div className="login-mode-pills" role="tablist" style={{ marginBottom: 0 }}>
             {/* Opción 1: POS / Restaurante */}
             <button
               type="button"
+              className={`login-mode-pill ${targetSystem === 'pos' ? 'active' : ''}`}
               onClick={() => {
                 setTargetSystem('pos');
                 setErrorMessage(null);
               }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.5rem',
-                padding: '0.65rem 0.5rem',
-                borderRadius: '9px',
-                border: targetSystem === 'pos' ? '1.5px solid #d97706' : '1px solid transparent',
-                background: targetSystem === 'pos' ? 'rgba(217, 119, 6, 0.25)' : 'transparent',
-                color: targetSystem === 'pos' ? '#fbbf24' : 'var(--text-muted)',
-                fontWeight: targetSystem === 'pos' ? 800 : 600,
-                fontSize: '0.82rem',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-              }}
             >
-              <Coffee size={18} style={{ color: targetSystem === 'pos' ? '#fbbf24' : '#94a3b8' }} />
+              <Coffee size={16} />
               <span>POS / Ventas</span>
             </button>
 
             {/* Opción 2: Nómina & Arriendos (Solo Admin) */}
             <button
               type="button"
+              className={`login-mode-pill ${targetSystem === 'nomina' ? 'active' : ''}`}
               onClick={() => {
                 setTargetSystem('nomina');
                 setErrorMessage(null);
               }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.5rem',
-                padding: '0.65rem 0.5rem',
-                borderRadius: '9px',
-                border: targetSystem === 'nomina' ? '1.5px solid #10b981' : '1px solid transparent',
-                background: targetSystem === 'nomina' ? 'rgba(16, 185, 129, 0.22)' : 'transparent',
-                color: targetSystem === 'nomina' ? '#34d399' : 'var(--text-muted)',
-                fontWeight: targetSystem === 'nomina' ? 800 : 600,
-                fontSize: '0.82rem',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                position: 'relative',
-              }}
             >
-              <Users size={18} style={{ color: targetSystem === 'nomina' ? '#34d399' : '#94a3b8' }} />
+              <Users size={16} />
               <span>Nómina</span>
               <span
                 style={{
                   fontSize: '0.62rem',
-                  padding: '0.1rem 0.35rem',
+                  padding: '1px 6px',
                   borderRadius: '999px',
-                  background: 'rgba(245, 158, 11, 0.2)',
-                  color: '#fbbf24',
-                  border: '1px solid rgba(245, 158, 11, 0.4)',
+                  background: 'rgba(245, 158, 11, 0.15)',
+                  color: '#b45309',
+                  border: '1px solid rgba(245, 158, 11, 0.35)',
                   fontWeight: 800,
+                  marginLeft: '2px',
                 }}
               >
                 Admin
