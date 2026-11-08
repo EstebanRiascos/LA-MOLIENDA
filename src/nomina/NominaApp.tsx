@@ -3,6 +3,7 @@ import { NominaSidebarLayout, NavSection } from './components/NominaSidebarLayou
 import { PayrollView } from './components/PayrollView';
 import { EmployeesView } from './components/EmployeesView';
 import { RentView } from './components/RentView';
+import { FixedExpensesView } from './components/FixedExpensesView';
 import { ReportsView } from './components/ReportsView';
 import { AmbientBackgroundCanvas } from '../components/AmbientBackgroundCanvas';
 import {
@@ -14,14 +15,17 @@ import {
   saveStoredRentContracts,
   getStoredRentPayments,
   saveStoredRentPayments,
+  getStoredFixedExpenses,
+  saveStoredFixedExpenses,
 } from './utils/nominaStorage';
 import {
   syncEmployeesToCloud,
   syncPayrollRecordsToCloud,
   syncRentContractsToCloud,
   syncRentPaymentsToCloud,
+  syncFixedExpensesToCloud,
 } from '../utils/firebaseSync';
-import { Employee, PayrollRecord, RentContract, RentPayment } from './types';
+import { Employee, PayrollRecord, RentContract, RentPayment, FixedExpenseItem, ExpensePaymentStatus } from './types';
 import './nomina.css';
 
 interface NominaAppProps {
@@ -47,6 +51,7 @@ export const NominaApp: React.FC<NominaAppProps> = ({
   const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>(() => getStoredPayrollRecords());
   const [rentContracts, setRentContracts] = useState<RentContract[]>(() => getStoredRentContracts());
   const [rentPayments, setRentPayments] = useState<RentPayment[]>(() => getStoredRentPayments());
+  const [fixedExpenses, setFixedExpenses] = useState<FixedExpenseItem[]>(() => getStoredFixedExpenses());
 
   // Escuchar actualizaciones remotas de Firebase en tiempo real
   useEffect(() => {
@@ -55,6 +60,7 @@ export const NominaApp: React.FC<NominaAppProps> = ({
       setPayrollRecords(getStoredPayrollRecords());
       setRentContracts(getStoredRentContracts());
       setRentPayments(getStoredRentPayments());
+      setFixedExpenses(getStoredFixedExpenses());
     };
 
     window.addEventListener('lamolienda:nomina-synced', handleRemoteSync);
@@ -83,6 +89,11 @@ export const NominaApp: React.FC<NominaAppProps> = ({
     saveStoredRentPayments(rentPayments);
     syncRentPaymentsToCloud(rentPayments);
   }, [rentPayments]);
+
+  useEffect(() => {
+    saveStoredFixedExpenses(fixedExpenses);
+    syncFixedExpensesToCloud(fixedExpenses);
+  }, [fixedExpenses]);
 
   // Handlers for Employees
   const handleAddEmployee = (emp: Employee) => {
@@ -139,8 +150,24 @@ export const NominaApp: React.FC<NominaAppProps> = ({
     );
   };
 
+  // Handlers for Fixed Operating Expenses (Servicios, Permisos, Aseo)
+  const handleAddFixedExpense = (expense: FixedExpenseItem) => {
+    setFixedExpenses((prev) => [expense, ...prev]);
+  };
+
+  const handleDeleteFixedExpense = (id: string) => {
+    setFixedExpenses((prev) => prev.filter((e) => e.id !== id));
+  };
+
+  const handleUpdateFixedExpenseStatus = (id: string, status: ExpensePaymentStatus) => {
+    setFixedExpenses((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, status } : e))
+    );
+  };
+
   const pendingPayrollCount = payrollRecords.filter((r) => r.status === 'pendiente').length;
   const pendingRentCount = rentPayments.filter((p) => p.status === 'pendiente' || p.status === 'vencido').length;
+  const pendingExpensesCount = fixedExpenses.filter((e) => e.status === 'pendiente' || e.status === 'vencido').length;
 
   return (
     <>
@@ -152,6 +179,7 @@ export const NominaApp: React.FC<NominaAppProps> = ({
         onChangeSection={setCurrentSection}
         pendingPayrollCount={pendingPayrollCount}
         pendingRentCount={pendingRentCount}
+        pendingExpensesCount={pendingExpensesCount}
         onLogout={onLogout}
         onOpenFirebaseSync={onOpenFirebaseSync}
         firebaseStatus={firebaseStatus}
@@ -186,10 +214,20 @@ export const NominaApp: React.FC<NominaAppProps> = ({
           />
         )}
 
+        {currentSection === 'gastos_fijos' && (
+          <FixedExpensesView
+            expenses={fixedExpenses}
+            onAddExpense={handleAddFixedExpense}
+            onDeleteExpense={handleDeleteFixedExpense}
+            onUpdateExpenseStatus={handleUpdateFixedExpenseStatus}
+          />
+        )}
+
         {currentSection === 'reportes' && (
           <ReportsView
             payrollRecords={payrollRecords}
             rentPayments={rentPayments}
+            fixedExpenses={fixedExpenses}
           />
         )}
       </NominaSidebarLayout>

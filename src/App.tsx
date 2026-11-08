@@ -70,6 +70,8 @@ import {
   saveStoredRentContracts,
   getStoredRentPayments,
   saveStoredRentPayments,
+  getStoredFixedExpenses,
+  saveStoredFixedExpenses,
 } from './nomina/utils/nominaStorage';
 import { UserManagementModal } from './components/UserManagementModal';
 import { AboutModal } from './components/AboutModal';
@@ -915,6 +917,7 @@ export const App: React.FC = () => {
         payrollRecords: getStoredPayrollRecords(),
         rentContracts: getStoredRentContracts(),
         rentPayments: getStoredRentPayments(),
+        fixedExpenses: getStoredFixedExpenses(),
       }),
       onRemoteProducts: (remoteProducts) => {
         const localProds = productsRef.current;
@@ -973,6 +976,10 @@ export const App: React.FC = () => {
       },
       onRemoteRentPayments: (remotePayments) => {
         saveStoredRentPayments(remotePayments);
+        window.dispatchEvent(new CustomEvent('lamolienda:nomina-synced'));
+      },
+      onRemoteFixedExpenses: (remoteExpenses) => {
+        saveStoredFixedExpenses(remoteExpenses);
         window.dispatchEvent(new CustomEvent('lamolienda:nomina-synced'));
       },
     });

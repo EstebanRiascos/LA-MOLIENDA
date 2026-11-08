@@ -57,3 +57,24 @@ export interface RentPayment {
   createdAt: string;
 }
 
+export type FixedExpenseCategory = 'servicios_publicos' | 'permisos_legales' | 'aseo_dotacion';
+export type ExpensePaymentStatus = 'pendiente' | 'pagado' | 'vencido';
+export type ExpensePaymentMethod = 'efectivo' | 'transferencia' | 'nequi' | 'daviplata' | 'tarjeta';
+
+export interface FixedExpenseItem {
+  id: string;
+  category: FixedExpenseCategory;
+  subCategory: string;
+  title: string;
+  periodMonth: string;
+  amount: number;
+  dueDate: string;
+  paymentDate?: string;
+  status: ExpensePaymentStatus;
+  paymentMethod?: ExpensePaymentMethod;
+  receiptReference?: string;
+  provider?: string;
+  notes?: string;
+  createdAt: string;
+}
+

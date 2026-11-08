@@ -3,6 +3,7 @@ import {
   Users,
   UserCheck,
   Building2,
+  Zap,
   BarChart3,
   Sun,
   Moon,
@@ -12,7 +13,7 @@ import {
 } from 'lucide-react';
 import laMoliendaLogo from '../../assets/la_molienda_logo.png';
 
-export type NavSection = 'nomina' | 'empleados' | 'arriendo' | 'reportes';
+export type NavSection = 'nomina' | 'empleados' | 'arriendo' | 'gastos_fijos' | 'reportes';
 
 interface NominaSidebarLayoutProps {
   theme: 'dark' | 'light';
@@ -21,6 +22,7 @@ interface NominaSidebarLayoutProps {
   onChangeSection: (section: NavSection) => void;
   pendingPayrollCount: number;
   pendingRentCount: number;
+  pendingExpensesCount?: number;
   children: React.ReactNode;
   onLogout?: () => void;
   onOpenFirebaseSync?: () => void;
@@ -34,6 +36,7 @@ export const NominaSidebarLayout: React.FC<NominaSidebarLayoutProps> = ({
   onChangeSection,
   pendingPayrollCount,
   pendingRentCount,
+  pendingExpensesCount = 0,
   children,
   onLogout,
   onOpenFirebaseSync,
@@ -68,10 +71,15 @@ export const NominaSidebarLayout: React.FC<NominaSidebarLayoutProps> = ({
           title: 'Gestión y Pago de Arriendo',
           subtitle: 'Seguimiento al canon de arrendamiento y obligaciones mensuales',
         };
+      case 'gastos_fijos':
+        return {
+          title: 'Servicios, Permisos & Insumos',
+          subtitle: 'Facturas de servicios públicos, normativa legal e insumos operativos de aseo',
+        };
       case 'reportes':
         return {
           title: 'Resumen Financiero y Gastos Fijos',
-          subtitle: 'Consolidado global de egresos operativos (Nómina vs. Arriendo)',
+          subtitle: 'Consolidado global de egresos operativos (Nómina, Arriendo y Gastos Fijos)',
         };
       default:
         return { title: 'La Molienda', subtitle: 'Administración Independiente' };
@@ -162,7 +170,25 @@ export const NominaSidebarLayout: React.FC<NominaSidebarLayoutProps> = ({
             )}
           </button>
 
-          {/* 4. Resumen y Gastos */}
+          {/* 4. Servicios y Gastos Fijos */}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeSection === 'gastos_fijos'}
+            className={`sidebar-nav-item ${activeSection === 'gastos_fijos' ? 'active' : ''}`}
+            onClick={() => onChangeSection('gastos_fijos')}
+            title="Servicios y Gastos Fijos"
+          >
+            <div className="nav-item-icon">
+              <Zap size={24} />
+            </div>
+            <span className="nav-item-label sidebar-collapsible-text">Servicios & Gastos</span>
+            {pendingExpensesCount > 0 && (
+              <span className="sidebar-badge alert-stock">{pendingExpensesCount}</span>
+            )}
+          </button>
+
+          {/* 5. Resumen y Gastos */}
           <button
             type="button"
             role="tab"

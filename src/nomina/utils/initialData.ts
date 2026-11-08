@@ -1,4 +1,4 @@
-import { Employee, RentContract, RentPayment, PayrollRecord } from '../types';
+import { Employee, RentContract, RentPayment, PayrollRecord, FixedExpenseItem } from '../types';
 
 export const initialEmployees: Employee[] = [
   {
@@ -58,4 +58,6 @@ export const initialRentContracts: RentContract[] = [
 export const initialRentPayments: RentPayment[] = [];
 
 export const initialPayrollRecords: PayrollRecord[] = [];
+
+export const initialFixedExpenses: FixedExpenseItem[] = [];
 

@@ -1,9 +1,10 @@
-import { Employee, PayrollRecord, RentContract, RentPayment } from '../types';
+import { Employee, PayrollRecord, RentContract, RentPayment, FixedExpenseItem } from '../types';
 import {
   initialEmployees,
   initialRentContracts,
   initialRentPayments,
   initialPayrollRecords,
+  initialFixedExpenses,
 } from './initialData';
 
 const KEYS = {
@@ -11,6 +12,7 @@ const KEYS = {
   payrollRecords: 'la_molienda_payroll_records',
   rentContracts: 'la_molienda_rent_contracts',
   rentPayments: 'la_molienda_rent_payments',
+  fixedExpenses: 'la_molienda_fixed_expenses',
 };
 
 export const getStoredEmployees = (): Employee[] => {
@@ -134,6 +136,24 @@ export const saveStoredRentPayments = (payments: RentPayment[]): void => {
     localStorage.setItem(KEYS.rentPayments, JSON.stringify(payments));
   } catch (e) {
     console.error('Error saving rent payments to localStorage', e);
+  }
+};
+
+export const getStoredFixedExpenses = (): FixedExpenseItem[] => {
+  try {
+    const raw = localStorage.getItem(KEYS.fixedExpenses);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {
+    console.error('Error loading fixed expenses from localStorage', e);
+  }
+  return initialFixedExpenses;
+};
+
+export const saveStoredFixedExpenses = (expenses: FixedExpenseItem[]): void => {
+  try {
+    localStorage.setItem(KEYS.fixedExpenses, JSON.stringify(expenses));
+  } catch (e) {
+    console.error('Error saving fixed expenses to localStorage', e);
   }
 };
 

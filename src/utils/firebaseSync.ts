@@ -13,7 +13,7 @@ import {
   Firestore,
   Unsubscribe,
 } from 'firebase/firestore';
-import { Product, Table, SaleRecord, SystemUser, CashClosingSummary, OrderItem, Employee, PayrollRecord, RentContract, RentPayment } from '../types';
+import { Product, Table, SaleRecord, SystemUser, CashClosingSummary, OrderItem, Employee, PayrollRecord, RentContract, RentPayment, FixedExpenseItem } from '../types';
 
 export interface FirebaseConnectionConfig {
   apiKey: string;
@@ -51,6 +51,7 @@ export interface FirebaseSyncCallbacks {
     payrollRecords?: PayrollRecord[];
     rentContracts?: RentContract[];
     rentPayments?: RentPayment[];
+    fixedExpenses?: FixedExpenseItem[];
   };
   onRemoteProducts: (products: Product[]) => void;
   onRemoteTables: (tables: Table[]) => void;
@@ -62,6 +63,7 @@ export interface FirebaseSyncCallbacks {
   onRemotePayrollRecords?: (records: PayrollRecord[]) => void;
   onRemoteRentContracts?: (contracts: RentContract[]) => void;
   onRemoteRentPayments?: (payments: RentPayment[]) => void;
+  onRemoteFixedExpenses?: (expenses: FixedExpenseItem[]) => void;
 }
 
 const FIREBASE_CONFIG_STORAGE_KEY = 'lamolienda_firebase_config_v1';
@@ -92,6 +94,7 @@ const COLLECTIONS = {
   payrollRecords: 'lamolienda_payroll_records',
   rentContracts: 'lamolienda_rent_contracts',
   rentPayments: 'lamolienda_rent_payments',
+  fixedExpenses: 'lamolienda_fixed_expenses',
   health: 'lamolienda_meta',
 } as const;
 
@@ -104,7 +107,8 @@ type CollectionKey =
   | 'employees'
   | 'payrollRecords'
   | 'rentContracts'
-  | 'rentPayments';
+  | 'rentPayments'
+  | 'fixedExpenses';
 
 let firebaseAppInstance: FirebaseApp | null = null;
 let firestoreInstance: Firestore | null = null;
@@ -123,6 +127,7 @@ const syncedDocHashes: Record<CollectionKey, Map<string, string>> = {
   payrollRecords: new Map(),
   rentContracts: new Map(),
   rentPayments: new Map(),
+  fixedExpenses: new Map(),
 };
 
 // Control de primera carga por colección para sembrar datos locales si Firestore está vacío
@@ -136,6 +141,7 @@ const initialSnapshotHandled: Record<CollectionKey, boolean> = {
   payrollRecords: false,
   rentContracts: false,
   rentPayments: false,
+  fixedExpenses: false,
 };
 
 // Timers de debounce por colección para agrupar cambios rápidos (ej: clics seguidos de +1 stock)
@@ -520,6 +526,10 @@ export function syncRentContractsToCloud(contracts: RentContract[]): void {
 
 export function syncRentPaymentsToCloud(payments: RentPayment[]): void {
   scheduleCollectionSync('rentPayments', payments, true, true, 250);
+}
+
+export function syncFixedExpensesToCloud(expenses: FixedExpenseItem[]): void {
+  scheduleCollectionSync('fixedExpenses', expenses, true, true, 250);
 }
 
 /**
@@ -1018,6 +1028,42 @@ function attachRealtimeListeners(db: Firestore, cb: FirebaseSyncCallbacks): void
     () => {}
   );
 
+  // 9. SERVICIOS Y OTROS GASTOS FIJOS OPERATIVOS
+  const unsubFixedExpenses = onSnapshot(
+    collection(db, COLLECTIONS.fixedExpenses),
+    (snapshot) => {
+      if (snapshot.empty && !initialSnapshotHandled.fixedExpenses) {
+        initialSnapshotHandled.fixedExpenses = true;
+        const local = cb.getLocalData().fixedExpenses;
+        if (local && local.length > 0) {
+          syncCollectionDiff('fixedExpenses', local, true, true);
+        }
+        return;
+      }
+      initialSnapshotHandled.fixedExpenses = true;
+
+      const nextMap = new Map<string, string>();
+      const remoteExpenses: FixedExpenseItem[] = snapshot.docs.map((d) => {
+        const raw = d.data();
+        const cleanDoc = { ...raw, id: raw.id || d.id };
+        nextMap.set(cleanDoc.id, computeDocHash(cleanDoc));
+        return stripInternalFields<FixedExpenseItem>(cleanDoc);
+      });
+
+      syncedDocHashes.fixedExpenses = nextMap;
+
+      if (!snapshot.metadata.hasPendingWrites && cb.onRemoteFixedExpenses) {
+        isApplyingRemoteUpdate = true;
+        try {
+          cb.onRemoteFixedExpenses(remoteExpenses);
+        } finally {
+          isApplyingRemoteUpdate = false;
+        }
+      }
+    },
+    () => {}
+  );
+
   activeUnsubscribers.push(
     unsubProducts,
     unsubTables,
@@ -1028,7 +1074,8 @@ function attachRealtimeListeners(db: Firestore, cb: FirebaseSyncCallbacks): void
     unsubEmployees,
     unsubPayrollRecords,
     unsubRentContracts,
-    unsubRentPayments
+    unsubRentPayments,
+    unsubFixedExpenses
   );
 }
 
@@ -1147,6 +1194,9 @@ export async function pushAllLocalDataToCloud(): Promise<{
     if (local.rentPayments) {
       await syncCollectionDiff('rentPayments', local.rentPayments, true, false);
     }
+    if (local.fixedExpenses) {
+      await syncCollectionDiff('fixedExpenses', local.fixedExpenses, true, false);
+    }
 
     if (currentStatus.status === 'error') {
       return {
@@ -1186,7 +1236,7 @@ export async function pullAllCloudDataToLocal(): Promise<{
     emitStatus({ status: 'syncing', errorMessage: null });
     const db = firestoreInstance;
 
-    const [prodSnap, tblSnap, salesSnap, usersSnap, closeSnap, empSnap, paySnap, rentSnap, rentPaySnap] = await Promise.all([
+    const [prodSnap, tblSnap, salesSnap, usersSnap, closeSnap, empSnap, paySnap, rentSnap, rentPaySnap, fixedExpSnap] = await Promise.all([
       getDocs(collection(db, COLLECTIONS.products)),
       getDocs(collection(db, COLLECTIONS.tables)),
       getDocs(collection(db, COLLECTIONS.sales)),
@@ -1196,6 +1246,7 @@ export async function pullAllCloudDataToLocal(): Promise<{
       getDocs(collection(db, COLLECTIONS.payrollRecords)),
       getDocs(collection(db, COLLECTIONS.rentContracts)),
       getDocs(collection(db, COLLECTIONS.rentPayments)),
+      getDocs(collection(db, COLLECTIONS.fixedExpenses)),
     ]);
 
     const parseSorted = <T>(snap: typeof prodSnap): T[] => {
@@ -1214,6 +1265,9 @@ export async function pullAllCloudDataToLocal(): Promise<{
     );
     const rentPayments = rentPaySnap.docs.map((d) =>
       stripInternalFields<RentPayment>({ ...d.data(), id: d.data().id || d.id })
+    );
+    const fixedExpenses = fixedExpSnap.docs.map((d) =>
+      stripInternalFields<FixedExpenseItem>({ ...d.data(), id: d.data().id || d.id })
     );
     const sales = salesSnap.docs
       .map((d) => stripInternalFields<SaleRecord>({ ...d.data(), id: d.data().id || d.id }))
@@ -1242,6 +1296,9 @@ export async function pullAllCloudDataToLocal(): Promise<{
       }
       if (rentPayments.length > 0 && registeredCallbacks.onRemoteRentPayments) {
         registeredCallbacks.onRemoteRentPayments(rentPayments);
+      }
+      if (fixedExpenses.length > 0 && registeredCallbacks.onRemoteFixedExpenses) {
+        registeredCallbacks.onRemoteFixedExpenses(fixedExpenses);
       }
     } finally {
       isApplyingRemoteUpdate = false;

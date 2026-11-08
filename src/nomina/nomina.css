@@ -621,6 +621,24 @@
   transition: width 0.4s ease;
 }
 
+.report-bar-fill-services {
+  background: linear-gradient(90deg, #d97706, #f59e0b);
+  height: 100%;
+  transition: width 0.4s ease;
+}
+
+.report-bar-fill-permits {
+  background: linear-gradient(90deg, #6366f1, #818cf8);
+  height: 100%;
+  transition: width 0.4s ease;
+}
+
+.report-bar-fill-supplies {
+  background: linear-gradient(90deg, #059669, #10b981);
+  height: 100%;
+  transition: width 0.4s ease;
+}
+
 /* ============================================================================
    AUMENTO DE TAMAÑO Y ESCALA DE LA BARRA LATERAL (SIDEBAR)
    ============================================================================ */
