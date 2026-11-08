@@ -839,16 +839,18 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  className="pos-btn-secondary"
-                  onClick={() => setIsModalOpen(false)}
-                >
-                  Cancelar
-                </button>
-                <button type="submit" className="pos-btn-primary">
-                  Guardar Registro
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <button
+                    type="button"
+                    className="pos-btn-secondary"
+                    onClick={() => setIsModalOpen(false)}
+                  >
+                    Cancelar
+                  </button>
+                  <button type="submit" className="pos-btn-primary">
+                    Guardar Registro
+                  </button>
+                </div>
               </div>
             </form>
           </div>

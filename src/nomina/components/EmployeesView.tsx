@@ -707,16 +707,18 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  className="pos-btn-secondary"
-                  onClick={() => setIsModalOpen(false)}
-                >
-                  Cancelar
-                </button>
-                <button type="submit" className="pos-btn-primary">
-                  <span>{editingEmployee ? 'Actualizar Colaborador' : 'Crear Colaborador'}</span>
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <button
+                    type="button"
+                    className="pos-btn-secondary"
+                    onClick={() => setIsModalOpen(false)}
+                  >
+                    Cancelar
+                  </button>
+                  <button type="submit" className="pos-btn-primary">
+                    <span>{editingEmployee ? 'Actualizar Colaborador' : 'Crear Colaborador'}</span>
+                  </button>
+                </div>
               </div>
             </form>
           </div>

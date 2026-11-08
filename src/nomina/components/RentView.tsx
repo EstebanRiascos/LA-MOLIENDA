@@ -646,17 +646,19 @@ export const RentView: React.FC<RentViewProps> = ({
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  className="pos-btn-secondary"
-                  onClick={() => setIsModalOpen(false)}
-                >
-                  Cancelar
-                </button>
-                <button type="submit" className="pos-btn-primary">
-                  <Plus size={16} />
-                  <span>Guardar Pago de Arriendo</span>
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <button
+                    type="button"
+                    className="pos-btn-secondary"
+                    onClick={() => setIsModalOpen(false)}
+                  >
+                    Cancelar
+                  </button>
+                  <button type="submit" className="pos-btn-primary">
+                    <Plus size={16} />
+                    <span>Guardar Pago de Arriendo</span>
+                  </button>
+                </div>
               </div>
             </form>
           </div>
@@ -1008,17 +1010,19 @@ export const RentView: React.FC<RentViewProps> = ({
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  className="pos-btn-secondary"
-                  onClick={() => setIsEditContractOpen(false)}
-                >
-                  Cancelar
-                </button>
-                <button type="submit" className="pos-btn-primary">
-                  <Check size={16} />
-                  <span>Guardar Información</span>
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <button
+                    type="button"
+                    className="pos-btn-secondary"
+                    onClick={() => setIsEditContractOpen(false)}
+                  >
+                    Cancelar
+                  </button>
+                  <button type="submit" className="pos-btn-primary">
+                    <Check size={16} />
+                    <span>Guardar Información</span>
+                  </button>
+                </div>
               </div>
             </form>
           </div>

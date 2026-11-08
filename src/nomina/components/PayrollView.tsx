@@ -491,17 +491,19 @@ export const PayrollView: React.FC<PayrollViewProps> = ({
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  className="pos-btn-secondary"
-                  onClick={() => setIsModalOpen(false)}
-                >
-                  Cancelar
-                </button>
-                <button type="submit" className="pos-btn-primary">
-                  <Plus size={16} />
-                  <span>Guardar Liquidación</span>
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <button
+                    type="button"
+                    className="pos-btn-secondary"
+                    onClick={() => setIsModalOpen(false)}
+                  >
+                    Cancelar
+                  </button>
+                  <button type="submit" className="pos-btn-primary">
+                    <Plus size={16} />
+                    <span>Guardar Liquidación</span>
+                  </button>
+                </div>
               </div>
             </form>
           </div>
