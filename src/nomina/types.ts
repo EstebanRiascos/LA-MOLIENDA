@@ -57,7 +57,7 @@ export interface RentPayment {
   createdAt: string;
 }
 
-export type FixedExpenseCategory = 'servicios_publicos' | 'permisos_legales' | 'aseo_dotacion';
+export type FixedExpenseCategory = 'servicios_publicos' | 'aseo_dotacion';
 export type ExpensePaymentStatus = 'pendiente' | 'pagado' | 'vencido';
 export type ExpensePaymentMethod = 'efectivo' | 'transferencia' | 'nequi' | 'daviplata' | 'tarjeta';
 

@@ -167,7 +167,12 @@ export const NominaApp: React.FC<NominaAppProps> = ({
 
   const pendingPayrollCount = payrollRecords.filter((r) => r.status === 'pendiente').length;
   const pendingRentCount = rentPayments.filter((p) => p.status === 'pendiente' || p.status === 'vencido').length;
-  const pendingExpensesCount = fixedExpenses.filter((e) => e.status === 'pendiente' || e.status === 'vencido').length;
+  const pendingServicesCount = fixedExpenses.filter(
+    (e) => e.category === 'servicios_publicos' && (e.status === 'pendiente' || e.status === 'vencido')
+  ).length;
+  const pendingSuppliesCount = fixedExpenses.filter(
+    (e) => e.category === 'aseo_dotacion' && (e.status === 'pendiente' || e.status === 'vencido')
+  ).length;
 
   return (
     <>
@@ -179,7 +184,8 @@ export const NominaApp: React.FC<NominaAppProps> = ({
         onChangeSection={setCurrentSection}
         pendingPayrollCount={pendingPayrollCount}
         pendingRentCount={pendingRentCount}
-        pendingExpensesCount={pendingExpensesCount}
+        pendingServicesCount={pendingServicesCount}
+        pendingSuppliesCount={pendingSuppliesCount}
         onLogout={onLogout}
         onOpenFirebaseSync={onOpenFirebaseSync}
         firebaseStatus={firebaseStatus}
@@ -214,8 +220,19 @@ export const NominaApp: React.FC<NominaAppProps> = ({
           />
         )}
 
-        {currentSection === 'gastos_fijos' && (
+        {currentSection === 'servicios_publicos' && (
           <FixedExpensesView
+            category="servicios_publicos"
+            expenses={fixedExpenses}
+            onAddExpense={handleAddFixedExpense}
+            onDeleteExpense={handleDeleteFixedExpense}
+            onUpdateExpenseStatus={handleUpdateFixedExpenseStatus}
+          />
+        )}
+
+        {currentSection === 'aseo_dotacion' && (
+          <FixedExpensesView
+            category="aseo_dotacion"
             expenses={fixedExpenses}
             onAddExpense={handleAddFixedExpense}
             onDeleteExpense={handleDeleteFixedExpense}

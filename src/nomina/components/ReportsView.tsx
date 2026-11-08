@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   Wallet,
   Zap,
-  FileText,
   Sparkles,
   Clock,
 } from 'lucide-react';
@@ -38,15 +37,11 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
     .filter((e) => e.status === 'pagado' && e.category === 'servicios_publicos')
     .reduce((acc, curr) => acc + curr.amount, 0);
 
-  const totalPermits = fixedExpenses
-    .filter((e) => e.status === 'pagado' && e.category === 'permisos_legales')
-    .reduce((acc, curr) => acc + curr.amount, 0);
-
   const totalSupplies = fixedExpenses
     .filter((e) => e.status === 'pagado' && e.category === 'aseo_dotacion')
     .reduce((acc, curr) => acc + curr.amount, 0);
 
-  const grandTotal = totalPayroll + totalRent + totalServices + totalPermits + totalSupplies;
+  const grandTotal = totalPayroll + totalRent + totalServices + totalSupplies;
 
   // Porcentajes de distribución
   const calcPct = (amount: number) => (grandTotal > 0 ? Math.round((amount / grandTotal) * 100) : 0);
@@ -54,7 +49,6 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   const payrollPct = calcPct(totalPayroll);
   const rentPct = calcPct(totalRent);
   const servicesPct = calcPct(totalServices);
-  const permitsPct = calcPct(totalPermits);
   const suppliesPct = calcPct(totalSupplies);
 
   // Pendientes de desembolso
@@ -70,15 +64,11 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
     .filter((e) => (e.status === 'pendiente' || e.status === 'vencido') && e.category === 'servicios_publicos')
     .reduce((acc, curr) => acc + curr.amount, 0);
 
-  const pendingPermits = fixedExpenses
-    .filter((e) => (e.status === 'pendiente' || e.status === 'vencido') && e.category === 'permisos_legales')
-    .reduce((acc, curr) => acc + curr.amount, 0);
-
   const pendingSupplies = fixedExpenses
     .filter((e) => (e.status === 'pendiente' || e.status === 'vencido') && e.category === 'aseo_dotacion')
     .reduce((acc, curr) => acc + curr.amount, 0);
 
-  const grandPending = pendingPayroll + pendingRent + pendingServices + pendingPermits + pendingSupplies;
+  const grandPending = pendingPayroll + pendingRent + pendingServices + pendingSupplies;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -106,7 +96,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               Consolidado de Egresos Fijos Operativos
             </h3>
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0.15rem 0 0 0' }}>
-              Resumen total de pagos ejecutados en Nómina, Arriendo, Servicios Públicos, Normativa Comercial y Dotación
+              Resumen total de pagos ejecutados en Nómina, Arriendo, Servicios Públicos y Aseo & Dotación
             </p>
           </div>
         </div>
@@ -134,9 +124,6 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
             <span style={{ color: '#f59e0b' }}>
               ● Servicios: {servicesPct}% ({formatCOP(totalServices)})
             </span>
-            <span style={{ color: '#818cf8' }}>
-              ● Permisos: {permitsPct}% ({formatCOP(totalPermits)})
-            </span>
             <span style={{ color: '#10b981' }}>
               ● Aseo & Dotación: {suppliesPct}% ({formatCOP(totalSupplies)})
             </span>
@@ -162,13 +149,6 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                 className="report-bar-fill-services"
                 style={{ width: `${servicesPct}%` }}
                 title={`Servicios Públicos: ${servicesPct}% (${formatCOP(totalServices)})`}
-              />
-            )}
-            {permitsPct > 0 && (
-              <div
-                className="report-bar-fill-permits"
-                style={{ width: `${permitsPct}%` }}
-                title={`Normativa & Permisos: ${permitsPct}% (${formatCOP(totalPermits)})`}
               />
             )}
             {suppliesPct > 0 && (
@@ -223,18 +203,6 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
             <span className="inv-stat-label">SERVICIOS PÚBLICOS</span>
             <span className="inv-stat-value" style={{ color: '#f59e0b', fontFamily: 'var(--font-mono)' }}>
               {formatCOP(totalServices)}
-            </span>
-          </div>
-        </div>
-
-        <div className="inv-stat-card">
-          <div className="inv-stat-icon" style={{ background: 'rgba(129, 140, 248, 0.15)', color: '#818cf8' }}>
-            <FileText size={20} />
-          </div>
-          <div className="inv-stat-text">
-            <span className="inv-stat-label">PERMISOS COMERCIALES</span>
-            <span className="inv-stat-value" style={{ color: '#818cf8', fontFamily: 'var(--font-mono)' }}>
-              {formatCOP(totalPermits)}
             </span>
           </div>
         </div>
@@ -300,7 +268,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
             gap: '0.85rem',
           }}
         >
@@ -364,26 +332,6 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
             </span>
           </div>
 
-          {/* Permisos Pendientes */}
-          <div
-            style={{
-              padding: '0.85rem 1rem',
-              borderRadius: 'var(--radius-md)',
-              background: 'rgba(129, 140, 248, 0.08)',
-              border: '1px solid rgba(129, 140, 248, 0.25)',
-            }}
-          >
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', fontWeight: 700 }}>
-              🧾 PERMISOS PENDIENTES
-            </span>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '1.15rem', fontWeight: 800, color: '#818cf8', display: 'block', margin: '0.2rem 0' }}>
-              {formatCOP(pendingPermits)}
-            </span>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-              Sayco, bomberos, cámara com.
-            </span>
-          </div>
-
           {/* Aseo Pendiente */}
           <div
             style={{
@@ -408,4 +356,5 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
     </div>
   );
 };
+
 export default ReportsView;

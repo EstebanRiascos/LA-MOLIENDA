@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   Zap,
-  FileText,
   Sparkles,
   DollarSign,
   Plus,
@@ -17,8 +16,6 @@ import {
   Receipt,
   Search,
   Building,
-  ShieldCheck,
-  Droplet,
 } from 'lucide-react';
 import laMoliendaLogo from '../../assets/la_molienda_logo.png';
 import {
@@ -30,6 +27,7 @@ import {
 import { formatCOP, formatDate } from '../utils/formatters';
 
 interface FixedExpensesViewProps {
+  category: FixedExpenseCategory; // 'servicios_publicos' | 'aseo_dotacion'
   expenses: FixedExpenseItem[];
   onAddExpense: (expense: FixedExpenseItem) => void;
   onDeleteExpense: (id: string) => void;
@@ -50,13 +48,6 @@ const PRESETS: Record<FixedExpenseCategory, CategoryPreset[]> = {
     { title: 'Internet Fibra Óptica & Wi-Fi', subCategory: 'Telecomunicaciones', defaultProvider: 'Claro / Tigo / Movistar' },
     { title: 'Plan Móvil Corporativo', subCategory: 'Telefonía', defaultProvider: 'Operador Móvil' },
   ],
-  permisos_legales: [
-    { title: 'Sayco & Acinpro (Derechos de Autor)', subCategory: 'Sayco & Acinpro', defaultProvider: 'Organización Sayco Acinpro' },
-    { title: 'Inspección de Bomberos (Seguridad)', subCategory: 'Bomberos', defaultProvider: 'Cuerpo de Bomberos Voluntarios' },
-    { title: 'Renovación Matrícula Mercantil', subCategory: 'Cámara de Comercio', defaultProvider: 'Cámara de Comercio' },
-    { title: 'Concepto Sanitario & Fumigación', subCategory: 'Sanidad', defaultProvider: 'Secretaría de Salud / Empresa Certificada' },
-    { title: 'Impuesto de Industria y Comercio (ICA)', subCategory: 'Impuestos Locales', defaultProvider: 'Alcaldía Municipal' },
-  ],
   aseo_dotacion: [
     { title: 'Químicos Desengrasantes & Cafetera', subCategory: 'Químicos Cafetera', defaultProvider: 'Distribuidor Especializado de Café' },
     { title: 'Papel Institucional & Servilletas', subCategory: 'Papelería Institucional', defaultProvider: 'Distribuidora de Desechables' },
@@ -66,56 +57,77 @@ const PRESETS: Record<FixedExpenseCategory, CategoryPreset[]> = {
   ],
 };
 
-const CATEGORY_META: Record<
+const CATEGORY_CONFIG: Record<
   FixedExpenseCategory,
-  { label: string; shortLabel: string; icon: string; color: string; bg: string }
+  {
+    title: string;
+    subtitle: string;
+    badgeLabel: string;
+    btnLabel: string;
+    modalTitle: string;
+    modalSubtitle: string;
+    voucherTitle: string;
+    icon: typeof Zap;
+    color: string;
+    bg: string;
+    border: string;
+  }
 > = {
   servicios_publicos: {
-    label: '💡 Servicios Públicos (Esenciales)',
-    shortLabel: 'Servicios Públicos',
-    icon: '💡',
+    title: 'Servicios Públicos (Esenciales)',
+    subtitle: 'Control y liquidación de energía eléctrica, agua, gas y telecomunicaciones',
+    badgeLabel: 'Servicios Públicos',
+    btnLabel: 'Registrar Factura de Servicio',
+    modalTitle: 'Registrar Factura de Servicio Público',
+    modalSubtitle: 'Control de fechas límite, periodos y comprobantes de servicios',
+    voucherTitle: 'COMPROBANTE DE SERVICIOS PÚBLICOS',
+    icon: Zap,
     color: '#f59e0b',
-    bg: 'rgba(245, 158, 11, 0.12)',
-  },
-  permisos_legales: {
-    label: '🧾 Derechos y Permisos Comerciales (Normativa Colombia)',
-    shortLabel: 'Derechos & Permisos',
-    icon: '🧾',
-    color: '#38bdf8',
-    bg: 'rgba(56, 189, 248, 0.12)',
+    bg: 'rgba(245, 158, 11, 0.15)',
+    border: 'rgba(245, 158, 11, 0.35)',
   },
   aseo_dotacion: {
-    label: '🧹 Insumos de Aseo y Dotación Operativa',
-    shortLabel: 'Aseo & Dotación',
-    icon: '🧹',
+    title: 'Insumos de Aseo y Dotación Operativa',
+    subtitle: 'Control de compras de químicos de cafetera, papel, bolsas y dotación',
+    badgeLabel: 'Aseo & Dotación',
+    btnLabel: 'Registrar Gasto de Aseo / Dotación',
+    modalTitle: 'Registrar Compra de Aseo o Dotación',
+    modalSubtitle: 'Control de compras de limpieza, desinfección y dotación del personal',
+    voucherTitle: 'COMPROBANTE DE ASEO Y DOTACIÓN',
+    icon: Sparkles,
     color: '#10b981',
-    bg: 'rgba(16, 185, 129, 0.12)',
+    bg: 'rgba(16, 185, 129, 0.15)',
+    border: 'rgba(16, 185, 129, 0.35)',
   },
 };
 
 export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
+  category,
   expenses,
   onAddExpense,
   onDeleteExpense,
 }) => {
+  const config = CATEGORY_CONFIG[category];
+  const presets = PRESETS[category] || [];
+  const CategoryIcon = config.icon;
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [receiptToPrint, setReceiptToPrint] = useState<FixedExpenseItem | null>(null);
 
   // Filters
-  const [categoryFilter, setCategoryFilter] = useState<'all' | FixedExpenseCategory>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | ExpensePaymentStatus>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Form State for creating a new expense
+  // Form State
   const now = new Date();
   const currentMonthName = now.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
   const formattedMonth = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1);
   const todayStr = now.toISOString().split('T')[0];
 
-  const [formCategory, setFormCategory] = useState<FixedExpenseCategory>('servicios_publicos');
-  const [formSubCategory, setFormSubCategory] = useState('Energía');
-  const [formTitle, setFormTitle] = useState('Energía Eléctrica');
-  const [formProvider, setFormProvider] = useState('EPM / Operador de Energía');
+  const defaultPreset = presets[0];
+  const [formSubCategory, setFormSubCategory] = useState(defaultPreset?.subCategory || 'General');
+  const [formTitle, setFormTitle] = useState(defaultPreset?.title || '');
+  const [formProvider, setFormProvider] = useState(defaultPreset?.defaultProvider || '');
   const [formPeriodMonth, setFormPeriodMonth] = useState(formattedMonth);
   const [formAmount, setFormAmount] = useState<number | ''>('');
   const [formDueDate, setFormDueDate] = useState(todayStr);
@@ -125,34 +137,39 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
   const [formReceiptRef, setFormReceiptRef] = useState('');
   const [formNotes, setFormNotes] = useState('');
 
+  const handleOpenModal = () => {
+    const first = presets[0];
+    if (first) {
+      setFormTitle(first.title);
+      setFormSubCategory(first.subCategory);
+      setFormProvider(first.defaultProvider);
+    }
+    setFormPeriodMonth(formattedMonth);
+    setFormAmount('');
+    setFormDueDate(todayStr);
+    setFormPaymentDate(todayStr);
+    setFormStatus('pendiente');
+    setFormReceiptRef('');
+    setFormNotes('');
+    setIsModalOpen(true);
+  };
+
   const handleSelectPreset = (preset: CategoryPreset) => {
     setFormTitle(preset.title);
     setFormSubCategory(preset.subCategory);
-    if (!formProvider || formProvider === 'EPM / Operador de Energía' || formProvider === 'Proveedor de Aseo') {
-      setFormProvider(preset.defaultProvider);
-    }
-  };
-
-  const handleCategoryChange = (cat: FixedExpenseCategory) => {
-    setFormCategory(cat);
-    const defaultPreset = PRESETS[cat][0];
-    if (defaultPreset) {
-      setFormTitle(defaultPreset.title);
-      setFormSubCategory(defaultPreset.subCategory);
-      setFormProvider(defaultPreset.defaultProvider);
-    }
+    setFormProvider(preset.defaultProvider);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formTitle.trim() || !formAmount || Number(formAmount) <= 0) {
-      alert('Por favor ingresa un título y un monto válido.');
+      alert('Por favor ingresa un concepto y un monto válido.');
       return;
     }
 
     const newExpense: FixedExpenseItem = {
       id: 'fix-exp-' + Date.now(),
-      category: formCategory,
+      category,
       subCategory: formSubCategory.trim() || 'General',
       title: formTitle.trim(),
       periodMonth: formPeriodMonth.trim() || formattedMonth,
@@ -169,36 +186,19 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
 
     onAddExpense(newExpense);
     setIsModalOpen(false);
-
-    // Reset Form
-    setFormAmount('');
-    setFormReceiptRef('');
-    setFormNotes('');
-    setFormStatus('pendiente');
   };
 
-  // Calculations for KPI Summary
-  const paidExpenses = expenses.filter((e) => e.status === 'pagado');
-  const pendingExpenses = expenses.filter((e) => e.status === 'pendiente' || e.status === 'vencido');
+  // Only consider items of this category
+  const categoryExpenses = expenses.filter((e) => e.category === category);
+
+  const paidExpenses = categoryExpenses.filter((e) => e.status === 'pagado');
+  const pendingExpenses = categoryExpenses.filter((e) => e.status === 'pendiente' || e.status === 'vencido');
 
   const totalPaid = paidExpenses.reduce((sum, e) => sum + e.amount, 0);
   const totalPending = pendingExpenses.reduce((sum, e) => sum + e.amount, 0);
 
-  const totalServicesPaid = paidExpenses
-    .filter((e) => e.category === 'servicios_publicos')
-    .reduce((sum, e) => sum + e.amount, 0);
-
-  const totalPermitsPaid = paidExpenses
-    .filter((e) => e.category === 'permisos_legales')
-    .reduce((sum, e) => sum + e.amount, 0);
-
-  const totalSuppliesPaid = paidExpenses
-    .filter((e) => e.category === 'aseo_dotacion')
-    .reduce((sum, e) => sum + e.amount, 0);
-
   // Filtered List
-  const filteredExpenses = expenses.filter((item) => {
-    if (categoryFilter !== 'all' && item.category !== categoryFilter) return false;
+  const filteredExpenses = categoryExpenses.filter((item) => {
     if (statusFilter !== 'all' && item.status !== statusFilter) return false;
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
@@ -214,7 +214,7 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-      {/* 1. Tarjeta Hero / Ficha de Servicios y Gastos Fijos */}
+      {/* 1. Tarjeta Hero de la Pestaña */}
       <div className="rent-contract-hero-card">
         <div className="rent-hero-top">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
@@ -223,23 +223,23 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
                 width: '46px',
                 height: '46px',
                 borderRadius: '12px',
-                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(217, 119, 6, 0.1))',
-                border: '1px solid rgba(245, 158, 11, 0.4)',
-                color: 'var(--accent-amber)',
+                background: config.bg,
+                border: `1px solid ${config.border}`,
+                color: config.color,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
               }}
             >
-              <Zap size={24} />
+              <CategoryIcon size={24} />
             </div>
             <div>
               <h3 style={{ fontSize: '1.18rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-                Gastos Fijos Operativos del Negocio
+                {config.title}
               </h3>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0.15rem 0 0 0' }}>
-                💡 Servicios Públicos • 🧾 Normativa Comercial & Permisos • 🧹 Insumos de Aseo & Dotación
+                {config.subtitle}
               </p>
             </div>
           </div>
@@ -254,7 +254,7 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
               ) : (
                 <>
                   <CheckCircle2 size={13} />
-                  <span>Al día en Servicios y Gastos</span>
+                  <span>Al día en {config.badgeLabel}</span>
                 </>
               )}
             </span>
@@ -262,7 +262,7 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
             <button
               type="button"
               className="pos-btn-primary"
-              onClick={() => setIsModalOpen(true)}
+              onClick={handleOpenModal}
               style={{
                 padding: '0.55rem 1.15rem',
                 fontSize: '0.84rem',
@@ -274,38 +274,38 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
               }}
             >
               <Plus size={16} strokeWidth={2.5} />
-              <span>Registrar Gasto / Factura</span>
+              <span>{config.btnLabel}</span>
             </button>
           </div>
         </div>
 
-        {/* 2. Mini Resumen Comparativo de Categorías */}
+        {/* 2. Resumen de Métricas de la Categoría */}
         <div className="rent-hero-grid">
           <div className="rent-hero-stat">
-            <span className="stat-label">💡 SERVICIOS PÚBLICOS PAGADOS</span>
-            <span className="stat-val" style={{ color: '#f59e0b' }}>
-              {formatCOP(totalServicesPaid)}
+            <span className="stat-label">TOTAL PAGADO AL DÍA</span>
+            <span className="stat-val" style={{ color: config.color }}>
+              {formatCOP(totalPaid)}
             </span>
           </div>
 
           <div className="rent-hero-stat">
-            <span className="stat-label">🧾 PERMISOS & NORMATIVA PAGADOS</span>
-            <span className="stat-val" style={{ color: '#38bdf8' }}>
-              {formatCOP(totalPermitsPaid)}
-            </span>
-          </div>
-
-          <div className="rent-hero-stat">
-            <span className="stat-label">🧹 ASEO & DOTACIÓN PAGADOS</span>
-            <span className="stat-val" style={{ color: '#10b981' }}>
-              {formatCOP(totalSuppliesPaid)}
-            </span>
-          </div>
-
-          <div className="rent-hero-stat">
-            <span className="stat-label">TOTAL PENDIENTE POR PAGAR</span>
+            <span className="stat-label">TOTAL PENDIENTE POR DESEMBOLSAR</span>
             <span className="stat-val" style={{ color: totalPending > 0 ? '#fb7185' : 'var(--text-muted)' }}>
               {formatCOP(totalPending)}
+            </span>
+          </div>
+
+          <div className="rent-hero-stat">
+            <span className="stat-label">REGISTROS PAGADOS</span>
+            <span className="stat-val" style={{ color: 'var(--accent-emerald)' }}>
+              {paidExpenses.length} pagados
+            </span>
+          </div>
+
+          <div className="rent-hero-stat">
+            <span className="stat-label">TOTAL FACTURAS / COMPRAS</span>
+            <span className="stat-val" style={{ color: 'var(--text-primary)' }}>
+              {categoryExpenses.length} en historial
             </span>
           </div>
         </div>
@@ -314,78 +314,12 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
       {/* 3. Barra de Filtros y Búsqueda */}
       <div className="payroll-history-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          {/* Filtros de Categoría */}
-          <button
-            type="button"
-            className={`method-pill ${categoryFilter === 'all' ? 'transferencia' : ''}`}
-            onClick={() => setCategoryFilter('all')}
-            style={{
-              cursor: 'pointer',
-              border: categoryFilter === 'all' ? '1.5px solid var(--accent-amber)' : '1px solid var(--border-color)',
-              background: categoryFilter === 'all' ? 'rgba(245, 158, 11, 0.15)' : 'var(--bg-input)',
-              color: categoryFilter === 'all' ? 'var(--accent-amber)' : 'var(--text-secondary)',
-              fontWeight: 700,
-              padding: '0.35rem 0.75rem',
-              borderRadius: '20px',
-              fontSize: '0.78rem',
-            }}
-          >
-            Todos ({expenses.length})
-          </button>
-
-          <button
-            type="button"
-            className="method-pill"
-            onClick={() => setCategoryFilter('servicios_publicos')}
-            style={{
-              cursor: 'pointer',
-              border: categoryFilter === 'servicios_publicos' ? '1.5px solid #f59e0b' : '1px solid var(--border-color)',
-              background: categoryFilter === 'servicios_publicos' ? 'rgba(245, 158, 11, 0.18)' : 'var(--bg-input)',
-              color: categoryFilter === 'servicios_publicos' ? '#f59e0b' : 'var(--text-secondary)',
-              fontWeight: 700,
-              padding: '0.35rem 0.75rem',
-              borderRadius: '20px',
-              fontSize: '0.78rem',
-            }}
-          >
-            💡 Servicios Públicos ({expenses.filter((e) => e.category === 'servicios_publicos').length})
-          </button>
-
-          <button
-            type="button"
-            className="method-pill"
-            onClick={() => setCategoryFilter('permisos_legales')}
-            style={{
-              cursor: 'pointer',
-              border: categoryFilter === 'permisos_legales' ? '1.5px solid #38bdf8' : '1px solid var(--border-color)',
-              background: categoryFilter === 'permisos_legales' ? 'rgba(56, 189, 248, 0.18)' : 'var(--bg-input)',
-              color: categoryFilter === 'permisos_legales' ? '#38bdf8' : 'var(--text-secondary)',
-              fontWeight: 700,
-              padding: '0.35rem 0.75rem',
-              borderRadius: '20px',
-              fontSize: '0.78rem',
-            }}
-          >
-            🧾 Derechos & Permisos ({expenses.filter((e) => e.category === 'permisos_legales').length})
-          </button>
-
-          <button
-            type="button"
-            className="method-pill"
-            onClick={() => setCategoryFilter('aseo_dotacion')}
-            style={{
-              cursor: 'pointer',
-              border: categoryFilter === 'aseo_dotacion' ? '1.5px solid #10b981' : '1px solid var(--border-color)',
-              background: categoryFilter === 'aseo_dotacion' ? 'rgba(16, 185, 129, 0.18)' : 'var(--bg-input)',
-              color: categoryFilter === 'aseo_dotacion' ? '#10b981' : 'var(--text-secondary)',
-              fontWeight: 700,
-              padding: '0.35rem 0.75rem',
-              borderRadius: '20px',
-              fontSize: '0.78rem',
-            }}
-          >
-            🧹 Aseo & Dotación ({expenses.filter((e) => e.category === 'aseo_dotacion').length})
-          </button>
+          <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+            Historial de {config.badgeLabel}
+          </span>
+          <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+            ({filteredExpenses.length} de {categoryExpenses.length})
+          </span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -421,7 +355,7 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
             />
             <input
               type="text"
-              placeholder="Buscar gasto o proveedor..."
+              placeholder="Buscar concepto o proveedor..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pos-form-input"
@@ -437,12 +371,12 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
         </div>
       </div>
 
-      {/* 4. Tabla de Facturas y Gastos Fijos */}
+      {/* 4. Tabla de Facturas */}
       <div className="inventory-table-container">
         <table className="inventory-table">
           <thead>
             <tr>
-              <th>Categoría / Concepto</th>
+              <th>Concepto / Detalle</th>
               <th>Proveedor / Entidad</th>
               <th style={{ textAlign: 'center' }}>Periodo</th>
               <th style={{ textAlign: 'center' }}>Vencimiento</th>
@@ -456,142 +390,120 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
             {filteredExpenses.length === 0 ? (
               <tr>
                 <td colSpan={8} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
-                  No se encontraron facturas o gastos fijos registrados.
+                  No se encontraron registros de {config.badgeLabel}.
                 </td>
               </tr>
             ) : (
-              filteredExpenses.map((exp) => {
-                const meta = CATEGORY_META[exp.category];
-                return (
-                  <tr key={exp.id}>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: '28px',
-                            height: '28px',
-                            borderRadius: '8px',
-                            background: meta.bg,
-                            fontSize: '1rem',
-                            flexShrink: 0,
-                          }}
-                        >
-                          {meta.icon}
+              filteredExpenses.map((exp) => (
+                <tr key={exp.id}>
+                  <td>
+                    <span style={{ fontWeight: 750, color: 'var(--text-primary)', display: 'block' }}>
+                      {exp.title}
+                    </span>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                      Subcategoría: {exp.subCategory}
+                    </span>
+                    {exp.notes && (
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem', fontStyle: 'italic' }}>
+                        Nota: {exp.notes}
+                      </div>
+                    )}
+                  </td>
+
+                  <td>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {exp.provider || 'Sin especificar'}
+                    </span>
+                  </td>
+
+                  <td style={{ textAlign: 'center' }}>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                      {exp.periodMonth}
+                    </span>
+                  </td>
+
+                  <td style={{ textAlign: 'center' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                      <Clock size={13} style={{ color: 'var(--accent-amber)' }} />
+                      <span>{formatDate(exp.dueDate)}</span>
+                    </div>
+                  </td>
+
+                  <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: '0.94rem', color: 'var(--text-primary)' }}>
+                    {formatCOP(exp.amount)}
+                  </td>
+
+                  <td style={{ textAlign: 'center' }}>
+                    {exp.paymentMethod ? (
+                      <div>
+                        <span className={`method-pill ${exp.paymentMethod}`}>
+                          {exp.paymentMethod}
                         </span>
-                        <div>
-                          <span style={{ fontWeight: 750, color: 'var(--text-primary)', display: 'block' }}>
-                            {exp.title}
+                        {exp.receiptReference && (
+                          <span style={{ display: 'block', fontSize: '0.68rem', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                            #{exp.receiptReference}
                           </span>
-                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                            {meta.shortLabel} • {exp.subCategory}
-                          </span>
-                        </div>
-                      </div>
-                      {exp.notes && (
-                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem', fontStyle: 'italic' }}>
-                          Nota: {exp.notes}
-                        </div>
-                      )}
-                    </td>
-
-                    <td>
-                      <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                        {exp.provider || 'Sin especificar'}
-                      </span>
-                    </td>
-
-                    <td style={{ textAlign: 'center' }}>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                        {exp.periodMonth}
-                      </span>
-                    </td>
-
-                    <td style={{ textAlign: 'center' }}>
-                      <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-                        <Clock size={13} style={{ color: 'var(--accent-amber)' }} />
-                        <span>{formatDate(exp.dueDate)}</span>
-                      </div>
-                    </td>
-
-                    <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 800, fontSize: '0.94rem', color: 'var(--text-primary)' }}>
-                      {formatCOP(exp.amount)}
-                    </td>
-
-                    <td style={{ textAlign: 'center' }}>
-                      {exp.paymentMethod ? (
-                        <div>
-                          <span className={`method-pill ${exp.paymentMethod}`}>
-                            {exp.paymentMethod}
-                          </span>
-                          {exp.receiptReference && (
-                            <span style={{ display: 'block', fontSize: '0.68rem', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
-                              #{exp.receiptReference}
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>—</span>
-                      )}
-                    </td>
-
-                    <td style={{ textAlign: 'center' }}>
-                      <span className={`status-badge ${exp.status === 'pagado' ? 'paid' : exp.status === 'vencido' ? 'overdue' : 'pending'}`}>
-                        {exp.status === 'pagado' ? (
-                          <>
-                            <CheckCircle2 size={13} />
-                            <span>Pagado</span>
-                          </>
-                        ) : exp.status === 'vencido' ? (
-                          <>
-                            <AlertTriangle size={13} />
-                            <span>Vencido</span>
-                          </>
-                        ) : (
-                          <>
-                            <Clock size={13} />
-                            <span>Pendiente</span>
-                          </>
                         )}
-                      </span>
-                    </td>
-
-                    <td>
-                      <div className="action-buttons-cell">
-                        <button
-                          type="button"
-                          className="table-action-btn btn-print"
-                          onClick={() => setReceiptToPrint(exp)}
-                          title="Imprimir Comprobante de Gasto"
-                        >
-                          <Printer size={14} />
-                        </button>
-
-                        <button
-                          type="button"
-                          className="table-action-btn btn-delete"
-                          onClick={() => {
-                            if (window.confirm(`¿Deseas eliminar el registro "${exp.title}"?`)) {
-                              onDeleteExpense(exp.id);
-                            }
-                          }}
-                          title="Eliminar registro"
-                        >
-                          <Trash2 size={14} />
-                        </button>
                       </div>
-                    </td>
-                  </tr>
-                );
-              })
+                    ) : (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>—</span>
+                    )}
+                  </td>
+
+                  <td style={{ textAlign: 'center' }}>
+                    <span className={`status-badge ${exp.status === 'pagado' ? 'paid' : exp.status === 'vencido' ? 'overdue' : 'pending'}`}>
+                      {exp.status === 'pagado' ? (
+                        <>
+                          <CheckCircle2 size={13} />
+                          <span>Pagado</span>
+                        </>
+                      ) : exp.status === 'vencido' ? (
+                        <>
+                          <AlertTriangle size={13} />
+                          <span>Vencido</span>
+                        </>
+                      ) : (
+                        <>
+                          <Clock size={13} />
+                          <span>Pendiente</span>
+                        </>
+                      )}
+                    </span>
+                  </td>
+
+                  <td>
+                    <div className="action-buttons-cell">
+                      <button
+                        type="button"
+                        className="table-action-btn btn-print"
+                        onClick={() => setReceiptToPrint(exp)}
+                        title="Imprimir Comprobante"
+                      >
+                        <Printer size={14} />
+                      </button>
+
+                      <button
+                        type="button"
+                        className="table-action-btn btn-delete"
+                        onClick={() => {
+                          if (window.confirm(`¿Deseas eliminar el registro "${exp.title}"?`)) {
+                            onDeleteExpense(exp.id);
+                          }
+                        }}
+                        title="Eliminar registro"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>
       </div>
 
-      {/* 5. Modal para Registrar Gasto / Factura */}
+      {/* 5. Modal para Registrar Gasto */}
       {isModalOpen && (
         <div className="pos-modal-overlay" onClick={() => setIsModalOpen(false)}>
           <div
@@ -601,12 +513,12 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
           >
             <div className="pos-modal-header">
               <div className="pos-modal-title-group">
-                <div className="pos-modal-icon-badge">
-                  <Zap size={20} />
+                <div className="pos-modal-icon-badge" style={{ background: config.bg, color: config.color }}>
+                  <CategoryIcon size={20} />
                 </div>
                 <div>
-                  <h3 className="pos-modal-title">Registrar Gasto Fijo / Factura</h3>
-                  <p className="pos-modal-subtitle">Control de servicios, permisos e insumos de aseo</p>
+                  <h3 className="pos-modal-title">{config.modalTitle}</h3>
+                  <p className="pos-modal-subtitle">{config.modalSubtitle}</p>
                 </div>
               </div>
               <button
@@ -620,51 +532,13 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
             </div>
 
             <form onSubmit={handleSubmit} className="pos-modal-body">
-              {/* Selector de Categoría Principal */}
-              <div className="pos-form-group" style={{ marginBottom: '1rem' }}>
-                <label className="pos-form-label" style={{ fontWeight: 800 }}>
-                  Categoría Principal del Gasto
-                </label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.45rem' }}>
-                  {(['servicios_publicos', 'permisos_legales', 'aseo_dotacion'] as FixedExpenseCategory[]).map((cat) => {
-                    const meta = CATEGORY_META[cat];
-                    const isSelected = formCategory === cat;
-                    return (
-                      <button
-                        key={cat}
-                        type="button"
-                        onClick={() => handleCategoryChange(cat)}
-                        style={{
-                          textAlign: 'left',
-                          padding: '0.65rem 0.95rem',
-                          borderRadius: '10px',
-                          border: isSelected ? `2px solid ${meta.color}` : '1.5px solid var(--border-color)',
-                          background: isSelected ? meta.bg : 'var(--bg-input)',
-                          color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          fontWeight: isSelected ? 800 : 500,
-                          fontSize: '0.84rem',
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        <span>{meta.label}</span>
-                        {isSelected && <Check size={16} style={{ color: meta.color }} />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Sugerencias Rápidas (Chips de Presets) */}
+              {/* Sugerencias Rápidas de la Categoría */}
               <div className="pos-form-group" style={{ marginBottom: '1rem' }}>
                 <label className="pos-form-label" style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                  Sugerencias Rápidas para esta categoría (Clic para autocompletar):
+                  Sugerencias Rápidas (Clic para autocompletar):
                 </label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                  {PRESETS[formCategory].map((p, idx) => (
+                  {presets.map((p, idx) => (
                     <button
                       key={idx}
                       type="button"
@@ -673,8 +547,8 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
                         padding: '0.3rem 0.65rem',
                         borderRadius: '16px',
                         border: '1px solid var(--border-color)',
-                        background: formTitle === p.title ? 'rgba(245, 158, 11, 0.2)' : 'var(--bg-input)',
-                        color: formTitle === p.title ? 'var(--accent-amber)' : 'var(--text-secondary)',
+                        background: formTitle === p.title ? config.bg : 'var(--bg-input)',
+                        color: formTitle === p.title ? config.color : 'var(--text-secondary)',
                         fontSize: '0.74rem',
                         cursor: 'pointer',
                         fontWeight: formTitle === p.title ? 700 : 500,
@@ -686,7 +560,7 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
                 </div>
               </div>
 
-              {/* Título y Subcategoría */}
+              {/* Concepto y Proveedor */}
               <div className="pos-form-grid-2">
                 <div className="pos-form-group">
                   <label className="pos-form-label">Concepto / Nombre del Gasto *</label>
@@ -704,7 +578,7 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
                   <label className="pos-form-label">Proveedor / Entidad Emisora</label>
                   <input
                     type="text"
-                    placeholder="Ej. EPM, Sayco Acinpro, Distribuidora..."
+                    placeholder="Ej. EPM, Claro, Distribuidora..."
                     value={formProvider}
                     onChange={(e) => setFormProvider(e.target.value)}
                     className="pos-form-input"
@@ -837,7 +711,7 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
                 <label className="pos-form-label">Notas u Observaciones (Opcional)</label>
                 <textarea
                   rows={2}
-                  placeholder="Detalles adicionales, número de cuenta del contrato, etc."
+                  placeholder="Detalles adicionales, número de contrato, etc."
                   value={formNotes}
                   onChange={(e) => setFormNotes(e.target.value)}
                   className="pos-form-input"
@@ -862,7 +736,7 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
         </div>
       )}
 
-      {/* 6. Modal de Comprobante Imprimible de Gasto */}
+      {/* 6. Modal de Comprobante Imprimible */}
       {receiptToPrint && (
         <div className="pos-modal-overlay" onClick={() => setReceiptToPrint(null)}>
           <div
@@ -878,7 +752,6 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Cabecera del Modal */}
             <div
               className="pos-modal-header no-print"
               style={{
@@ -891,9 +764,9 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
                 <div
                   className="pos-modal-icon-badge"
                   style={{
-                    background: 'rgba(245, 158, 11, 0.2)',
-                    color: 'var(--accent-amber)',
-                    border: '1px solid rgba(245, 158, 11, 0.35)',
+                    background: config.bg,
+                    color: config.color,
+                    border: `1px solid ${config.border}`,
                   }}
                 >
                   <Printer size={18} />
@@ -917,7 +790,6 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
               </button>
             </div>
 
-            {/* Hoja de Impresión del Comprobante */}
             <div
               className="pos-modal-body print-voucher-page"
               id="rent-receipt-sheet"
@@ -929,7 +801,6 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
                 lineHeight: 1.35,
               }}
             >
-              {/* Encabezado */}
               <div style={{ textAlign: 'center', marginBottom: '0.85rem' }}>
                 <img
                   src={laMoliendaLogo}
@@ -967,7 +838,7 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
                     marginBottom: '0.35rem',
                   }}
                 >
-                  COMPROBANTE DE EGRESO
+                  {config.voucherTitle}
                 </div>
                 <div style={{ fontSize: '0.74rem', fontWeight: 700, color: '#333333' }}>
                   N° {receiptToPrint.id.toUpperCase().replace('FIX-EXP-', 'EXP-')}
@@ -976,11 +847,10 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
 
               <div className="receipt-divider-dashed" />
 
-              {/* Datos del Comprobante */}
               <div style={{ fontSize: '0.74rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', margin: '0.65rem 0' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span><strong>Categoría:</strong></span>
-                  <span>{CATEGORY_META[receiptToPrint.category].shortLabel}</span>
+                  <span>{config.badgeLabel}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span><strong>Concepto:</strong></span>
@@ -1024,7 +894,6 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
 
               <div className="receipt-divider-dashed" />
 
-              {/* Total Destacado */}
               <div
                 style={{
                   display: 'flex',
@@ -1050,7 +919,6 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
                 </div>
               )}
 
-              {/* Firmas */}
               <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
                 <div style={{ flex: 1, textAlign: 'center', borderTop: '1px solid #000', paddingTop: '0.35rem', fontSize: '0.7rem' }}>
                   <strong>AUTORIZADO POR</strong>
@@ -1063,7 +931,6 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
               </div>
             </div>
 
-            {/* Footer con botones de Acción */}
             <div
               className="pos-modal-footer no-print"
               style={{
@@ -1087,7 +954,7 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
                 type="button"
                 className="btn-print-receipt"
                 onClick={() => window.print()}
-                title="Imprimir ticket o PDF"
+                title="Imprimir comprobante"
               >
                 <Printer size={15} />
                 <span>Imprimir Comprobante</span>

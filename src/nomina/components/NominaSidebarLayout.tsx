@@ -4,6 +4,7 @@ import {
   UserCheck,
   Building2,
   Zap,
+  Sparkles,
   BarChart3,
   Sun,
   Moon,
@@ -13,7 +14,13 @@ import {
 } from 'lucide-react';
 import laMoliendaLogo from '../../assets/la_molienda_logo.png';
 
-export type NavSection = 'nomina' | 'empleados' | 'arriendo' | 'gastos_fijos' | 'reportes';
+export type NavSection =
+  | 'nomina'
+  | 'empleados'
+  | 'arriendo'
+  | 'servicios_publicos'
+  | 'aseo_dotacion'
+  | 'reportes';
 
 interface NominaSidebarLayoutProps {
   theme: 'dark' | 'light';
@@ -22,7 +29,8 @@ interface NominaSidebarLayoutProps {
   onChangeSection: (section: NavSection) => void;
   pendingPayrollCount: number;
   pendingRentCount: number;
-  pendingExpensesCount?: number;
+  pendingServicesCount?: number;
+  pendingSuppliesCount?: number;
   children: React.ReactNode;
   onLogout?: () => void;
   onOpenFirebaseSync?: () => void;
@@ -36,7 +44,8 @@ export const NominaSidebarLayout: React.FC<NominaSidebarLayoutProps> = ({
   onChangeSection,
   pendingPayrollCount,
   pendingRentCount,
-  pendingExpensesCount = 0,
+  pendingServicesCount = 0,
+  pendingSuppliesCount = 0,
   children,
   onLogout,
   onOpenFirebaseSync,
@@ -71,15 +80,20 @@ export const NominaSidebarLayout: React.FC<NominaSidebarLayoutProps> = ({
           title: 'Gestión y Pago de Arriendo',
           subtitle: 'Seguimiento al canon de arrendamiento y obligaciones mensuales',
         };
-      case 'gastos_fijos':
+      case 'servicios_publicos':
         return {
-          title: 'Servicios, Permisos & Insumos',
-          subtitle: 'Facturas de servicios públicos, normativa legal e insumos operativos de aseo',
+          title: 'Servicios Públicos (Esenciales)',
+          subtitle: 'Control y pago de energía eléctrica, agua, gas y telecomunicaciones',
+        };
+      case 'aseo_dotacion':
+        return {
+          title: 'Insumos de Aseo & Dotación',
+          subtitle: 'Control de químicos para cafetera, papel institucional, bolsas y dotación operativa',
         };
       case 'reportes':
         return {
           title: 'Resumen Financiero y Gastos Fijos',
-          subtitle: 'Consolidado global de egresos operativos (Nómina, Arriendo y Gastos Fijos)',
+          subtitle: 'Consolidado global de egresos operativos (Nómina, Arriendo, Servicios y Aseo)',
         };
       default:
         return { title: 'La Molienda', subtitle: 'Administración Independiente' };
@@ -170,25 +184,43 @@ export const NominaSidebarLayout: React.FC<NominaSidebarLayoutProps> = ({
             )}
           </button>
 
-          {/* 4. Servicios y Gastos Fijos */}
+          {/* 4. Servicios Públicos */}
           <button
             type="button"
             role="tab"
-            aria-selected={activeSection === 'gastos_fijos'}
-            className={`sidebar-nav-item ${activeSection === 'gastos_fijos' ? 'active' : ''}`}
-            onClick={() => onChangeSection('gastos_fijos')}
-            title="Servicios y Gastos Fijos"
+            aria-selected={activeSection === 'servicios_publicos'}
+            className={`sidebar-nav-item ${activeSection === 'servicios_publicos' ? 'active' : ''}`}
+            onClick={() => onChangeSection('servicios_publicos')}
+            title="Servicios Públicos (Esenciales)"
           >
             <div className="nav-item-icon">
               <Zap size={24} />
             </div>
-            <span className="nav-item-label sidebar-collapsible-text">Servicios & Gastos</span>
-            {pendingExpensesCount > 0 && (
-              <span className="sidebar-badge alert-stock">{pendingExpensesCount}</span>
+            <span className="nav-item-label sidebar-collapsible-text">Servicios Públicos</span>
+            {pendingServicesCount > 0 && (
+              <span className="sidebar-badge alert-stock">{pendingServicesCount}</span>
             )}
           </button>
 
-          {/* 5. Resumen y Gastos */}
+          {/* 5. Aseo & Dotación */}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeSection === 'aseo_dotacion'}
+            className={`sidebar-nav-item ${activeSection === 'aseo_dotacion' ? 'active' : ''}`}
+            onClick={() => onChangeSection('aseo_dotacion')}
+            title="Insumos de Aseo & Dotación"
+          >
+            <div className="nav-item-icon">
+              <Sparkles size={24} />
+            </div>
+            <span className="nav-item-label sidebar-collapsible-text">Aseo & Dotación</span>
+            {pendingSuppliesCount > 0 && (
+              <span className="sidebar-badge alert-stock">{pendingSuppliesCount}</span>
+            )}
+          </button>
+
+          {/* 6. Resumen y Gastos */}
           <button
             type="button"
             role="tab"
