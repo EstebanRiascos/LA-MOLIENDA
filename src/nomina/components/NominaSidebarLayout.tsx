@@ -238,18 +238,34 @@ export const NominaSidebarLayout: React.FC<NominaSidebarLayoutProps> = ({
             </div>
 
             <div className="top-bar-right" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              {/* Indicador de Base de Datos / Nube */}
+              {/* Indicador de Base de Datos / Nube Activa */}
               <div
-                className={`top-micro-cloud ${firebaseStatus === 'connected' ? 'status-connected' : ''}`}
-                onClick={onOpenFirebaseSync}
-                style={{ cursor: onOpenFirebaseSync ? 'pointer' : 'default' }}
-                title="Sincronización en la nube y almacenamiento seguro"
+                className={`top-micro-cloud status-${firebaseStatus}`}
+                title={`Base de Datos en la Nube (${firebaseStatus === 'connected' ? 'la-molienda-pos' : 'Firebase'}): ${
+                  firebaseStatus === 'connected'
+                    ? 'Conectado y sincronizado en tiempo real'
+                    : firebaseStatus === 'syncing'
+                    ? 'Sincronizando datos...'
+                    : 'Modo Local (Offline)'
+                }`}
               >
                 <Cloud size={14} className="micro-cloud-icon" />
                 <span className="micro-text">
-                  {firebaseStatus === 'connected' ? 'Nube Activa' : 'Local'}
+                  {firebaseStatus === 'connected'
+                    ? 'Nube Activa'
+                    : firebaseStatus === 'syncing'
+                    ? 'Sincronizando...'
+                    : 'Modo Local'}
                 </span>
-                <span className={`micro-dot ${firebaseStatus === 'connected' ? 'dot-connected' : ''}`} />
+                <span
+                  className={`micro-dot ${
+                    firebaseStatus === 'connected'
+                      ? 'dot-connected'
+                      : firebaseStatus === 'syncing'
+                      ? 'dot-syncing'
+                      : 'dot-disconnected'
+                  }`}
+                />
               </div>
             </div>
           </div>

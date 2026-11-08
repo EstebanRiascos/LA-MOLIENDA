@@ -14,7 +14,7 @@
   border-radius: 999px !important;
   background: rgba(255, 255, 255, 0.05) !important;
   border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
-  cursor: pointer !important;
+  cursor: default !important;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
   font-family: inherit !important;
   color: var(--text-primary) !important;
@@ -60,16 +60,35 @@
   box-shadow: 0 0 8px #ef4444 !important;
 }
 
-.top-micro-cloud:hover {
-  transform: translateY(-1px) !important;
-  border-color: rgba(217, 119, 6, 0.5) !important;
+/* Estado Conectado en Modo Oscuro */
+.top-micro-cloud.status-connected {
+  background: rgba(16, 185, 129, 0.12) !important;
+  border-color: rgba(16, 185, 129, 0.35) !important;
 }
 
-.top-micro-cloud:hover .micro-cloud-icon {
-  transform: scale(1.12) !important;
+.top-micro-cloud.status-connected .micro-cloud-icon {
+  color: #10b981 !important;
 }
 
-/* Modo Claro: Nube OK */
+.top-micro-cloud.status-connected .micro-text {
+  color: #34d399 !important;
+}
+
+/* Estado Sincronizando */
+.top-micro-cloud.status-syncing {
+  background: rgba(56, 189, 248, 0.12) !important;
+  border-color: rgba(56, 189, 248, 0.35) !important;
+}
+
+.top-micro-cloud.status-syncing .micro-cloud-icon {
+  color: #38bdf8 !important;
+}
+
+.top-micro-cloud.status-syncing .micro-text {
+  color: #38bdf8 !important;
+}
+
+/* Modo Claro: Base */
 [data-theme='light'] .top-micro-cloud {
   background: #ffffff !important;
   border: 1.5px solid #ebd9c8 !important;

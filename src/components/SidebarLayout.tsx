@@ -366,22 +366,35 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
             </div>
 
             <div className="top-bar-right">
-              {/* Micro-indicador de Firebase */}
-              <button
-                type="button"
+              {/* Micro-indicador de Firebase Nube Activa */}
+              <div
                 className={`top-micro-cloud status-${firebaseStatus}`}
-                onClick={onOpenFirebaseSync}
-                title={`Base de Datos en la Nube (${firebaseProjectId || 'Firebase'}): ${firebaseStatus === 'connected'
-                  ? 'Sincronizado en tiempo real'
-                  : firebaseStatus === 'syncing'
-                    ? 'Sincronizando...'
-                    : 'Desconectado'
-                  }`}
+                title={`Base de Datos en la Nube (${firebaseProjectId || 'Firebase'}): ${
+                  firebaseStatus === 'connected'
+                    ? 'Conectado y sincronizado en tiempo real'
+                    : firebaseStatus === 'syncing'
+                    ? 'Sincronizando datos...'
+                    : 'Modo Local (Offline)'
+                }`}
               >
                 <Cloud size={14} className="micro-cloud-icon" />
-                <span className="micro-text">Nube OK</span>
-                <span className={`micro-dot dot-${firebaseStatus}`} />
-              </button>
+                <span className="micro-text">
+                  {firebaseStatus === 'connected'
+                    ? 'Nube Activa'
+                    : firebaseStatus === 'syncing'
+                    ? 'Sincronizando...'
+                    : 'Modo Local'}
+                </span>
+                <span
+                  className={`micro-dot ${
+                    firebaseStatus === 'connected'
+                      ? 'dot-connected'
+                      : firebaseStatus === 'syncing'
+                      ? 'dot-syncing'
+                      : 'dot-disconnected'
+                  }`}
+                />
+              </div>
 
               {/* Notificaciones */}
               {onOpenNotifications && (

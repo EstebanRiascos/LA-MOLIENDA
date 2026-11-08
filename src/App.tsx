@@ -1825,7 +1825,6 @@ export const App: React.FC = () => {
           theme={theme}
           onToggleTheme={handleToggleTheme}
           onLogout={handleLogout}
-          onOpenFirebaseSync={() => setIsFirebaseSyncOpen(true)}
           firebaseStatus={firebaseStatusSnap.status}
         />
 
@@ -1864,7 +1863,6 @@ export const App: React.FC = () => {
       connectedClientsCount={connectedClientsCount}
       isServiceOpen={isServiceOpen}
       onToggleServiceLock={handleToggleServiceLock}
-      onOpenFirebaseSync={() => setIsFirebaseSyncOpen(true)}
       firebaseStatus={firebaseStatusSnap.status}
       firebaseProjectId={firebaseStatusSnap.projectId}
       unreadNotificationsCount={unreadNotificationsCount}

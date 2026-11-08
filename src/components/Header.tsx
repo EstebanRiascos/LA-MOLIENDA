@@ -289,26 +289,23 @@ export const Header: React.FC<HeaderProps> = ({
           )}
 
           {/* Base de Datos en la Nube (Firebase Firestore) */}
-          {currentUser?.role === 'admin' && onOpenFirebaseSync && (
-            <button
-              type="button"
-              className={`btn-header-action btn-header-compact btn-header-firebase-sync status-${firebaseStatus}`}
-              onClick={onOpenFirebaseSync}
-              title={
-                firebaseStatus === 'connected' || firebaseStatus === 'syncing'
-                  ? `Nube Firebase conectada (${firebaseProjectId || 'Firestore'})`
-                  : firebaseStatus === 'offline'
-                  ? `Firebase en modo Offline (${firebaseProjectId || 'cola activa'})`
-                  : firebaseStatus === 'error'
-                  ? 'Revisar conexión con Firebase Firestore'
-                  : 'Conectar Base de Datos Gratuita en la Nube (Firebase)'
-              }
-            >
-              <Cloud size={15} />
-              <span className="btn-text-desktop">Nube</span>
-              <span className={`header-fb-dot dot-${firebaseStatus}`} />
-            </button>
-          )}
+          <div
+            className={`btn-header-action btn-header-compact btn-header-firebase-sync status-${firebaseStatus}`}
+            style={{ cursor: 'default' }}
+            title={
+              firebaseStatus === 'connected'
+                ? `Nube Firebase Activa (${firebaseProjectId || 'Firestore'})`
+                : firebaseStatus === 'syncing'
+                ? 'Sincronizando con Firebase...'
+                : 'Modo Local (Offline)'
+            }
+          >
+            <Cloud size={15} />
+            <span className="btn-text-desktop">
+              {firebaseStatus === 'connected' ? 'Nube Activa' : firebaseStatus === 'syncing' ? 'Sincronizando' : 'Local'}
+            </span>
+            <span className={`header-fb-dot dot-${firebaseStatus}`} />
+          </div>
 
 
 
