@@ -16,10 +16,26 @@ const KEYS = {
 export const getStoredEmployees = (): Employee[] => {
   try {
     const raw = localStorage.getItem(KEYS.employees);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed: Employee[] = JSON.parse(raw);
+      // Depurar colaboradores demo antiguos si aún persisten en caché local
+      const hasOldDemo = parsed.some(
+        (e) =>
+          e.id === 'emp-1' ||
+          e.id === 'emp-2' ||
+          e.id === 'emp-3' ||
+          e.name === 'Carlos Andrés Mendoza' ||
+          e.name === 'Valentina Restrepo' ||
+          e.name === 'Julián David Gómez'
+      );
+      if (!hasOldDemo && parsed.length > 0) {
+        return parsed;
+      }
+    }
   } catch (e) {
     console.error('Error loading employees from localStorage', e);
   }
+  saveStoredEmployees(initialEmployees);
   return initialEmployees;
 };
 
@@ -34,7 +50,29 @@ export const saveStoredEmployees = (employees: Employee[]): void => {
 export const getStoredPayrollRecords = (): PayrollRecord[] => {
   try {
     const raw = localStorage.getItem(KEYS.payrollRecords);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed: PayrollRecord[] = JSON.parse(raw);
+      // Depurar registros demo
+      const hasOldDemo = parsed.some(
+        (p) =>
+          p.id === 'pay-rec-1' ||
+          p.id === 'pay-rec-2' ||
+          p.employeeName === 'Carlos Andrés Mendoza' ||
+          p.employeeName === 'Valentina Restrepo'
+      );
+      if (hasOldDemo) {
+        const cleaned = parsed.filter(
+          (p) =>
+            p.id !== 'pay-rec-1' &&
+            p.id !== 'pay-rec-2' &&
+            p.employeeName !== 'Carlos Andrés Mendoza' &&
+            p.employeeName !== 'Valentina Restrepo'
+        );
+        saveStoredPayrollRecords(cleaned);
+        return cleaned;
+      }
+      return parsed;
+    }
   } catch (e) {
     console.error('Error loading payroll records from localStorage', e);
   }

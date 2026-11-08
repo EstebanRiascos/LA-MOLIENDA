@@ -511,7 +511,7 @@ export function syncEmployeesToCloud(employees: Employee[]): void {
 }
 
 export function syncPayrollRecordsToCloud(records: PayrollRecord[]): void {
-  scheduleCollectionSync('payrollRecords', records, true, false, 250);
+  scheduleCollectionSync('payrollRecords', records, true, true, 250);
 }
 
 export function syncRentContractsToCloud(contracts: RentContract[]): void {
@@ -519,7 +519,7 @@ export function syncRentContractsToCloud(contracts: RentContract[]): void {
 }
 
 export function syncRentPaymentsToCloud(payments: RentPayment[]): void {
-  scheduleCollectionSync('rentPayments', payments, true, false, 250);
+  scheduleCollectionSync('rentPayments', payments, true, true, 250);
 }
 
 /**
