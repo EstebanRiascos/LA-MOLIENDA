@@ -614,6 +614,38 @@ export const RentView: React.FC<RentViewProps> = ({
               </div>
 
               <div className="pos-modal-footer">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginRight: 'auto' }}>
+                  <div
+                    style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      background: 'rgba(245, 158, 11, 0.12)',
+                      border: '1px solid rgba(245, 158, 11, 0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '2px',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <img
+                      src={laMoliendaLogo}
+                      alt="La Molienda POS"
+                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', lineHeight: 1.15 }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '0.2px' }}>
+                      La Molienda POS
+                    </span>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                      Control de Arriendo
+                    </span>
+                  </div>
+                </div>
+
                 <button
                   type="button"
                   className="pos-btn-secondary"
@@ -944,6 +976,38 @@ export const RentView: React.FC<RentViewProps> = ({
               </div>
 
               <div className="pos-modal-footer">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginRight: 'auto' }}>
+                  <div
+                    style={{
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      background: 'rgba(245, 158, 11, 0.12)',
+                      border: '1px solid rgba(245, 158, 11, 0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '2px',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <img
+                      src={laMoliendaLogo}
+                      alt="La Molienda POS"
+                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', lineHeight: 1.15 }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '0.2px' }}>
+                      La Molienda POS
+                    </span>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                      Contrato de Arrendamiento
+                    </span>
+                  </div>
+                </div>
+
                 <button
                   type="button"
                   className="pos-btn-secondary"
