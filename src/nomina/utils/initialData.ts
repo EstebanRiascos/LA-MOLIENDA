@@ -55,36 +55,7 @@ export const initialRentContracts: RentContract[] = [
   }
 ];
 
-export const initialRentPayments: RentPayment[] = [
-  {
-    id: 'pay-rent-1',
-    contractId: 'rent-1',
-    propertyName: 'Local Comercial La Molienda - Sede Principal',
-    periodMonth: 'Octubre 2026',
-    amount: 3200000,
-    dueDate: '2026-10-05',
-    paymentDate: '2026-10-04',
-    status: 'pagado',
-    paymentMethod: 'transferencia',
-    receiptReference: 'TR-98234120',
-    notes: 'Pagado puntualmente vía Bancolombia',
-    createdAt: '2026-10-04T10:00:00Z'
-  },
-  {
-    id: 'pay-rent-2',
-    contractId: 'rent-1',
-    propertyName: 'Local Comercial La Molienda - Sede Principal',
-    periodMonth: 'Noviembre 2026',
-    amount: 3200000,
-    dueDate: '2026-11-05',
-    paymentDate: '',
-    status: 'pendiente',
-    paymentMethod: 'transferencia',
-    receiptReference: '',
-    notes: 'Pendiente de pago antes del día 5',
-    createdAt: '2026-11-01T08:00:00Z'
-  }
-];
+export const initialRentPayments: RentPayment[] = [];
 
 export const initialPayrollRecords: PayrollRecord[] = [];
 

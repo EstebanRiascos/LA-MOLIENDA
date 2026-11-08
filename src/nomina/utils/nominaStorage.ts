@@ -108,7 +108,21 @@ export const saveStoredRentContracts = (contracts: RentContract[]): void => {
 export const getStoredRentPayments = (): RentPayment[] => {
   try {
     const raw = localStorage.getItem(KEYS.rentPayments);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed: RentPayment[] = JSON.parse(raw);
+      // Depurar pagos de arriendo demo antiguos si persisten en caché local
+      const hasOldDemo = parsed.some(
+        (p) => p.id === 'pay-rent-1' || p.id === 'pay-rent-2' || p.receiptReference === 'TR-98234120'
+      );
+      if (hasOldDemo) {
+        const cleaned = parsed.filter(
+          (p) => p.id !== 'pay-rent-1' && p.id !== 'pay-rent-2' && p.receiptReference !== 'TR-98234120'
+        );
+        saveStoredRentPayments(cleaned);
+        return cleaned;
+      }
+      return parsed;
+    }
   } catch (e) {
     console.error('Error loading rent payments from localStorage', e);
   }
