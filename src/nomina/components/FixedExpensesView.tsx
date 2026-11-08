@@ -2,12 +2,19 @@ import React, { useState } from 'react';
 import {
   Zap,
   Sparkles,
+  Droplets,
+  Flame,
+  Wifi,
+  Smartphone,
+  Coffee,
+  Layers,
+  Trash2,
+  Shirt,
   DollarSign,
   Plus,
   CheckCircle2,
   AlertTriangle,
   Clock,
-  Trash2,
   X,
   CreditCard,
   Check,
@@ -35,25 +42,98 @@ interface FixedExpensesViewProps {
 }
 
 interface CategoryPreset {
+  id: string;
   title: string;
   subCategory: string;
   defaultProvider: string;
+  shortDesc: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
 }
 
 const PRESETS: Record<FixedExpenseCategory, CategoryPreset[]> = {
   servicios_publicos: [
-    { title: 'Energía Eléctrica', subCategory: 'Energía', defaultProvider: 'EPM / Operador de Energía' },
-    { title: 'Agua y Alcantarillado', subCategory: 'Acueducto', defaultProvider: 'Aguas Locales / EPM' },
-    { title: 'Gas Natural / Propano', subCategory: 'Gas', defaultProvider: 'Empresa de Gas' },
-    { title: 'Internet Fibra Óptica & Wi-Fi', subCategory: 'Telecomunicaciones', defaultProvider: 'Claro / Tigo / Movistar' },
-    { title: 'Plan Móvil Corporativo', subCategory: 'Telefonía', defaultProvider: 'Operador Móvil' },
+    {
+      id: 'energia',
+      title: 'Energía Eléctrica',
+      subCategory: 'Energía',
+      defaultProvider: 'EPM / Operador de Energía',
+      shortDesc: 'Luz y potencia del local',
+      icon: Zap,
+    },
+    {
+      id: 'agua',
+      title: 'Agua y Alcantarillado',
+      subCategory: 'Acueducto',
+      defaultProvider: 'Aguas Locales / EPM',
+      shortDesc: 'Acueducto y saneamiento',
+      icon: Droplets,
+    },
+    {
+      id: 'gas',
+      title: 'Gas Natural / Propano',
+      subCategory: 'Gas',
+      defaultProvider: 'Empresa de Gas',
+      shortDesc: 'Cocina y calentador',
+      icon: Flame,
+    },
+    {
+      id: 'internet',
+      title: 'Internet & Wi-Fi',
+      subCategory: 'Telecomunicaciones',
+      defaultProvider: 'Claro / Tigo / Movistar',
+      shortDesc: 'Fibra óptica clientes/POS',
+      icon: Wifi,
+    },
+    {
+      id: 'movil',
+      title: 'Plan Móvil Corporativo',
+      subCategory: 'Telefonía',
+      defaultProvider: 'Operador Móvil',
+      shortDesc: 'Línea de pedidos/WhatsApp',
+      icon: Smartphone,
+    },
   ],
   aseo_dotacion: [
-    { title: 'Químicos Desengrasantes & Cafetera', subCategory: 'Químicos Cafetera', defaultProvider: 'Distribuidor Especializado de Café' },
-    { title: 'Papel Institucional & Servilletas', subCategory: 'Papelería Institucional', defaultProvider: 'Distribuidora de Desechables' },
-    { title: 'Bolsas de Basura & Canecas', subCategory: 'Bolsas y Residuos', defaultProvider: 'Proveedor de Aseo' },
-    { title: 'Insumos de Limpieza y Desinfección', subCategory: 'Limpieza General', defaultProvider: 'Distribuidora de Aseo' },
-    { title: 'Dotación, Delantales y Gorros', subCategory: 'Dotación Personal', defaultProvider: 'Proveedor de Dotaciones' },
+    {
+      id: 'quimicos',
+      title: 'Químicos & Cafetera',
+      subCategory: 'Químicos Cafetera',
+      defaultProvider: 'Distribuidor Especializado de Café',
+      shortDesc: 'Desengrasante y lanzaderas',
+      icon: Coffee,
+    },
+    {
+      id: 'papel',
+      title: 'Papel & Servilletas',
+      subCategory: 'Papelería Institucional',
+      defaultProvider: 'Distribuidora de Desechables',
+      shortDesc: 'Higiénico jumbo y toallas',
+      icon: Layers,
+    },
+    {
+      id: 'bolsas',
+      title: 'Bolsas & Residuos',
+      subCategory: 'Bolsas y Residuos',
+      defaultProvider: 'Proveedor de Aseo',
+      shortDesc: 'Código de colores y canecas',
+      icon: Trash2,
+    },
+    {
+      id: 'limpieza',
+      title: 'Limpieza General',
+      subCategory: 'Limpieza General',
+      defaultProvider: 'Distribuidora de Aseo',
+      shortDesc: 'Cloro, desinfectante, trapero',
+      icon: Sparkles,
+    },
+    {
+      id: 'dotacion',
+      title: 'Dotación & Delantales',
+      subCategory: 'Dotación Personal',
+      defaultProvider: 'Proveedor de Dotaciones',
+      shortDesc: 'Uniformes, gorros, delantales',
+      icon: Shirt,
+    },
   ],
 };
 
@@ -452,31 +532,118 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
             </div>
 
             <form onSubmit={handleSubmit} className="pos-modal-body">
-              {/* Sugerencias Rápidas de la Categoría */}
-              <div className="pos-form-group" style={{ marginBottom: '1rem' }}>
-                <label className="pos-form-label" style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                  Sugerencias Rápidas (Clic para autocompletar):
-                </label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                  {presets.map((p, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => handleSelectPreset(p)}
-                      style={{
-                        padding: '0.3rem 0.65rem',
-                        borderRadius: '16px',
-                        border: '1px solid var(--border-color)',
-                        background: formTitle === p.title ? config.bg : 'var(--bg-input)',
-                        color: formTitle === p.title ? config.color : 'var(--text-secondary)',
-                        fontSize: '0.74rem',
-                        cursor: 'pointer',
-                        fontWeight: formTitle === p.title ? 700 : 500,
-                      }}
-                    >
-                      {p.title}
-                    </button>
-                  ))}
+              {/* Selector Visual de Conceptos Frecuentes */}
+              <div style={{ marginBottom: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
+                  <label className="pos-form-label" style={{ margin: 0, fontWeight: 800, fontSize: '0.82rem' }}>
+                    Concepto / Tipo de {category === 'servicios_publicos' ? 'Servicio' : 'Insumo'}
+                  </label>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    Haz clic para autocompletar
+                  </span>
+                </div>
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+                    gap: '0.55rem',
+                  }}
+                >
+                  {presets.map((p) => {
+                    const isSelected = formTitle === p.title;
+                    const PresetIcon = p.icon;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => handleSelectPreset(p)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.65rem',
+                          padding: '0.65rem 0.8rem',
+                          borderRadius: '12px',
+                          border: isSelected
+                            ? `2px solid ${config.color}`
+                            : '1.5px solid var(--border-color)',
+                          background: isSelected
+                            ? (category === 'servicios_publicos' ? 'rgba(245, 158, 11, 0.12)' : 'rgba(16, 185, 129, 0.12)')
+                            : 'var(--bg-input)',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'all 0.18s ease',
+                          boxShadow: isSelected ? `0 2px 8px ${config.color}22` : 'none',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '8px',
+                            background: isSelected ? config.color : 'rgba(255, 255, 255, 0.08)',
+                            color: isSelected ? '#ffffff' : config.color,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                            transition: 'all 0.18s ease',
+                          }}
+                        >
+                          <PresetIcon size={17} />
+                        </div>
+
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <span
+                            style={{
+                              display: 'block',
+                              fontSize: '0.8rem',
+                              fontWeight: isSelected ? 800 : 650,
+                              color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
+                              lineHeight: 1.2,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {p.title}
+                          </span>
+                          <span
+                            style={{
+                              display: 'block',
+                              fontSize: '0.68rem',
+                              color: 'var(--text-muted)',
+                              marginTop: '0.15rem',
+                              lineHeight: 1.15,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {p.shortDesc}
+                          </span>
+                        </div>
+
+                        {isSelected && (
+                          <div
+                            style={{
+                              width: '18px',
+                              height: '18px',
+                              borderRadius: '50%',
+                              background: config.color,
+                              color: '#ffffff',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            <Check size={11} strokeWidth={3} />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
