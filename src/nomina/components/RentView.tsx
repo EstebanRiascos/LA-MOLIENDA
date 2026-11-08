@@ -473,20 +473,6 @@ export const RentView: React.FC<RentViewProps> = ({
 
                       <button
                         type="button"
-                        className="table-action-btn btn-pay-toggle"
-                        onClick={() =>
-                          onUpdatePaymentStatus(
-                            p.id,
-                            p.status === 'pagado' ? 'pendiente' : 'pagado'
-                          )
-                        }
-                        title={p.status === 'pagado' ? 'Marcar como Pendiente' : 'Marcar como Pagado'}
-                      >
-                        <Check size={14} />
-                      </button>
-
-                      <button
-                        type="button"
                         className="table-action-btn btn-delete"
                         onClick={() => onDeletePayment(p.id)}
                         title="Eliminar registro"

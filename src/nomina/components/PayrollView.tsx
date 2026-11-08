@@ -10,7 +10,6 @@ import {
   X,
   CreditCard,
   Users,
-  Check,
 } from 'lucide-react';
 import { Employee, PayrollRecord } from '../types';
 import { formatCOP, formatDate } from '../utils/formatters';
@@ -270,20 +269,6 @@ export const PayrollView: React.FC<PayrollViewProps> = ({
 
                   <td>
                     <div className="action-buttons-cell">
-                      <button
-                        type="button"
-                        className="table-action-btn btn-pay-toggle"
-                        onClick={() =>
-                          onUpdateRecordStatus(
-                            record.id,
-                            record.status === 'pagado' ? 'pendiente' : 'pagado'
-                          )
-                        }
-                        title={record.status === 'pagado' ? 'Marcar como Pendiente' : 'Marcar como Pagado'}
-                      >
-                        <Check size={14} />
-                      </button>
-
                       <button
                         type="button"
                         className="table-action-btn btn-delete"
