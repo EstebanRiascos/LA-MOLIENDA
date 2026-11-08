@@ -214,164 +214,84 @@ export const FixedExpensesView: React.FC<FixedExpensesViewProps> = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-      {/* 1. Tarjeta Hero de la Pestaña */}
-      <div className="rent-contract-hero-card">
-        <div className="rent-hero-top">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-            <div
-              style={{
-                width: '46px',
-                height: '46px',
-                borderRadius: '12px',
-                background: config.bg,
-                border: `1px solid ${config.border}`,
-                color: config.color,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <CategoryIcon size={24} />
-            </div>
-            <div>
-              <h3 style={{ fontSize: '1.18rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-                {config.title}
-              </h3>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0.15rem 0 0 0' }}>
-                {config.subtitle}
-              </p>
-            </div>
+      {/* 1. Barrita de Métricas / KPIs */}
+      <div className="inventory-stats-strip">
+        <div className="inv-stat-card">
+          <div className="inv-stat-icon icon-emerald">
+            <CheckCircle2 size={20} />
           </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <span className={`status-badge ${pendingExpenses.length > 0 ? 'pending' : 'paid'}`}>
-              {pendingExpenses.length > 0 ? (
-                <>
-                  <Clock size={13} />
-                  <span>{pendingExpenses.length} Factura(s) Pendiente(s)</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 size={13} />
-                  <span>Al día en {config.badgeLabel}</span>
-                </>
-              )}
-            </span>
-
-            <button
-              type="button"
-              className="pos-btn-primary"
-              onClick={handleOpenModal}
-              style={{
-                padding: '0.55rem 1.15rem',
-                fontSize: '0.84rem',
-                fontWeight: 700,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                borderRadius: '10px',
-              }}
-            >
-              <Plus size={16} strokeWidth={2.5} />
-              <span>{config.btnLabel}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* 2. Resumen de Métricas de la Categoría */}
-        <div className="rent-hero-grid">
-          <div className="rent-hero-stat">
-            <span className="stat-label">TOTAL PAGADO AL DÍA</span>
-            <span className="stat-val" style={{ color: config.color }}>
+          <div className="inv-stat-text">
+            <span className="inv-stat-label">TOTAL {config.badgeLabel.toUpperCase()} PAGADO</span>
+            <span className="inv-stat-value" style={{ color: 'var(--accent-emerald)', fontFamily: 'var(--font-mono)' }}>
               {formatCOP(totalPaid)}
             </span>
           </div>
+        </div>
 
-          <div className="rent-hero-stat">
-            <span className="stat-label">TOTAL PENDIENTE POR DESEMBOLSAR</span>
-            <span className="stat-val" style={{ color: totalPending > 0 ? '#fb7185' : 'var(--text-muted)' }}>
+        <div className="inv-stat-card">
+          <div className={`inv-stat-icon ${totalPending > 0 ? 'icon-rose' : 'icon-amber'}`}>
+            <Clock size={20} />
+          </div>
+          <div className="inv-stat-text">
+            <span className="inv-stat-label">PAGOS PENDIENTES</span>
+            <span className="inv-stat-value" style={{ color: totalPending > 0 ? '#fb7185' : 'var(--accent-amber)', fontFamily: 'var(--font-mono)' }}>
               {formatCOP(totalPending)}
             </span>
           </div>
+        </div>
 
-          <div className="rent-hero-stat">
-            <span className="stat-label">REGISTROS PAGADOS</span>
-            <span className="stat-val" style={{ color: 'var(--accent-emerald)' }}>
-              {paidExpenses.length} pagados
-            </span>
+        <div className="inv-stat-card">
+          <div className="inv-stat-icon icon-blue">
+            <CategoryIcon size={20} />
           </div>
-
-          <div className="rent-hero-stat">
-            <span className="stat-label">TOTAL FACTURAS / COMPRAS</span>
-            <span className="stat-val" style={{ color: 'var(--text-primary)' }}>
-              {categoryExpenses.length} en historial
+          <div className="inv-stat-text">
+            <span className="inv-stat-label">REGISTROS EN HISTORIAL</span>
+            <span className="inv-stat-value" style={{ fontFamily: 'var(--font-mono)' }}>
+              {categoryExpenses.length} {categoryExpenses.length === 1 ? 'registro' : 'registros'}
             </span>
           </div>
         </div>
       </div>
 
-      {/* 3. Barra de Filtros y Búsqueda */}
-      <div className="payroll-history-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-            Historial de {config.badgeLabel}
-          </span>
-          <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-            ({filteredExpenses.length} de {categoryExpenses.length})
-          </span>
-        </div>
+      {/* 2. Barra de Herramientas y Filtros */}
+      <div className="inventory-toolbar">
+        <div className="toolbar-left">
+          <div className="inv-search-wrapper">
+            <Search size={16} className="inv-search-icon" />
+            <input
+              type="text"
+              placeholder={`Buscar en ${config.badgeLabel}...`}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="inv-search-input"
+            />
+          </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          {/* Filtro por Estado */}
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="pos-form-select"
-            style={{
-              padding: '0.35rem 0.75rem',
-              fontSize: '0.78rem',
-              width: 'auto',
-              borderRadius: '10px',
-            }}
+            className="inv-select"
           >
-            <option value="all">Estado: Todos</option>
-            <option value="pagado">Estado: Pagados</option>
-            <option value="pendiente">Estado: Pendientes</option>
-            <option value="vencido">Estado: Vencidos</option>
+            <option value="all">Todos los estados</option>
+            <option value="pagado">Solo Pagados</option>
+            <option value="pendiente">Solo Pendientes</option>
+            <option value="vencido">Solo Vencidos</option>
           </select>
+        </div>
 
-          {/* Buscador */}
-          <div style={{ position: 'relative', width: '220px' }}>
-            <Search
-              size={14}
-              style={{
-                position: 'absolute',
-                left: '10px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'var(--text-muted)',
-              }}
-            />
-            <input
-              type="text"
-              placeholder="Buscar concepto o proveedor..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pos-form-input"
-              style={{
-                paddingLeft: '30px',
-                paddingTop: '0.35rem',
-                paddingBottom: '0.35rem',
-                fontSize: '0.78rem',
-                borderRadius: '10px',
-              }}
-            />
-          </div>
+        <div className="toolbar-right">
+          <button
+            type="button"
+            className="btn-add-product pos-btn-primary"
+            onClick={handleOpenModal}
+          >
+            <Plus size={16} strokeWidth={2.5} />
+            <span>{config.btnLabel}</span>
+          </button>
         </div>
       </div>
 
-      {/* 4. Tabla de Facturas */}
+      {/* 3. Tabla de Registros */}
       <div className="inventory-table-container">
         <table className="inventory-table">
           <thead>
